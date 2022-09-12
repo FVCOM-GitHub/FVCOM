@@ -1,0 +1,94 @@
+======================================  fvcom2gnome ===========================================================
+
+GNOME is available for both windows and mac platforms from:
+   http://response.restoration.noaa.gov/index.php (click on GNOME under "Featured Software and Data Sets")
+   note:  the mac version is pre-carbon and will require you to install the Classic emulator from your 
+   OS X install disks (normally on the second of the two disks).
+
+Description from the GNOME web site:
+  The General NOAA Operational Modeling Environment (GNOME) is a free computer program you can use to predict the trajectory of oil spilled in a particular scenario.
+
+GNOME User comments
+   GNOME is a 2-D lagrangian particle tracking program that pulls in unsteady surface current data from a 
+   variety of sources.  Algorithms used to reconstruct velocities and integrate positions are unclear.  
+   Interface is very nice and easy to use.
+
+GNOME will read certain combinations of formats from the options of (ascii/netcdf) (structured/unstructured) (current patterns / unsteady) (vertex based/cell-center based).  At the present time (8/08), GNOME will not read [netcdf/unstructured/unstead/cell-center based].  This would be optimal for FVCOM.  Discussions with NOAA have begun and plans are in place to make this happen.  This would allow direct reading of FVCOM output into GNOME.  Efforts by R. Signell will hopefully ensure that the NetCDF reader in GNOME will make use of the NetCDF-java/CF-lib to pull data across the web from OpenDAP servers. 
+
+The present solution here is intermediate and makes use of the input formats currently available for GNOME.  
+Note that GNOME currently (Sep 2008) has extremely non-general NetCDF input (requiring a specific order).
+In addition it seems that a dimension specifying the number of elements (nele) is required.  In NCTools,
+it is not clear if this is possible without dumping a variable containing this dimension which GNOME
+barfs on.  
+
+
+
+fvcom2gnome
+
+input - FVCOM output file
+output - GNOME input file
+
+function
+  - read FVCOM input file
+  - construct the boundary array needed for GNOME
+  - average surface velocity (or vertically-averaged velocit if model output is 2-D) to vertex positions
+  - dump into GNOME compatible file
+
+usage
+  
+  fvcom2gnome --inputfile=[full path to input file] --outputfile=[full path to output file] 
+              --fbeg=[integer] --fend=[integer] --fint=[integer] --tstring="begin time in format below"
+
+    required:   
+      inputfile
+
+    optional
+      outputfile [default = ./gnome.nc]
+      
+      fbeg: first frame to translate   [default = 1]  
+      fend:  last frame to translate   [default = last frame in file]
+      fint: frame interval             [default = 1]
+      tstring: time string             [default: Gregorian day determined from output file, use if model time is MJD]
+         see below under tstring_details
+
+    Examples:
+       !grab every frame from tst_0001.nc and dump to gnome.nc 
+       ./fvcom2gnome --inputfile=tst_0001.nc --outputfile=junk.nc --fint=2 
+
+       !grab every other frame from tst_0001.nc and dump to junk.nc
+       ./fvcom2gnome --inputfile=tst_0001.nc --outputfile=junk.nc --fint=2 
+
+       !set the begin time manually (use this if your model did not use real time (i.e. started from 0)
+       ./fvcom2gnome --inputfile=tst_0001.nc --tstring='2008-09-15 23:00:00 UTC'
+
+tstring_details
+   as far as I know, GNOME cannot parse Jtime and expects time to essentially start from around
+   zero and for the user to specify the begin date relative to zero in model settings/ 
+   start time.  Thus, there are two cases to consider.
+     1.) FVCOM output is in Julian time.  IN this case, do not specify tstring_details, fvcom2gnome
+         will convert the MJD time in the FVCOM file to unix time (time after Jan 1, 1970) which
+         GNOME can handle.  GNOME cannot handle MJD since it cannot deal with dates prior to 1970. 
+         This is because nobody cared about oil spills before that year.
+     2.) FVCOM is not in Julian time.  In this case, fvcom2gnome does not know what the Gregorian
+         day is for the first frame in the gnome output.  Thus must be provided by the user as above in tstring.
+         Please note that this is the Gregorian time for the first output into GNOME, not necessarily
+         the first frame in the FVCOM output file (e.g. fbeg /= 1).  Time in the GNOME file will start
+         from zero and is now assumed to be relevant to this user-supplied date.
+    
+
+checking
+    fvcom2gnome will produce a boundary file:  check.dat.  Run matlab script 
+    check_bndry.m to ensure boundary is ccw around the water (as you walk
+    on the boundary you have your left foot in the water) and that the open
+    boundary edges are properly marked (should have a blue cross in matlab)
+
+
+dependencies
+    libfvcom.a  [we might consider eliminating this to make it more standalone]
+    D.Stuebe's NetCDF Types and Routines (read only) 
+    
+
+Acknowledgements
+    Thanks to Rich Signell (USGS) for introducing us to GNOME, setting up the connection with NOAA, discussing 
+    how best to display FVCOM results in the GNOME framework, etc. 
+    

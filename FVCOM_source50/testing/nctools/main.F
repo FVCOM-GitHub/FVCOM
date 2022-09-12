@@ -1,0 +1,77 @@
+PROGRAM nctest
+  USE MOD_nctest
+  USE MOD_NCDIO
+  ! SEE PARAMETER SETTINGS IN MOD_SST2GRD.F90
+  IMPLICIT NONE
+ 
+  character(len=*),parameter::CVS_Id="$Id$" ! [sng] CVS Identification
+  character(len=*),parameter::CVS_Date="$Date$" ! [sng] Date string
+  character(len=*),parameter::CVS_Name="$Name$" ! [sng] File name string
+  character(len=*),parameter::CVS_Revision="$Revision$" ! [sng] File revision string
+
+
+
+  INTEGER :: STATUS, TEST_CODE
+  CHARACTER(len=80) :: FNAME
+  TYPE(TIME) :: NOW
+  TYPE(NCFTIME), POINTER ::FTM
+
+  ! INTIALIZE MEMORY FROM libfvcom.a
+  CALL INITIALIZE_CONTROL("NCFTEST")
+
+# if defined (MULTIPROCESSOR)
+  CALL INIT_MPI_ENV(MYID,NPROCS,SERIAL,PAR,MSR,MSRID)
+  MPI_FVCOM_GROUP = MPI_COMM_WORLD ! FOR NOW MAKE THEM EQUAL
+# endif
+
+  CALL GET_COMMANDLINE(CVS_ID,CVS_Date,CVS_Name,CVS_Revision)
+
+  IF (DBG_SET(DBG_LOG)) THEN
+     WRITE(IPT,*) "! ============================="
+     WRITE(IPT,*) "!   FVCOM NETCDF LIBRARY TEST"
+     WRITE(IPT,*) "! ============================="
+  END IF
+  
+  call REGISTER_FUNC(TEST_UNSTRUCTURED_IO,TEST_CODE,status)
+  IF (status/=0) CALL FATAL_ERROR("REGISTER_FUNC: FAILED TO REGISTER:: TEST_UNSTRUCTURED_IO")
+
+
+  CALL GET_FVCOM_GRID
+
+  IF (DBG_SET(DBG_LOG)) WRITE(IPT,*) "! LOADED GRID AND SET UP PARALLEL"
+  
+  IF (DBG_SET(DBG_LOG)) WRITE(IPT,*) "! RUNNING TEST_NCLL:"
+  
+  CALL TEST_NCLL
+
+  
+  IF (DBG_SET(DBG_LOG)) WRITE(IPT,*) "! FINISHED RUNNING TEST_NCLL"
+  IF (DBG_SET(DBG_LOG)) WRITE(IPT,*) "! RUNNING TEST_BASIC_IO"
+
+  CALL TEST_BASIC_IO
+
+  IF (DBG_SET(DBG_LOG)) WRITE(IPT,*) "! FINISHED RUNNING TEST_BASIC_IO"
+  IF (DBG_SET(DBG_LOG)) WRITE(IPT,*) "! RUNNING TEST_UNSTRUCTURED_IO"
+  
+  IF(USE_MPI_IO_MODE) THEN
+     CALL MPI_IO_SYNCHRONIZE(TEST_CODE)
+  ELSE
+     CALL CALL_FUNC(TEST_CODE,status)
+     IF (status/=0) call fatal_error("ARCHIVE:: Bad TEST_CODE",&
+          & "Could not retrieve valid function pointer?")
+  END IF
+
+  IF (DBG_SET(DBG_LOG)) WRITE(IPT,*) "! FINISHED RUNNING TEST_UNSTRUCTURED_IO"
+  IF (DBG_SET(DBG_LOG)) WRITE(IPT,*) "! RUNNING TEST_START_COUNT_STRIDE"
+
+
+  CALL TEST_START_COUNT_STRIDE
+
+
+  IF (DBG_SET(DBG_LOG)) WRITE(IPT,*) "! TADA: it worked!"
+  CALL PSHUTDOWN
+
+
+
+END PROGRAM nctest
+

@@ -1,0 +1,22 @@
+&NML_TS_CLIM
+ INPUT_DIR       = '../../../Input_AFNN/',
+ OUTPUT_DIR      = '../../../Input_AFNN/',
+ OLD_TS_FILE     = 'glbn_Pts_julian2009.dat',
+ OUTPUT_FILE     = 'AFNN_Pts_2009_0406.nc',
+ GRID_FILE       = 'AFNN_grd.dat',
+ GRID_FILE_UNITS = 'degrees',
+ SIGMA_LEVELS_FILE       = 'AFNN_sig_5m.dat',
+ DEPTH_FILE      = 'AFNN_dep.dat',
+ PROJECTION_REFERENCE    ='none' ,
+ DATE_FORMAT     = 'YMD',
+ START_DATE      = '2009-04-15 00:00:00',
+ END_DATE        = '2009-07-15 12:00:00',
+ OUT_INTERVAL    = 'days=1.',
+ TIMEZONE        = 'UTC',
+ ZERO_TIME       = '2009-04-15 00:00:00'
+ /
+
+
+
+
+

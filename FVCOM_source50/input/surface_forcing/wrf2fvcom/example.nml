@@ -1,0 +1,15 @@
+
+
+&NML_WRF2FVCOM
+ WRF_IN_FILE = '/path/and/file.nc'
+ WRF_OUT_FILE = '/path/and/prefix'
+ OUT_FILE_TYPE = 'both' or 'binary' or 'netcdf'
+ GRID_FILE     = '/path/and/file.dat'
+ GRID_FILE_UNITS = 'meters'
+ PROJECTION_REFERENCE = 'nad83:1802'
+ DATE_FORMAT     = 'YMD'                                                
+ START_DATE      = '2007-01-01 00:00:00'                     
+ END_DATE        = '2007-02-01 00:00:00.00000'
+ OUT_INTERVAL    = 'seconds=3600.0' or 'days=1.2'  
+ ZERO_TIME       = '2007-01-01 00:00:00.00000'
+ /

@@ -1,0 +1,2 @@
+mod_fvcom2gnome.o : mod_fvcom2gnome.F 
+main.o : main.F 

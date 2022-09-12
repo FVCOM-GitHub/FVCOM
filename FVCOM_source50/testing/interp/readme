@@ -1,0 +1,8 @@
+This is a test program folder for the interpolation module.
+
+The Bilinear (curvilinear) method is a generalized aproach to bilinear interopolation intended to work on gridded data that is not strictly regular. The method uses simple algebra for the equation of a line to caluculate intercepts on the edges of a cell, interpolating allong the top and bottom of a cell first, then between these points to the data location. If the point is outside the boundaries of the gridded domain, an attempt is made to set the value from the nearest edge. When a land mask is applied, the situation is more complicated. Depending on the number of nodes missing from a cell which contains data, the value is set to be as consistent as possible with surrounding data. For a non masked data set, a contineous solution is gaurenteed, when a mask is applied the masked region may show some disjointed solutions.
+
+
+The QUAD method is used for scattered observation data. It is relatively fast and attempts to get a result balance between the closest values and values from different directions, using 2 values from each quadrant. This can create some discontinuities in the result. Picking an appropriate rzero scaling factor is very important!
+
+David Stuebe
