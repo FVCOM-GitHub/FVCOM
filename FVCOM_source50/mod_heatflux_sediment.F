@@ -73,8 +73,8 @@
    
    HEATFLUX_SEDIMENT_ON     = .FALSE.
    MUD_INITIAL_TEMP_FILE    = "none"
-   VOLUMETRIC_HEAT_CAPACITY = 3.65e+6_SP     !unit = J/(m**3*K)
-   THERMAL_DIFFUSIVITY      = 0.38e-6_SP     !unit = m**2/s
+   VOLUMETRIC_HEAT_CAPACITY = 3.65_SP     !unit = J/(m**3*K)*e+6
+   THERMAL_DIFFUSIVITY      = 0.38_SP     !unit = m**2/s*e-6
    EFFECTIVE_THICKNESS      = 0.01           !unit = m
    CRITICAL_DEPTH           = 1.0            !unit = m   
    SEDIMENT_TEMPERATURE     = 10.0           !unit = degree
@@ -131,7 +131,7 @@
     MVHC(1) = THERMAL_DIFFUSIVITY
 !    EFFECTIVE_THICKNESS
 !    CRITICAL_DEPTH
-    FMST2(:,1) = SEDIMENT_TEMPERATURE
+!    FMST2(:,1) = SEDIMENT_TEMPERATURE
    
     if(DBG_SET(dbg_sbr)) &
          & write(IPT,*) "Subroutine Ends: name_list_read_heatflux_sediment;"    
@@ -208,6 +208,13 @@
   REAL(SP) :: AAA,BBB,KTEM,KAIRT,KSST,EVAPS,EVAPS1,EVAPS2,EVAPS3,EVAPS4,EVAPA,DHAIRTE,DHRETHU, &
               CLOUDF,DHCLOUD,LONGHEAT,STBOC,EMIS,CONDHEAT,DENAIR,CONHC,ZDIMM
 ! ============================================================================|   
+
+  IF(.NOT.ALLOCATED(FMST1))ALLOCATE(FMST1(M,50))
+  IF(.NOT.ALLOCATED(FMST2))ALLOCATE(FMST2(M,50))
+  IF(.NOT.ALLOCATED(NMST)) ALLOCATE(NMST(M,50))
+  IF(.NOT.ALLOCATED(WHEAT))ALLOCATE(WHEAT(M))
+  IF(.NOT.ALLOCATED(WHEAT1))ALLOCATE(WHEAT1(M))       !,NMST(M,50))
+
 
 
 !
