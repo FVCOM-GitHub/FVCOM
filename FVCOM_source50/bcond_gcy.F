@@ -94,6 +94,7 @@
 
    INTEGER  I,J,K,I1,I2,J1,J2,II,L1,L2,IERR
    INTEGER  cdx,ndx,K_RK
+   LOGICAL  finish
 
 
   if(dbg_set(dbg_sbr)) write(ipt,*) "Start: bcond_gcy: ",idx
@@ -251,8 +252,7 @@
 !==============================================================================|
    CASE(2) !External Mode Velocity Boundary Conditions                         |
 !==============================================================================|
-
-   DO I=1,N
+    DO I=1,N
 
 !
 !--2 SOLID BOUNDARY EDGES------------------------------------------------------|
@@ -270,39 +270,40 @@
 !
 !--1 SOLID BOUNDARY EDGE-------------------------------------------------------|
 !
-   IF(ISBCE(I) == 1) THEN
-     ALPHA1=ALPHA(I)
-     IF(NUMQBC > 0) THEN
-       IF(RIVER_INFLOW_LOCATION == 'node') THEN
-         DO J=1,NUMQBC
-           I1=INODEQ(J)
-           J1=NBVE(I1,1)
-           J2=NBVE(I1,NTVE(I1))
-           IF((I == J1).OR.(I == J2)) THEN
-             UNTMP=UAF(I)*COS(ANGLEQ(J))+VAF(I)*SIN(ANGLEQ(J))
-             VNTMP=-UAF(I)*SIN(ANGLEQ(J))+VAF(I)*COS(ANGLEQ(J))
-             UNTMP=MAX(UNTMP,0.0_SP)
-             UAF(I)=UNTMP*COS(ANGLEQ(J))-VNTMP*SIN(ANGLEQ(J))
-             VAF(I)=UNTMP*SIN(ANGLEQ(J))+VNTMP*COS(ANGLEQ(J))
-               GOTO 21
-               END IF
-             END DO
-            ELSE IF(RIVER_INFLOW_LOCATION == 'edge') THEN
-             DO J=1,NUMQBC
-               J1=ICELLQ(J)
-               IF(I == J1) THEN
+      IF(ISBCE(I) == 1) THEN
+        ALPHA1=ALPHA(I)
+        finish=.false.
+        IF(NUMQBC > 0) THEN
+          IF(RIVER_INFLOW_LOCATION == 'node') THEN
+            DO J=1,NUMQBC
+              I1=INODEQ(J)
+              J1=NBVE(I1,1)
+              J2=NBVE(I1,NTVE(I1))
+              IF((I == J1).OR.(I == J2)) THEN
                 UNTMP=UAF(I)*COS(ANGLEQ(J))+VAF(I)*SIN(ANGLEQ(J))
                 VNTMP=-UAF(I)*SIN(ANGLEQ(J))+VAF(I)*COS(ANGLEQ(J))
                 UNTMP=MAX(UNTMP,0.0_SP)
                 UAF(I)=UNTMP*COS(ANGLEQ(J))-VNTMP*SIN(ANGLEQ(J))
                 VAF(I)=UNTMP*SIN(ANGLEQ(J))+VNTMP*COS(ANGLEQ(J))
-               GOTO 21
-               END IF
-             END DO
-           END IF
+                finish=.true.
+              END IF
+            END DO
+          ELSE IF(RIVER_INFLOW_LOCATION == 'edge') THEN
+            DO J=1,NUMQBC
+              J1=ICELLQ(J)
+              IF(I == J1) THEN
+                UNTMP=UAF(I)*COS(ANGLEQ(J))+VAF(I)*SIN(ANGLEQ(J))
+                VNTMP=-UAF(I)*SIN(ANGLEQ(J))+VAF(I)*COS(ANGLEQ(J))
+                UNTMP=MAX(UNTMP,0.0_SP)
+                UAF(I)=UNTMP*COS(ANGLEQ(J))-VNTMP*SIN(ANGLEQ(J))
+                VAF(I)=UNTMP*SIN(ANGLEQ(J))+VNTMP*COS(ANGLEQ(J))
+                finish=.true.
+              END IF
+            END DO
+          END IF
+        END IF
 
-           END IF
-
+        IF(.not. finish)THEN
 !Q&C< commented on 06/22/04
 !           UI= UAF(I)*(SIN(ALPHA1))**2-VAF(I)*SIN(ALPHA1)*COS(ALPHA1)
 !           VI=-UAF(I)*SIN(ALPHA1)*COS(ALPHA1)+VAF(I)*(COS(ALPHA1))**2
@@ -317,10 +318,9 @@
 !           UAS(I)=UAF(I)
 !           VAS(I)=VAF(I)
 #          endif
-
-21        CONTINUE
-          END IF
-       END DO
+        END IF
+      END IF
+    END DO
 
 
 !==============================================================================|
@@ -331,8 +331,8 @@
 !   UF(LISBCE_3(1:NISBCE_3),1:KBM1) = 0.
 !   VF(LISBCE_3(1:NISBCE_3),1:KBM1) = 0.
 
-       do i= 1, n
-         do k =1, kbm1
+    do i= 1, n
+      do k =1, kbm1
 !Q&C< commented on 06/22/04
 !          if(isbce(i).eq.3) then
 !           uf(i,k)=0.0_SP
@@ -340,41 +340,43 @@
 !          end if
 !Q&C> 06/22/04
 
-          if(isbce(i).eq.1) then
+        if(isbce(i).eq.1) then
           alpha1=alpha(i)
+          finish=.false.
           if(numqbc.ge.1) then
-          if(river_inflow_location.eq.'node') then
-            do j=1,numqbc
-              i1=inodeq(j)
-              j1=nbve(i1,1)
-              j2=nbve(i1,ntve(i1))
-              if((i.eq.j1).or.(i.eq.j2)) then
-               untmp=uf(i,k)*cos(angleq(j))+vf(i,k)*sin(angleq(j))
-               vntmp=-uf(i,k)*sin(angleq(j))+vf(i,k)*cos(angleq(j))
-               untmp=max(untmp,0.0_SP)
-               uf(i,k)=untmp*cos(angleq(j))-vntmp*sin(angleq(j))
-               vf(i,k)=untmp*sin(angleq(j))+vntmp*cos(angleq(j))
-              goto 31
-              end if
-            end do
-           else if(river_inflow_location.eq.'edge') then
-            do j=1,numqbc
-              j1=icellq(j)
-              if(i.eq.j1) then
-               untmp=uf(i,k)*cos(angleq(j))+vf(i,k)*sin(angleq(j))
-               vntmp=-uf(i,k)*sin(angleq(j))+vf(i,k)*cos(angleq(j))
-               untmp=max(untmp,0.0_SP)
-               uf(i,k)=untmp*cos(angleq(j))-vntmp*sin(angleq(j))
-               vf(i,k)=untmp*sin(angleq(j))+vntmp*cos(angleq(j))
-              goto 31
-              end if
-            end do
-           else
-             print*, 'river_inflow_location not correct'
-             call pstop
-          end if
+            if(river_inflow_location.eq.'node') then
+              do j=1,numqbc
+                i1=inodeq(j)
+                j1=nbve(i1,1)
+                j2=nbve(i1,ntve(i1))
+                if((i.eq.j1).or.(i.eq.j2)) then
+                  untmp=uf(i,k)*cos(angleq(j))+vf(i,k)*sin(angleq(j))
+                  vntmp=-uf(i,k)*sin(angleq(j))+vf(i,k)*cos(angleq(j))
+                  untmp=max(untmp,0.0_SP)
+                  uf(i,k)=untmp*cos(angleq(j))-vntmp*sin(angleq(j))
+                  vf(i,k)=untmp*sin(angleq(j))+vntmp*cos(angleq(j))
+                  finish=.true.
+                end if
+              end do
+            else if(river_inflow_location.eq.'edge') then
+              do j=1,numqbc
+                j1=icellq(j)
+                if(i.eq.j1) then
+                  untmp=uf(i,k)*cos(angleq(j))+vf(i,k)*sin(angleq(j))
+                  vntmp=-uf(i,k)*sin(angleq(j))+vf(i,k)*cos(angleq(j))
+                  untmp=max(untmp,0.0_SP)
+                  uf(i,k)=untmp*cos(angleq(j))-vntmp*sin(angleq(j))
+                  vf(i,k)=untmp*sin(angleq(j))+vntmp*cos(angleq(j))
+                  finish=.true.
+                end if
+              end do
+            else
+              print*, 'river_inflow_location not correct'
+              call pstop
+            end if
           end if
 
+          IF(.not. finish)THEN
 !Q&C< commented on 06/22/04
 !          ui= uf(i,k)*(sin(alpha1))**2-vf(i,k)*sin(alpha1)*cos(alpha1)
 !          vi=-uf(i,k)*sin(alpha1)*cos(alpha1)+vf(i,k)*(cos(alpha1))**2
@@ -390,11 +392,10 @@
 !           vs(i,k)=vf(i,k)
 #         endif
 !Q&C> 06/22/04
-
-31        continue
-          end if
-         end do
-       end do
+          END IF
+        end if
+      end do
+    end do
 
 
 
@@ -411,49 +412,51 @@
 !   U(LISBCE_3(1:NISBCE_3),1:KBM1) = 0.
 !   V(LISBCE_3(1:NISBCE_3),1:KBM1) = 0.
 
-       do i= 1, n
-         do k =1, kbm1
+    do i= 1, n
+      do k =1, kbm1
 !Q&C< commented on 06/22/04
 !          if(isbce(i).eq.3) then
 !          u(i,k)=0.0_SP
 !          v(i,k)=0.0_SP
 !          end if
 !Q&C> 06/22/04
-          if(isbce(i).eq.1) then
+        if(isbce(i).eq.1) then
           alpha1=alpha(i)
+          finish=.false.
           if(numqbc.ge.1) then
-          if(river_inflow_location.eq.'node') then
-            do j=1,numqbc
-              i1=inodeq(j)
-              j1=nbve(i1,1)
-              j2=nbve(i1,ntve(i1))
-              if((i.eq.j1).or.(i.eq.j2)) then
-               untmp=u(i,k)*cos(angleq(j))+v(i,k)*sin(angleq(j))
-               vntmp=-u(i,k)*sin(angleq(j))+v(i,k)*cos(angleq(j))
-               untmp=max(untmp,0.0_SP)
-               u(i,k)=untmp*cos(angleq(j))-vntmp*sin(angleq(j))
-               v(i,k)=untmp*sin(angleq(j))+vntmp*cos(angleq(j))
-              goto 51
-              end if
-            end do
-           else if(river_inflow_location.eq.'edge') then
-            do j=1,numqbc
-              j1=icellq(j)
-              if(i.eq.j1) then
-               untmp=u(i,k)*cos(angleq(j))+v(i,k)*sin(angleq(j))
-               vntmp=-u(i,k)*sin(angleq(j))+v(i,k)*cos(angleq(j))
-               untmp=max(untmp,0.0_SP)
-               u(i,k)=untmp*cos(angleq(j))-vntmp*sin(angleq(j))
-               v(i,k)=untmp*sin(angleq(j))+vntmp*cos(angleq(j))
-              goto 51
-              end if
-            end do
-           else
-             print*, 'river_inflow_location not correct'
-             call pstop
-          end if
+            if(river_inflow_location.eq.'node') then
+              do j=1,numqbc
+                i1=inodeq(j)
+                j1=nbve(i1,1)
+                j2=nbve(i1,ntve(i1))
+                if((i.eq.j1).or.(i.eq.j2)) then
+                  untmp=u(i,k)*cos(angleq(j))+v(i,k)*sin(angleq(j))
+                  vntmp=-u(i,k)*sin(angleq(j))+v(i,k)*cos(angleq(j))
+                  untmp=max(untmp,0.0_SP)
+                  u(i,k)=untmp*cos(angleq(j))-vntmp*sin(angleq(j))
+                  v(i,k)=untmp*sin(angleq(j))+vntmp*cos(angleq(j))
+                  finish=.true.
+                end if
+              end do
+            else if(river_inflow_location.eq.'edge') then
+              do j=1,numqbc
+                j1=icellq(j)
+                if(i.eq.j1) then
+                  untmp=u(i,k)*cos(angleq(j))+v(i,k)*sin(angleq(j))
+                  vntmp=-u(i,k)*sin(angleq(j))+v(i,k)*cos(angleq(j))
+                  untmp=max(untmp,0.0_SP)
+                  u(i,k)=untmp*cos(angleq(j))-vntmp*sin(angleq(j))
+                  v(i,k)=untmp*sin(angleq(j))+vntmp*cos(angleq(j))
+                  finish=.true.
+                end if
+              end do
+            else
+              print*, 'river_inflow_location not correct'
+              call pstop
+            end if
           end if
 
+          IF(.not. finish)THEN
 !Q&C< commented on 06/22/04
 !          ui= u(i,k)*(sin(alpha1))**2-v(i,k)*sin(alpha1)*cos(alpha1)
 !          vi=-u(i,k)*sin(alpha1)*cos(alpha1)+v(i,k)*(cos(alpha1))**2
@@ -469,11 +472,10 @@
 !          vs(i,k)=v(i,k)
 #         endif
 !Q&C> 06/22/04
-
-51        continue
-          end if
-         end do
-       end do
+          END IF
+        end if
+      end do
+    end do
 
 
 
@@ -776,5 +778,3 @@
 
    END SUBROUTINE BCOND_GCY
 !==============================================================================|
-
-

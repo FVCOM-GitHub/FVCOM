@@ -12,18 +12,18 @@ SUBROUTINE DOM
    USE MOD_DETRITUS
    USE MOD_BACTERIA
    USE MOD_DOM
-   
+
    IMPLICIT NONE
    INTEGER  :: I,K,J,I1,I2
-   REAL(SPP) :: SOURCE 
+   REAL(SPP) :: SOURCE
 !=======================================================================
 !  BEGINNING EXECUTABLE
 !=======================================================================
 
-      DO 10 K=1,KBVM1
+      DO K=1,KBVM1
         DO J=1,NNM
           AGE_DOM(J)=ALPHA_DOM(J)*FVDOM(K,J)
-        END DO 
+        END DO
         DO J=1,NNM
           SOURCE=0.
           SOURCE=SOURCE+AGE_DOM(J-1)-AGE_DOM(J)             !AGEING GAIN
@@ -46,13 +46,13 @@ SUBROUTINE DOM
             END DO
             DO I2=1,NNB
               SOURCE=SOURCE+ALPHA_ZBDOM(J,I2,I1)*G_B(K,I2,I1)
-            END DO         
+            END DO
           END DO !I1=1,NNZ
           DO I1=1,NNB
             SOURCE=SOURCE-UPTAKE_DOM(K,J,I1)
           END DO
           BIO_DOM(K,J)=BIO_DOM(K,J)+SOURCE*T_STEP
         END DO
- 10   CONTINUE
+      ENDDO
       RETURN
 END SUBROUTINE DOM

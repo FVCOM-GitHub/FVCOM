@@ -1179,7 +1179,9 @@ End Subroutine Setup_Sed
     allocate(sed(i)%eflx(0:mt     ))      ; sed(i)%eflx = 0.0
     allocate(sed(i)%dflx(0:mt     ))      ; sed(i)%dflx = 0.0
     allocate(sed(i)%cdis(500      ))      ; sed(i)%cdis = 0.0
-    allocate(sed(i)%cflx(tmp2,kbm1))      ; sed(i)%cflx = 0.0
+!JQI NOV2021
+    allocate(sed(i)%cflx(tmp3,kbm1))      ; sed(i)%cflx = 0.0 ! KURT GLAESEMANN - remove +1 from dimension
+!JQI NOV2021
     allocate(sed(i)%cobc(tmp3     ))      ; sed(i)%cobc = 0.0
     allocate(sed(i)%depm(0:mt     ))      ; sed(i)%depm = 0.0
 ! Jianzhong Ge 03/05/2013

@@ -481,8 +481,21 @@ MODULE NON_HYDRO
 
       VISCOF=(FACT*0.5_SP*(VISCOFF(IA)*NN_HVC(IA)+VISCOFF(IB)*NN_HVC(IB)) + FM1*0.5_SP*(NN_HVC(IA)+NN_HVC(IB)))/HPRNU
 
-      TXX=0.5_SP*(PWPX(IA)+PWPX(IB))*VISCOF
-      TYY=0.5_SP*(PWPY(IA)+PWPY(IB))*VISCOF
+!JQI NOV2021
+# if defined (WET_DRY)
+	   !Added by Adi Nugraha
+	   !Allow no diffusive flux between a wet node and a dry node (Wen Long and Tarang Khangaonkar)
+	   IF(ISWETN(IA)==1.AND.ISWETN(IB)==1)THEN
+# endif 	
+        TXX=0.5_SP*(PWPX(IA)+PWPX(IB))*VISCOF
+        TYY=0.5_SP*(PWPY(IA)+PWPY(IB))*VISCOF
+# if defined (WET_DRY)			   
+	   ELSE
+		TXX = 0.0_SP
+		TYY = 0.0_SP
+	   ENDIF
+# endif
+!JQI NOV2021
 
       FXX=-DT1(I1)*DZZ1(I1,K-1)*TXX*DLTYE(I)
       FYY= DT1(I1)*DZZ1(I1,K-1)*TYY*DLTXE(I)
@@ -2789,15 +2802,15 @@ MODULE NON_HYDRO
     if(b(1).eq.0.)pause 'tridag: rewrite equations'
     bet=b(1)
     u(1)=r(1)/bet
-    do 11 j=2,n
+    do j=2,n
       gam(j)=c(j-1)/bet
       bet=b(j)-a(j)*gam(j)
       if(bet.eq.0.)pause 'tridag failed'
       u(j)=(r(j)-a(j)*u(j-1))/bet
-11  continue
-    do 12 j=n-1,1,-1
+    enddo
+    do j=n-1,1,-1
       u(j)=u(j)-gam(j+1)*u(j+1)
-12  continue
+    enddo
   return
   END SUBROUTINE TRIDAG
 

@@ -101,6 +101,10 @@ SUBROUTINE INTERNAL_STEP
 # if defined (PWP)
   USE MOD_PWP
 # endif
+# if defined (PROJ) && !defined (SPHERICAL)
+  USE MOD_VECTOR_PROJECTION  ! Siqi Li, 20221005
+# endif
+
   IMPLICIT NONE
   INTEGER :: I,J,K
   REAL(SP) :: UTMP,VTMP
@@ -110,6 +114,9 @@ SUBROUTINE INTERNAL_STEP
 # if defined (SEDIMENT)
   REAL(DP) :: DPDAYS
   REAL(SP) :: SPDAYS
+# endif
+# if defined (WAVE_ONLY)
+  LOGICAL :: wa_on
 # endif
   integer :: i1,i2
 
@@ -494,12 +501,13 @@ SUBROUTINE INTERNAL_STEP
 # endif
 # if defined (DATA_ASSIM)
   END IF
-# endif     
-  
+# endif
+
 # endif
 
 # if defined (WAVE_ONLY)
-  goto 5501
+  wa_on = .false.
+  IF(wa_on) THEN
 # endif
 
 # if !defined(ONE_D_MODEL) && !defined (SEMI_IMPLICIT)
@@ -1759,6 +1767,15 @@ SUBROUTINE INTERNAL_STEP
   !==============================================================================!
   U = UF
   V = VF
+
+# if defined (PROJ) && !defined (SPHERICAL)
+  !==============================================================================!
+  !     UV-PROJECTION                                                            !
+  !==============================================================================!
+  ! Siqi Li, 20221005
+  CALL UV_PROJECTION
+# endif
+
   !==============================================================================!
   !    PERFORM DATA EXCHANGE FOR ELEMENT BASED INFORMATION AT PROC BNDRIES       |
   !==============================================================================!
@@ -1821,7 +1838,7 @@ SUBROUTINE INTERNAL_STEP
 # endif
 
 # if defined (WAVE_ONLY)
-   5501 continue
+  END IF
 # endif
 
 !!$  CALL DUMP_PROBE_DATA 

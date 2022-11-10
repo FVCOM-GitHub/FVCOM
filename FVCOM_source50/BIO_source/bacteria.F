@@ -12,7 +12,7 @@ SUBROUTINE BACTERIA
    USE MOD_DETRITUS
    USE MOD_BACTERIA
    USE MOD_DOM
-   
+
    IMPLICIT NONE
    INTEGER  :: I,K,J,I1,I2
    REAL(SPP):: TEMPP, TRANS,TRANS1,DOC,DON,N2CDOMM,EFFIDOM_MEAN,PSI_DON_NH4
@@ -20,7 +20,7 @@ SUBROUTINE BACTERIA
 !=======================================================================
 !  BEGINNING EXECUTABLE
 !=======================================================================
-        DO 10 K=1,KBVM1  !vertical
+    DO K=1,KBVM1  !vertical
 !******  Determine availability of all biological pool *********
       TEMPP=T_BIO(K)
       DO J=1,NNB
@@ -76,13 +76,13 @@ SUBROUTINE BACTERIA
           TRANS=TRANS+PSI_DON_NH4
           UPTAKE_BN(K,1,J)=U_B(J)*PSI_DON_NH4/TRANS
           DO I1=1,NNM
-            UPTAKE_DOM(K,I1,J)=U_B(J)*SIGMA_DOM(I1,J)*FVDOM(K,I1)*N2CDOM(1,I1)/TRANS            
+            UPTAKE_DOM(K,I1,J)=U_B(J)*SIGMA_DOM(I1,J)*FVDOM(K,I1)*N2CDOM(1,I1)/TRANS
           END DO
-        END IF  !IF (DOCDON) 
+        END IF  !IF (DOCDON)
         RESPIRATION_B(K,J)=R_B(J)*FVB(K,J)*EXP(RP_T*(TEMPP-T_OPTB(J)))
 !**********************   BACTERIA SOURCE AND SINK TERMS   ***************
         BIO_B(K,J)=BIO_B(K,J)-RESPIRATION_B(K,J)*T_STEP        !RESPIRATION
-        DO I1=1,NNM           
+        DO I1=1,NNM
           BIO_B(K,J)=BIO_B(K,J) &                              !DOM UPTAKE
                   +UPTAKE_DOM(K,I1,J)*EFFIDOM(I1,J)*T_STEP
         END DO
@@ -92,7 +92,7 @@ SUBROUTINE BACTERIA
                   +UPTAKE_BN(K,I1,J)*EFFIN(J,I1)*T_STEP/N2CB(I1,J)
           END IF
         END DO
-        DO I1=1,NND           
+        DO I1=1,NND
           BIO_B(K,J)=BIO_B(K,J) &                              !DOM UPTAKE
                   +UPTAKE_BD(K,I1,J)*EFFIBD(I1,J)*T_STEP
         END DO
@@ -101,6 +101,6 @@ SUBROUTINE BACTERIA
                   -G_B(K,J,I1)*T_STEP
         END DO
       END DO !J=1,NNB
- 10   CONTINUE
-      RETURN
+    ENDDO
+    RETURN
 END SUBROUTINE BACTERIA

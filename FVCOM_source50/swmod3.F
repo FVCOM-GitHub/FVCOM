@@ -283,146 +283,147 @@
       if(i_print >0) write(i_out,*)                              &
                      'Z_FILEIO: Incorrect value for IUFIND:',iufind
       iostat = -5
-      goto 9999
-    end if
+    ELSE
+      DO WHILE(.TRUE.)
 !
-    if ( PARLL .and. iunit <= 0 ) then
-       ilpos = index ( filename, ' ' )-1
-       write(filename(ilpos+1:ilpos+4),33) INODE
-33     format('-',i3.3)
-    end if
+        if ( PARLL .and. iunit <= 0 ) then
+          ilpos = index ( filename, ' ' )-1
+          write(filename(ilpos+1:ilpos+4),33) INODE
+33            format('-',i3.3)
+        end if
 !
 !  check input argument QUAL
 !
-    if(i_print>=1) write(i_out,*) 'Z_FILEIO/A:',trim(filename),' ',  &
-                   qual,iunit,iostat
+        if(i_print>=1) write(i_out,*) 'Z_FILEIO/A:',trim(filename),' ',  &
+                    qual,iunit,iostat
 !
-    if (index('ORSUD',qual(1:1)) ==0 .or.                            &
-        index('FUB',qual(2:2)) ==0) then
-      if(i_print > 0) write(i_out,*) 'Incorrect file qualifier'
-      iostat = -1
-    else
-      if(qual(1:1) == 'O') cstat = 'old'
-      if(qual(1:1) == 'R') cstat = 'replace'
-      if(qual(1:1) == 'S') cstat = 'scratch'
-      if(qual(1:1) == 'U') cstat = 'unknown'
-      if(qual(1:1) == 'D') cstat = 'delete'
+        if (index('ORSUD',qual(1:1)) ==0 .or.                            &
+            index('FUB',qual(2:2)) ==0) then
+          if(i_print > 0) write(i_out,*) 'Incorrect file qualifier'
+          iostat = -1
+        else
+          if(qual(1:1) == 'O') cstat = 'old'
+          if(qual(1:1) == 'R') cstat = 'replace'
+          if(qual(1:1) == 'S') cstat = 'scratch'
+          if(qual(1:1) == 'U') cstat = 'unknown'
+          if(qual(1:1) == 'D') cstat = 'delete'
 !
-      if(qual(2:2) == 'F') cform = 'formatted'
-      if(qual(2:2) == 'U') cform = 'unformatted'
-      if(qual(2:2) == 'B') cform = 'binary'          ! extension to FORTRAN 95 standard
-      if(qual(2:2) == 'R') cform = 'unformatted'
+          if(qual(2:2) == 'F') cform = 'formatted'
+          if(qual(2:2) == 'U') cform = 'unformatted'
+          if(qual(2:2) == 'B') cform = 'binary'          ! extension to FORTRAN 95 standard
+          if(qual(2:2) == 'R') cform = 'unformatted'
 !
 !  Check if file exists
 !
-      inquire(file=filename,exist=lexist)
-      if(i_print >=2) write(i_out,*) 'Z_FILEIO  file exists?:',       &
+          inquire(file=filename,exist=lexist)
+          if(i_print >=2) write(i_out,*) 'Z_FILEIO  file exists?:',       &
                        trim(filename),':',lexist
 !
 !  delete file if it exists and qual == 'D'
 !
-      if(lexist .and. qual(1:1)=='D') then
-        inquire(file=filename,opened=lopen)
-        if(lopen) then
-          inquire(file=filename,number=junit)
-        else
-          if(iufind == 1) call z_flunit(iunit,iuerr)
-          junit = iunit
-          if(junit > 0) then
-            open(file=filename,unit=junit,form=cform,iostat=iostat)
-            if(iostat/=0) then
-              iostat = -4
-              goto 9999
+          if(lexist .and. qual(1:1)=='D') then
+            inquire(file=filename,opened=lopen)
+            if(lopen) then
+              inquire(file=filename,number=junit)
+            else
+              if(iufind == 1) call z_flunit(iunit,iuerr)
+              junit = iunit
+              if(junit > 0) then
+                open(file=filename,unit=junit,form=cform,iostat=iostat)
+                if(iostat/=0) then
+                  iostat = -4
+                  EXIT
+                end if
+              end if
             end if
+            close(junit,status=cstat)
+            EXIT
           end if
-        end if
-        close(junit,status=cstat)
-        goto 9999
-      end if
 !
 !  if the file exists, check if it is opened
 !
-      if(lexist) then
-        if(i_print >=2) write(i_out,*) 'Z_FILEIO: File exists:',   &
+          if(lexist) then
+            if(i_print >=2) write(i_out,*) 'Z_FILEIO: File exists:',   &
                         trim(filename)
-        inquire(file=filename,opened=lopen)
-        if(lopen) then
-          if(i_print >=2) write(i_out,*) 'Z_FILEIO: File is opened:',  &
+            inquire(file=filename,opened=lopen)
+            if(lopen) then
+              if(i_print >=2) write(i_out,*) 'Z_FILEIO: File is opened:',  &
                           trim(filename)
 !
 !  determine unit number to which this file is connected
 !  and assign it to the output number
 !
-          inquire(file=filename,number=junit)
-          if(i_print >=2) write(i_out,*)                              &
+              inquire(file=filename,number=junit)
+              if(i_print >=2) write(i_out,*)                              &
                          'Z_FILEIO: File is connected to unit:', junit
-          iunit = junit
-        else
+              iunit = junit
+            else
 !
 !  if the file exists and not connected to a unit number, search a free unit number
 !
-          if(i_print >=2) write(i_out,*)                             &
+              if(i_print >=2) write(i_out,*)                             &
                      'Z_FILEIO: File is not connected to a unit number'
-          if(iufind==0) then
-            if(i_print >=2) write(i_out,*)                           &
+              if(iufind==0) then
+                if(i_print >=2) write(i_out,*)                           &
                      'Z_FILEIO: Assign user defined unit number:',iunit
-          elseif(iufind==1) then
-            call z_flunit(iunit,iuerr)
-            if(i_print >=2) write(i_out,*)                           &
+              elseif(iufind==1) then
+                call z_flunit(iunit,iuerr)
+                if(i_print >=2) write(i_out,*)                           &
                               'Z_FILEIO: New unit number IUNIT:',iunit
-          end if
-          junit = iunit
+              end if
+              junit = iunit
 !
-          if(junit > 0) then
-            open(file=filename,unit=junit,form=cform,status=cstat)
-          else
-            iostat = -2
-          end if
-        end if
+              if(junit > 0) then
+                open(file=filename,unit=junit,form=cform,status=cstat)
+              else
+                iostat = -2
+              end if
+            end if
 !
 !  the file does not exist, so open it and find a free unit number
 !
-      else
+          else
 !
-        if(i_print>=2) then
-           write(i_out,*) 'Z_FILEIO: File does not exist !'
-           write(i_out,*) 'Z_FILEIO: Qual:',qual(1:1)
-        end if
+            if(i_print>=2) then
+              write(i_out,*) 'Z_FILEIO: File does not exist !'
+              write(i_out,*) 'Z_FILEIO: Qual:',qual(1:1)
+            end if
 !
-        if(index('SRU',qual(1:1)) > 0) then
-          if(iufind==1) then
-            call z_flunit(iunit,iuerr)
-            if(i_print >=1) write(i_out,*)                           &
+            if(index('SRU',qual(1:1)) > 0) then
+              if(iufind==1) then
+                call z_flunit(iunit,iuerr)
+                if(i_print >=1) write(i_out,*)                           &
                             'Z_FILEIO: New unit number IUNIT:',iunit
-          end if
-          junit = iunit
+              end if
+              junit = iunit
 !
 !  open file to IUNIT, if possible
 !
-          if(junit > 0) then
-            open(file=filename,unit=junit,form=cform,iostat=iuerr)
+              if(junit > 0) then
+                open(file=filename,unit=junit,form=cform,iostat=iuerr)
 !
 ! check added 8/2/2003
 !
-            if(iuerr/=0) then
-              iunit = -1
-              iostat = -6
-            end if
-          else
-            iostat = -2
-          end if
+                if(iuerr/=0) then
+                  iunit = -1
+                  iostat = -6
+                end if
+              else
+                iostat = -2
+              end if
 !
 !  file cannot be opened because it does not exist
 !
-        elseif('O'==qual(1:1)) then   ! File should exist
-          if(i_print>=2) write(i_out,*)                            &
-            'Z_FILEIO: File cannot be opened because it does not exist'
-          iostat = -3
+            elseif('O'==qual(1:1)) then   ! File should exist
+              if(i_print>=2) write(i_out,*)                            &
+              'Z_FILEIO: File cannot be opened because it does not exist'
+              iostat = -3
+            end if
+          end if
         end if
-      end if
+        EXIT
+      ENDDO
     end if
-!
-9999 continue
 !
     if(i_print>=1) write(i_out,*) 'Z_FILEIO/Z:',trim(filename),' ',  &
                                   qual,iunit,iostat
@@ -673,18 +674,19 @@
     xl=0.5d0*(x2-x1)
     do i=1,m
       z=cos(3.141592654d0*(i-.25d0)/(n+.5d0))
- 1    continue
-      p1=1.d0
-      p2=0.d0
-      do j=1,n
-        p3=p2
-        p2=p1
-        p1=((2.d0*j-1.d0)*z*p2-(j-1.d0)*p3)/j
-      end do
-      pp=n*(z*p1-p2)/(z*z-1.d0)
-      z1=z
-      z=z1-p1/pp
-      if(abs(z-z1).gt.EPS)goto 1
+      DO WHILE(.TRUE.)
+        p1=1.d0
+        p2=0.d0
+        do j=1,n
+          p3=p2
+          p2=p1
+          p1=((2.d0*j-1.d0)*z*p2-(j-1.d0)*p3)/j
+        end do
+        pp=n*(z*p1-p2)/(z*z-1.d0)
+        z1=z
+        z=z1-p1/pp
+        if(abs(z-z1).le.EPS) EXIT
+      ENDDO
       x(i)=xm-xl*z
       x(n+1-i)=xm+xl*z
       w(i)=2.d0*xl/((1.d0-z*z)*pp*pp)
@@ -884,98 +886,100 @@
 !
 !  check number of points of input array
 !
-    if(n1==1) then
-      y2 = y1(1)
-      goto 9999
-    end if
+    DO WHILE(.TRUE.)
+      if(n1==1) then
+        y2 = y1(1)
+        EXIT
+      end if
 !
 !  check minimum and maximum data values
 !
-    xmin1 = minval(x1)
-    xmax1 = maxval(x1)
-    xmin2 = minval(x2)
-    xmax2 = maxval(x2)
+      xmin1 = minval(x1)
+      xmax1 = maxval(x1)
+      xmin2 = minval(x2)
+      xmax2 = maxval(x2)
 !
-    if (abs(xmin1-xmax1) < eps .or. abs(x1(1)-x1(n1)) < eps) then
-      ierr = 2
-      goto 9999
-    end if
+      if (abs(xmin1-xmax1) < eps .or. abs(x1(1)-x1(n1)) < eps) then
+        ierr = 2
+        EXIT
+      end if
 !
-    if ((abs(xmin2-xmax2) < eps .or. abs(x2(1)-x2(n2)) < eps) .and.  &
+      if ((abs(xmin2-xmax2) < eps .or. abs(x2(1)-x2(n2)) < eps) .and.  &
          n2 > 1) then
-      ierr = 3
-      goto 9999
-    end if
+        ierr = 3
+        EXIT
+      end if
 !
 ! check input data for monotonicity
 !
-    if(x1(1) < x1(n1)) then             ! data increasing
-      do i1=1,n1-1
-        if(x1(i1) > x1(i1+1)) then
-          ierr=1
-          write(*,*) 'z_intp1: i1 x1(i1) x1(i1+1):',i1,x1(i1),x1(i1+1)
-          goto 9999
-        end if
-      end do
+      if(x1(1) < x1(n1)) then             ! data increasing
+        do i1=1,n1-1
+          if(x1(i1) > x1(i1+1)) then
+            ierr=1
+            write(*,*) 'z_intp1: i1 x1(i1) x1(i1+1):',i1,x1(i1),x1(i1+1)
+            EXIT
+          end if
+        end do
 !
-      do i2=1,n2-1
-        if(x2(i2) > x2(i2+1)) then
-          ierr=ierr+10
-          write(*,*) 'z_intp1: i2 x2(i2) x2(i2+1):',i2,x2(i2),x2(i2+1)
-          goto 9999
-        end if
-      end do
+        do i2=1,n2-1
+          if(x2(i2) > x2(i2+1)) then
+            ierr=ierr+10
+            write(*,*) 'z_intp1: i2 x2(i2) x2(i2+1):',i2,x2(i2),x2(i2+1)
+            EXIT
+          end if
+        end do
 !
-    else                                 ! data decreasing
-      do i1=1,n1-1
-        if(x1(i1) < x1(i1+1)) then
-          ierr=2
-          write(*,*) 'z_intp1: i1 x1(i1) x1(i1+1):',i1,x1(i1),x1(i1+1)
-          goto 9999
-        end if
-      end do
+      else                                 ! data decreasing
+        do i1=1,n1-1
+          if(x1(i1) < x1(i1+1)) then
+            ierr=2
+            write(*,*) 'z_intp1: i1 x1(i1) x1(i1+1):',i1,x1(i1),x1(i1+1)
+            EXIT
+          end if
+        end do
 !
-      do i2=1,n2-1
-        if(x2(i2) < x2(i2+1)) then
-          ierr=ierr + 20
-          write(*,*) 'z_intp1: i2 x2(i2) x2(i2+1):',i2,x2(i2),x2(i2+1)
-          goto 9999
-        end if
-      end do
-    end if
+        do i2=1,n2-1
+          if(x2(i2) < x2(i2+1)) then
+            ierr=ierr + 20
+            write(*,*) 'z_intp1: i2 x2(i2) x2(i2+1):',i2,x2(i2),x2(i2+1)
+            EXIT
+          end if
+        end do
+      end if
 !
 !------------------------------------------------------------------------------
 ! initialize
 !------------------------------------------------------------------------------
-    if(ierr==0) then
-      i1 = 1
-      s1 = x1(i1)
+      if(ierr==0) then
+        i1 = 1
+        s1 = x1(i1)
 !
-      do i2 = 1,n2
-        s2 = x2(i2)
-        do while (s1 <= s2 .and. i1 < n1)
-          i1 = i1 + 1
-          s1 = x1(i1)
-        end do
+        do i2 = 1,n2
+          s2 = x2(i2)
+          do while (s1 <= s2 .and. i1 < n1)
+            i1 = i1 + 1
+            s1 = x1(i1)
+          end do
 !
 !  special point
 !  choose lowest s1-value if x2(:) < x1(1)
 !
-        if(i1 ==1) then
-          y2(i2) = y1(i1)
-        else
-          ds = s2 - x1(i1-1)
-          fac = ds/(x1(i1)-x1(i1-1))
-          y2(i2) = y1(i1-1) + fac*(y1(i1)-y1(i1-1))
-        end if
+          if(i1 ==1) then
+            y2(i2) = y1(i1)
+          else
+            ds = s2 - x1(i1-1)
+            fac = ds/(x1(i1)-x1(i1-1))
+            y2(i2) = y1(i1-1) + fac*(y1(i1)-y1(i1-1))
+          end if
 !
 ! special case at end: choose s2(n2) > s1(n1), choose last value of y1(1)
 !
-        if(i2==n2 .and. s2>s1) y2(n2) = y1(n1)
-      end do
-    end if
+          if(i2==n2 .and. s2>s1) y2(n2) = y1(n1)
+        end do
+      end if
 !
- 9999 continue
+      EXIT
+    ENDDO
 !
     return
     end subroutine
@@ -1263,6 +1267,7 @@
     integer maxit                     ! maximum number of iteration
     integer luprint                   ! unit of test output
     logical lopen                     ! check if a file is opened
+    logical flag_9000
 
     parameter (maxit = 20)
     external func
@@ -1280,6 +1285,7 @@
 !
     ierr   = 0        ! set error level
     unused =-1.11e30  ! set start value
+    flag_9000 = .FALSE.
 !
     xx1 = x1          ! copy boundaries of interval to local variables
     xx2 = x2
@@ -1317,7 +1323,10 @@
           xm = 0.5*(xl+xh)
           fm = func(xm)
           s = sqrt(fm**2-fl*fh)
-          if(s == 0.) goto 9000
+          if(s == 0.) THEN
+            flag_9000=.TRUE.
+            exit
+          endif
           xnew = xm+(xm-xl)*(sign(1.,fl-fh)*fm/s)
 !
 !           if(luprint>0) write(luprint,'(a,4e13.5)')
@@ -1325,12 +1334,16 @@
 !
           if (abs(xnew-zriddr) <= xacc) then
 !              if(luprint>0) write(luprint,'(a)') 'Z_ROOT2: xnew=zriddr'
-            goto 9000
+            flag_9000=.TRUE.
+            exit
           end if
 !
           zriddr = xnew
           fnew = func(zriddr)
-          if (fnew == 0.) goto 9000
+          if (fnew == 0.) THEN
+            flag_9000=.TRUE.
+            exit
+          endif
 !
           if(sign(fm,fnew) /= fm) then
              xl = xm
@@ -1345,38 +1358,40 @@
              fl = fnew
           else
              ierr = 1
-             goto 9000
+             flag_9000=.TRUE.
+             exit
           endif
 !
-          if(abs(xh-xl) <= xacc) goto 9000
+          if(abs(xh-xl) <= xacc) THEN
+            flag_9000=.TRUE.
+            exit
+          ENDIF
 !
           if(luprint > 0) write(luprint,'(a,i4,5e14.6)')      &
           'Z_ROOT2: iter,x1,x2,|x1-x2|,xacc,z:', iter,xl,xh,  &
            abs(xl-xh),xacc,fnew
 !
        end do
-       ierr = 2
-       if(luprint > 0) write(luprint,'(a)') 'Z_ROOT2: -> ierr=2'
-       goto 9000
+       IF(.not. flag_9000) THEN
+         ierr = 2
+         if(luprint > 0) write(luprint,'(a)') 'Z_ROOT2: -> ierr=2'
+       ENDIF
     else if (fl == 0.) then
       zriddr = xx1
     else if (fh == 0.) then
       zriddr = xx2
     else
       ierr = 3
-      goto 9999
 ! 'root must be bracketed in zriddr'
     endif
 !
- 9000 continue
+    if(ierr .ne. 3) THEN
+      z_root2 = zriddr
 !
-    z_root2 = zriddr
-!
-    if(luprint > 0) write(luprint,'(a,2i3,5e13.5)')                &
+      if(luprint > 0) write(luprint,'(a,2i3,5e13.5)')                &
           'Z_ROOT2: ierr,iter,xl,xh,acc,x0,z0:', ierr,iter,xl,xh,xacc,  &
                                                  z_root2,func(z_root2)
-!
- 9999 continue
+    ENDIF
 !
     return
     end function
@@ -1760,7 +1775,7 @@
     real px,py       ! components of difference k1-k3 wave number
     real pmag        ! magnitude of P-vector
     real pang        ! angle related of P-vector, Pang = atan2(py,px), (radians)
-    real sang        ! angle of symmytry axis of locus, SANG = PANG +/ pi° (radians)
+    real sang        ! angle of symmytry axis of locus, SANG = PANG +/ piï¿½ (radians)
     real xang        ! angle of locus for the case that w1=w3, Xang=atan2(-px,py), (radians)
     real q           ! difference of radian frequencies, used in Resio-Tracy method
     real kmin_loc    ! minimum wave number of locus along symmetry axis
@@ -2157,22 +2172,23 @@
 !------------------------------------------------------------------------------
 ! Check input
 !------------------------------------------------------------------------------
-    if(iq_type<1 .or. iq_type>3) then
-      ierror = 1
-      goto 9999
-    end if
+    DO WHILE(.TRUE.)
+      if(iq_type<1 .or. iq_type>3) then
+        ierror = 1
+        EXIT
+      end if
 !
-    if(iq_grid<1 .or. iq_grid>3) then
-      ierror = 2
-      goto 9999
-    end if
+      if(iq_grid<1 .or. iq_grid>3) then
+        ierror = 2
+        EXIT
+      end if
 !
 !  Retrieve size of spectral grid from input
 !
-    fqmin = sigma(1)/(4.*pih)      ! minimum frequency in Hz
-    fqmax = sigma(nsigma)/(4.*pih) ! maximum frequency in Hz
-    nkq   = nsigma                 ! number of frequencies/wave numbers
-    naq   = ndir                   ! number of directions
+      fqmin = sigma(1)/(4.*pih)      ! minimum frequency in Hz
+      fqmax = sigma(nsigma)/(4.*pih) ! maximum frequency in Hz
+      nkq   = nsigma                 ! number of frequencies/wave numbers
+      naq   = ndir                   ! number of directions
 !
 !  check if directions are given on full circle or in a symmetric sector
 !----------------------------------------------------------------------------
@@ -2180,171 +2196,172 @@
 !  2: compute gap between first and last
 !  3: compare gap with step
 !
-    dstep = dird(2)-dird(1)                          ! directional step
-    dgap = 180.- abs(180.- abs(dird(1)-dird(ndir)))  ! directional gap
+      dstep = dird(2)-dird(1)                          ! directional step
+      dgap = 180.- abs(180.- abs(dird(1)-dird(ndir)))  ! directional gap
 !
 !----------------------------------------------------------------------
-    if(iq_grid==1 .or. iq_grid==2) then
+      if(iq_grid==1 .or. iq_grid==2) then
 !
 !  check if gap equal to step in the case of full circle
 !
-      if(abs(dstep-dgap) < 0.001) then
-        ierror = 31
-        write(iscreen,'(a,i4,2f10.2)') 'XNL_INIT iq_grid dstep dgap:', &
+        if(abs(dstep-dgap) < 0.001) then
+          ierror = 31
+          write(iscreen,'(a,i4,2f10.2)') 'XNL_INIT iq_grid dstep dgap:', &
                                        iq_grid,dstep,dgap
-        goto 9999
-      end if
+          EXIT
+        end if
 !
 !  check if sector is symmetric around zero in the case of sector grid
 !
-      if(abs(dird(1)+dird(ndir)) > 0.01) then
-        write(iscreen,'(a,i4,2f10.2)')                                &
-        'XNL_INIT iq_grid dird(1) dird(n):',iq_grid,dird(1),dird(ndir)
-        ierror = 32
-        goto 9999
+        if(abs(dird(1)+dird(ndir)) > 0.01) then
+          write(iscreen,'(a,i4,2f10.2)')                                &
+          'XNL_INIT iq_grid dird(1) dird(n):',iq_grid,dird(1),dird(ndir)
+          ierror = 32
+          EXIT
+        end if
       end if
-    end if
 !
-    q_dird1 = dird(1)
-    q_dird2 = dird(ndir)
+      q_dird1 = dird(1)
+      q_dird2 = dird(ndir)
 !
 ! assign unit numbers for QUAD related files
 !
 ! If IUFIND=0, fixed prespecified unit numbers must be given
 !    IUFIND=1, the numbers are searched automatically
 !
-    if(iufind==0) then
-      luq_err = 103
-      luq_tst = 104
-      luq_int = 105
-      luq_log = 106
-      luq_prt = 107
-      luq_cfg = 108
-      luq_bqf = 109
-      luq_grd = 110
-      luq_txt = 111
-      luq_loc = 112
-      luq_trf = 113
-      luq_t13 = 114
-      luq_fil = 117
-    end if
+      if(iufind==0) then
+        luq_err = 103
+        luq_tst = 104
+        luq_int = 105
+        luq_log = 106
+        luq_prt = 107
+        luq_cfg = 108
+        luq_bqf = 109
+        luq_grd = 110
+        luq_txt = 111
+        luq_loc = 112
+        luq_trf = 113
+        luq_t13 = 114
+        luq_fil = 117
+      end if
 !
 ! delete old Error file, if it exists
 !
-    tempfile = trim(qbase)//'.err'
-    call z_fileio(tempfile,'DF',iufind,luq_err,iuerr)
-    if(iuerr/=0) then
-      call q_error('e','FILEIO','Problem in deleting error file *.ERR')
-      ierror = 4
-      goto 9999
-    end if
+      tempfile = trim(qbase)//'.err'
+      call z_fileio(tempfile,'DF',iufind,luq_err,iuerr)
+      if(iuerr/=0) then
+        call q_error('e','FILEIO','Problem in deleting error file *.ERR')
+        ierror = 4
+        EXIT
+      end if
 !
 ! create new files, first create logging file
 !
-    tempfile = trim(qbase)//'.log'
-    call z_fileio(tempfile,'UF',iufind,luq_log,iuerr) ! logging
-    tempfile = trim(qbase)//'.prt'
-    call z_fileio(tempfile,'UF',iufind,luq_prt,iuerr) ! general print file
-    tempfile = trim(qbase)//'.tst'
-    call z_fileio(tempfile,'UF',iufind,luq_tst,iuerr) ! test output
+      tempfile = trim(qbase)//'.log'
+      call z_fileio(tempfile,'UF',iufind,luq_log,iuerr) ! logging
+      tempfile = trim(qbase)//'.prt'
+      call z_fileio(tempfile,'UF',iufind,luq_prt,iuerr) ! general print file
+      tempfile = trim(qbase)//'.tst'
+      call z_fileio(tempfile,'UF',iufind,luq_tst,iuerr) ! test output
 !
-    tempfile = trim(qbase)//'.int'
-    call z_fileio(tempfile,'UF',iufind,luq_int,iuerr) ! logging for locus integration
-    tempfile = trim(qbase)//'.trf'
-    call z_fileio(tempfile,'UF',iufind,luq_trf,iuerr) ! transformation test
-    tempfile = trim(qbase)//'.t13'
-    call z_fileio(tempfile,'UF',iufind,luq_t13,iuerr) ! test output for integration of T13
+      tempfile = trim(qbase)//'.int'
+      call z_fileio(tempfile,'UF',iufind,luq_int,iuerr) ! logging for locus integration
+      tempfile = trim(qbase)//'.trf'
+      call z_fileio(tempfile,'UF',iufind,luq_trf,iuerr) ! transformation test
+      tempfile = trim(qbase)//'.t13'
+      call z_fileio(tempfile,'UF',iufind,luq_t13,iuerr) ! test output for integration of T13
 !
-    write(luq_log,'(2a,i4)') 'XNL_INIT: ',                          &
+      write(luq_log,'(2a,i4)') 'XNL_INIT: ',                          &
                              trim(qbase)//'.log connected to :',luq_log
-    write(luq_log,'(2a,i4)') 'XNL_INIT: ',                          &
+      write(luq_log,'(2a,i4)') 'XNL_INIT: ',                          &
                              trim(qbase)//'.prt connected to :',luq_prt
-    write(luq_log,'(2a,i4)') 'XNL_INIT: ',                          &
+      write(luq_log,'(2a,i4)') 'XNL_INIT: ',                          &
                              trim(qbase)//'.tst connected to :',luq_tst
 !
-    write(luq_log,'(2a,i4)') 'XNL_INIT: ',                          &
+      write(luq_log,'(2a,i4)') 'XNL_INIT: ',                          &
                              trim(qbase)//'.int connected to :',luq_int
-    write(luq_log,'(2a,i4)') 'XNL_INIT: ',                          &
+      write(luq_log,'(2a,i4)') 'XNL_INIT: ',                          &
                              trim(qbase)//'.trf connected to :',luq_trf
-    write(luq_log,'(2a,i4)') 'XNL_INIT: ',                          &
+      write(luq_log,'(2a,i4)') 'XNL_INIT: ',                          &
                              trim(qbase)//'.t13 connected to :',luq_t13
 !
-    write(luq_prt,'(a)')                                            &
+      write(luq_prt,'(a)')                                            &
       '---------------------------------------------------------------'
-    write(luq_prt,'(a)') trim(q_version)
-    write(luq_prt,'(a)')                                            &
+      write(luq_prt,'(a)') trim(q_version)
+      write(luq_prt,'(a)')                                            &
       'Solution of Boltzmann integral using Webb/Resio/Tracy method'
-    write(luq_prt,'(a)')                                            &
+      write(luq_prt,'(a)')                                            &
       '---------------------------------------------------------------'
-    write(luq_prt,*)
-    write(luq_prt,'(a)') 'Initialisation'
-    write(luq_prt,*)
+      write(luq_prt,*)
+      write(luq_prt,'(a)') 'Initialisation'
+      write(luq_prt,*)
 !
 !    if(iproc >=0) write(luq_prt,'(a,i5)') '(MPI) processor number:',iproc
 !---------------------------------------------------------------------------------
 !   Reset configuration from file, using a backdoor
 !---------------------------------------------------------------------------------
-    call q_setconfig(jquad)
-    if (iq_err /=0) then
-      ierror = 5
-      goto 9999
-    end if
+      call q_setconfig(jquad)
+      if (iq_err /=0) then
+        ierror = 5
+        EXIT
+      end if
 !---------------------------------------------------------------------------------
 !  check settings for inconsistencies
 !---------------------------------------------------------------------------------
-    call q_chkconfig
-    if (iq_err /=0) then
-      ierror = 6
-      goto 9999
-    end if
+      call q_chkconfig
+      if (iq_err /=0) then
+        ierror = 6
+        EXIT
+      end if
 !---------------------------------------------------------------------------------
 ! determine minimum size of number of points on locus as stored in database
 !---------------------------------------------------------------------------------
-    klocus = nlocus0
-    if(iq_gauleg > 0) klocus = min(iq_gauleg,klocus)
-    if(iq_lump   > 0) klocus = min(iq_lump,klocus)
+      klocus = nlocus0
+      if(iq_gauleg > 0) klocus = min(iq_gauleg,klocus)
+      if(iq_lump   > 0) klocus = min(iq_lump,klocus)
 !---------------------------------------------------------------------------------
 !  write summary of program settings
 !---------------------------------------------------------------------------------
-    call q_summary
+      call q_summary
 !----------------------------------------------------------------------------------
 !  allocate data arrays
 !-----------------------------------------------------------------------------
-    call q_allocate
+      call q_allocate
 !------------------------------------------------------------------------------
 !  Generate interaction grid and coefficients for each valid water depth
 !  Q_CTRGRID  controls grid generation
 !------------------------------------------------------------------------------
-    do idepth=1,ndepth
-      q_depth = depth(idepth)
+      do idepth=1,ndepth
+        q_depth = depth(idepth)
 !
-      if(jquad==1 .or. jquad==2) q_depth = q_maxdepth
+        if(jquad==1 .or. jquad==2) q_depth = q_maxdepth
 !
-      if(q_depth <= q_mindepth) then
-        call q_error('w','DEPTH','Invalid depth')
-        write(luq_err,'(a,e12.5,f10.2)') 'Incorrect depth & minimum:',   &
+        if(q_depth <= q_mindepth) then
+          call q_error('w','DEPTH','Invalid depth')
+          write(luq_err,'(a,e12.5,f10.2)') 'Incorrect depth & minimum:',   &
                                          q_depth,q_mindepth
-      else
-        call q_init
-        call q_ctrgrid(2,igrid)
-        if(iq_err /= 0) then
-          ierror = 7
-          goto 9999
+        else
+          call q_init
+          call q_ctrgrid(2,igrid)
+          if(iq_err /= 0) then
+            ierror = 7
+            EXIT
+          end if
         end if
-      end if
 !
-      if(jquad==1 .and. ndepth > 0) then
-        write(luq_prt,'(a)')                                           &
+        if(jquad==1 .and. ndepth > 0) then
+          write(luq_prt,'(a)')                                           &
                       'XNL_INIT: For deep water only one grid suffices'
-        exit
-      end if
-    end do
+          exit
+        end if
+      end do
+      EXIT
+    ENDDO
 !
 !
 !  Create or open triplet output data file if iq_triq > 0
 !
 !
- 9999 continue
 !
 !!    if (iq_log ==0) call z_fileio(trim(qbase)//'.log','DF',iufind,luq_log,iuerr)
 !!    if (iq_prt ==0) call z_fileio(trim(qbase)//'.prt','DF',iufind,luq_prt,iuerr)
@@ -2521,63 +2538,64 @@
 !     !
 !  check water depth to be used in computation
 !
-    if(q_depth <= q_mindepth) then
-      xnl = 0.
-      call q_error('w','DEPTH','Zero transfer returned')
-      goto 9999
-    end if
+    DO WHILE(.TRUE.)
+      if(q_depth <= q_mindepth) then
+        xnl = 0.
+        call q_error('w','DEPTH','Zero transfer returned')
+        EXIT
+      end if
 !
 !  check if iquad has changed since last call, this is no more allowed
 !
 !!    if (iquad /= i_qlast .and. i_qmain/=1) then
 !!      call q_error('e','IQUAD','Value of IQUAD differs from initial value')
 !!      ierror = 1
-!!      goto 9999
+!!      EXIT
 !!    end if
 !-----------------------------------------------------------------------------+
 !  main choice between various options                                        |
 !-----------------------------------------------------------------------------+
 !
-    if(iquad>=1 .and. iquad <=3) then
+      if(iquad>=1 .and. iquad <=3) then
 !
-      a = aspec
-      call q_xnl4v4(aspec,sigma,angle,nsig,ndir,depth,xnl,diag,ierror)
+        a = aspec
+        call q_xnl4v4(aspec,sigma,angle,nsig,ndir,depth,xnl,diag,ierror)
 !
-      if(ierror/=0) then
-        call q_error('e','wrtvv','Problem in Q_XNL4V4')
-        goto 9999
-      end if
+        if(ierror/=0) then
+          call q_error('e','wrtvv','Problem in Q_XNL4V4')
+          EXIT
+        end if
 !------------------------------------------------------------------------------
 ! add parametric tail to transfer rate and diagonal term
 !------------------------------------------------------------------------------
 !
-      if(iq_tail==1) call q_addtail(xnl,diag,nsig,ndir,qf_tail)
+        if(iq_tail==1) call q_addtail(xnl,diag,nsig,ndir,qf_tail)
 !
 !------------------------------------------------------------------------------
 ! compute scale factor to include WAM depth scaling
 !------------------------------------------------------------------------------
 !
-      if(iq_dscale ==1) then
-        call q_dscale(aspec,sigma,angle,nsig,ndir,depth,q_grav,q_dfac)
+        if(iq_dscale ==1) then
+          call q_dscale(aspec,sigma,angle,nsig,ndir,depth,q_grav,q_dfac)
 !
-        xnl = xnl*q_dfac
+          xnl = xnl*q_dfac
 !
-        if(iq_prt >=1) write(luq_prt,'(a,f7.4)')                      &
+          if(iq_prt >=1) write(luq_prt,'(a,f7.4)')                      &
                                  'XNL_MAIN depth scale factor:',q_dfac
+        end if
       end if
-    end if
 !
 !  check conservation laws
 !
-    call q_chkcons(xnl,nsig,ndir,sum_e,sum_a,sum_mx,sum_my)
+      call q_chkcons(xnl,nsig,ndir,sum_e,sum_a,sum_mx,sum_my)
 !
       if(iq_prt >= 1) then
         write(luq_prt,'(a)')        'XNL_MAIN: Conservation checks'
         write(luq_prt,'(a,4e13.5)') 'XNL_MAIN: E/A/MOMX/MOMY:',      &
                                      sum_e,sum_a,sum_mx,sum_my
       end if
-!
- 9999 continue
+      EXIT
+    ENDDO
 !
     ierror = iq_err
 !
@@ -2718,8 +2736,6 @@
         diag(isig,ia) = diag(isig_tail,ia)*diag_tail(isig)
       end do
     end do
-!
- 9999 continue
 !
     call q_stack('-q_addtail')
     return
@@ -3752,7 +3768,10 @@
 !------------------------------------------------------------------------------
 !
         call q_locpos(ka,kb,km,kw,loclen)
-        if(iq_err/=0) goto 9999
+        if(iq_err/=0) THEN
+          call q_stack('-q_cmplocus')
+          return
+        ENDIF
 !
 !  compute position of start and end point for tracing
 !  the locus
@@ -3797,7 +3816,8 @@
               write(luq_tst,'(2f12.5)') x2_loc(iloc),y2_loc(iloc)
             end do
           end if
-          goto 9999
+          call q_stack('-q_cmplocus')
+          return
         end if
 !
 !  01/10/2001
@@ -3874,8 +3894,6 @@
       if(itest >= 1) write(luq_tst,'(a,2f10.5)')                     &
        'Q_CMPLOCUS: length of locus:',sum,                           &
         s_loc(nlocus1)+dsp !0.5*(ds_loc(1)+ds_loc(nlocus1))
-!
- 9999 continue
 !
       call q_stack('-q_cmplocus')
 !
@@ -4042,6 +4060,7 @@
       integer ierr,iuerr                     ! error variables
 !------------------------------------------------------------------------------
 !
+    DO WHILE(.TRUE.)
       call q_stack('+q_ctrgrid')
 !
 !  echo input arguments
@@ -4100,7 +4119,7 @@
       else
         call q_error('e','DISPER','Incorrect value for IQ_DISP')
         write(luq_err,'(a,i4)') 'IQ_DISP=',iq_disp
-        goto 9999
+        EXIT
       end if
 !
 !
@@ -4118,7 +4137,7 @@
         if(iq_prt>=1) write(luq_prt,'(2a)')                          &
 	  'Q_CTRGRID: Rereading of bqfile skipped: ',lastquadfile
         igrid = 0
-        goto 9999
+        EXIT
       end if
 !-------------------------------------------------------------------------------------------
       if(iq_prt >= 2) then
@@ -4169,19 +4188,19 @@
          igrid = 3
          lq_grid = .true.
         else
-         read(r_header,'(6x,i3)') nlocus
+          read(r_header,'(6x,i3)') nlocus
 !
-        if(iq_prt>=2) then
-         write(luq_prt,'(a,2i4)') 'Q_CTRGRID: luq_bqf ierr:',luq_bqf,     &
+          if(iq_prt>=2) then
+            write(luq_prt,'(a,2i4)') 'Q_CTRGRID: luq_bqf ierr:',luq_bqf,     &
 	                          ierr
-         write(luq_prt,'(2a)') 'Q_CTRGRID: r_header: ',trim(r_header)
-        end if
+            write(luq_prt,'(2a)') 'Q_CTRGRID: r_header: ',trim(r_header)
+          end if
 
-       if(iq_prt >= 1) then
-         write(luq_prt,'(4a)') 'Q_CTRGRID: bqname  : ',trim(bqname)
-         write(luq_prt,'(4a)') 'Q_CTRGRID: q_header: ',trim(q_header)
-         write(luq_prt,'(4a)') 'Q_CTRGRID: r_header: ',trim(r_header)
-       end if
+          if(iq_prt >= 1) then
+            write(luq_prt,'(4a)') 'Q_CTRGRID: bqname  : ',trim(bqname)
+            write(luq_prt,'(4a)') 'Q_CTRGRID: q_header: ',trim(q_header)
+            write(luq_prt,'(4a)') 'Q_CTRGRID: r_header: ',trim(r_header)
+          end if
         end if
 !-----------------------------------------------------------------------------
 !   check header of grid file
@@ -4277,7 +4296,7 @@
 !------------------------------------------------------------------------------
       if(itask==1) then
         if(luq_bqf>0) call z_fclose(luq_bqf)
-        goto 9999
+        EXIT
       end if
 !-----------------------------------------------------------------------------
 !  if lq_grid==true  a new grid has to be generated
@@ -4310,7 +4329,7 @@
 !
         if(iq_err /=0) then
            lastquadfile = 'quad_err_.bqf'
-           goto 9999
+           EXIT
         end if
 !
         igrid = 0
@@ -4363,7 +4382,7 @@
           write(luq_err,'(a)')                                       &
 	        'BQF file probably generated with test option off'
           igrid = 3
-          goto 9999
+          EXIT
         end if
         read(luq_bqf) quad_cple
         read(luq_bqf) quad_sym
@@ -4380,7 +4399,8 @@
 
       end if
 !
- 9999 continue
+      EXIT
+    ENDDO
        if(iq_prt>=1) write(luq_prt,'(a,i4,f10.2)')                   &
           'Q_CTRGRID: on exit igrid & q_depth:',igrid,q_depth
 !
@@ -4969,11 +4989,12 @@
 !  check memory indexing
 !------------------------------------------------------------------------------
 !
+    DO WHILE(.TRUE.)
       if (amem > iamax) then
         ifnd = 0
         call q_error('e','MEMORY','Incorrect addres')
         write(luq_err,'(a,2i4)') 'Q_GETLOCUS: iamax,amem:',iamax,amem
-        goto 9999
+        EXIT
       end if
 !
 !-----------------------------------------------------------------------------
@@ -4988,7 +5009,7 @@
 !
 !  short-cut when number of NON-ZERO points on locus is ZERO [27/8/2003]
 !
-      if(nlocusx==0) goto 9999
+      if(nlocusx==0) EXIT
 !
       r_ik2(1:nloc)   = quad_ik2(kmem,amem,1:nloc)
       r_ia2(1:nloc)   = quad_ia2(kmem,amem,1:nloc)
@@ -5239,7 +5260,8 @@
 !
       end if
 !
- 9999 continue
+      EXIT
+    ENDDO
 !
       call q_stack('-q_getlocus')
 !
@@ -5939,6 +5961,7 @@
 ! find location of points A and B on locus
 ! for deep water, explicit relations are available
 !
+    DO WHILE(.TRUE.)
       if(iq_disp==1) then
         qs = q/sqrtg
         qsq  = qs*qs
@@ -6007,7 +6030,7 @@
 !
           if(iter>=maxiter) then
             call q_error('e','Start kb','Too many iterations needed')
-            goto 9999
+            EXIT
           end if
 !
 !   search root by Ridders method
@@ -6042,7 +6065,7 @@
 !
           if(iter>=maxiter) then
             call q_error('e','Start ka','Too many iterations needed')
-            goto 9999
+            EXIT
           end if
 !
 !   search root by Ridder's method
@@ -6072,7 +6095,7 @@
 !
           if(iter>=maxiter) then
             call q_error('e','Start kb','Too many iterations needed')
-            goto 9999
+            EXIT
           end if
 !
 !   search root by Ridders method
@@ -6154,7 +6177,7 @@
         if(itest>=2) write(luq_tst,'(a,i4)')                 &
 	   'Q_LOCPOS/Z_ROOT2/IERR_W/5=',ierr
         call q_error('e','ROOT2','beta')
-        goto 9999
+        EXIT
       end if
 !
       kwx = kmidx - betaw*py
@@ -6193,7 +6216,8 @@
        write(luq_tst,'(a,4f10.5)')'Q_LOCPOS: length of ellipse:',loclen
       end if
 !
- 9999 continue
+      EXIT
+    ENDDO
 !
       call q_stack('-q_locpos')
 !
@@ -6326,11 +6350,13 @@
 !
       logical lwrite   ! indicator if binary interaction grid has been written successfully
       real smax        ! maximum s-value
+      LOGICAL flag_9999
 !
       real, allocatable :: xloc(:),yloc(:)
       real qq
 !-------------------------------------------------------------------------------
       call q_stack('+q_makegrid')
+      flag_9999=.FALSE.
 !
 ! initializations
 !
@@ -6359,7 +6385,7 @@
 !  compute components of reference wave number,
 !  for setting up interaction grid
 !-------------------------------------------------------------------------------------
-          do ikq1=1,nkq1
+  out:do ikq1=1,nkq1
 !
         if(iq_screen==2) write(iscreen,*) 'k1-ring:',ikq1
 !
@@ -6375,45 +6401,54 @@
                       'Q_MAKEGRID: ik1,krefx,krefy:',ikq1,krefx,krefy
 
           do ikq3 = ikq1,nkq   !
-         if(iq_screen==2) write(iscreen,*) 'k1-k3 indices:',ikq1,ikq3
+            if(iq_screen==2) write(iscreen,*) 'k1-k3 indices:',ikq1,ikq3
 !
-          kk3 = q_k(ikq3)
+            kk3 = q_k(ikq3)
 !
-         if(iq_test >= 1) write(luq_tst,'(a,3f12.6)')            &
+            if(iq_test >= 1) write(luq_tst,'(a,3f12.6)')            &
 	                    'Q_MAKEGRID: kk1 kk3 kk3/kk1:',kk1,kk3,kk3/kk1
 !
-          do iaq3 = iag1,iag2
+            do iaq3 = iag1,iag2
 !
-            if(iaq3 == iag1 .and. ikq3 == ikq1) cycle
+              if(iaq3 == iag1 .and. ikq3 == ikq1) cycle
 !
-            aa3 = q_ad(iaq3)
-            k3x = kk3*cos(aa3*dera)
-            k3y = kk3*sin(aa3*dera)
+              aa3 = q_ad(iaq3)
+              k3x = kk3*cos(aa3*dera)
+              k3y = kk3*sin(aa3*dera)
 !------------------------------------------------------------------------------
 !   compute locus for a specified combination of k1 and k3
 !
-            if(iq_test > 1) then
-              write(luq_tst,'(a,2f10.4,2i4)')                   &
+              if(iq_test > 1) then
+                write(luq_tst,'(a,2f10.4,2i4)')                   &
 	                'Q_MAKEGRID: k3 a3 ikq3 iaq3: ',kk3,aa3,ikq3,iaq3
-              write(luq_tst,'(a,4f11.5)')                       &
+                write(luq_tst,'(a,4f11.5)')                       &
 	                'Q_MAKEGRID: k1x/y k3x/y    :',k1x,k1y,k3x,k3y
-            end if
+              end if
 !-----------------------------------------------------------------------------
-            ia_k1 = iaq1; ik_k1 = ikq1
-            ia_k3 = iaq3; ik_k3 = ikq3
-            call q_cmplocus(ka,kb,km,kw,crf1)
+              ia_k1 = iaq1; ik_k1 = ikq1
+              ia_k3 = iaq3; ik_k3 = ikq3
+              call q_cmplocus(ka,kb,km,kw,crf1)
 !
-            if(iq_err/=0) goto 9999
+              if(iq_err/=0) THEN
+                flag_9999=.TRUE.
+                EXIT out
+              ENDIF
 !------------------------------------------------------------------------------
 !     redistibute or filter data points along locus
 !
-            call q_modify
-            if(iq_err > 0) goto 9999
+              call q_modify
+              if(iq_err > 0) THEN
+                flag_9999=.TRUE.
+                EXIT out
+              ENDIF
 !------------------------------------------------------------------------------
 !     compute weights for interpolation in computational grid
 !
-            call q_weight
-            if(iq_err > 0) goto 9999
+              call q_weight
+              if(iq_err > 0) THEN
+                flag_9999=.TRUE.
+                EXIT out
+              ENDIF
 !------------------------------------------------------------------------------
 !    special storing mechanism for interactions per combination of k1 and k3
 !
@@ -6546,56 +6581,56 @@
 !
           end do
         end do
-      end do
+      end do out
 !------------------------------------------------------------------------------
 !  Write locus information to binary file
 !------------------------------------------------------------------------------
 !
-      write(luq_bqf) q_header
+      IF(.not. flag_9999) THEN
+        write(luq_bqf) q_header
 !
 !------------------------------------------------------------------------------
 ! spectral interaction grid
 !------------------------------------------------------------------------------
 !
-      write(luq_bqf) naq,nkq
-      write(luq_bqf) q_sig
-      write(luq_bqf) q_ad
-      write(luq_bqf) iq_geom,iq_disp,iq_geom
-      write(luq_bqf) q_depth
+        write(luq_bqf) naq,nkq
+        write(luq_bqf) q_sig
+        write(luq_bqf) q_ad
+        write(luq_bqf) iq_geom,iq_disp,iq_geom
+        write(luq_bqf) q_depth
 !
 !------------------------------------------------------------------------------
 ! interaction grid
 !------------------------------------------------------------------------------
 !
-      write(luq_bqf) quad_nloc
-      write(luq_bqf) quad_ik2
-      write(luq_bqf) quad_ia2
-      write(luq_bqf) quad_ik4
-      write(luq_bqf) quad_ia4
-      write(luq_bqf) quad_w1k2
-      write(luq_bqf) quad_w2k2
-      write(luq_bqf) quad_w3k2
-      write(luq_bqf) quad_w4k2
-      write(luq_bqf) quad_w1k4
-      write(luq_bqf) quad_w2k4
-      write(luq_bqf) quad_w3k4
-      write(luq_bqf) quad_w4k4
-      write(luq_bqf) quad_zz
-      write(luq_bqf) quad_t2
-      write(luq_bqf) quad_t4
+        write(luq_bqf) quad_nloc
+        write(luq_bqf) quad_ik2
+        write(luq_bqf) quad_ia2
+        write(luq_bqf) quad_ik4
+        write(luq_bqf) quad_ia4
+        write(luq_bqf) quad_w1k2
+        write(luq_bqf) quad_w2k2
+        write(luq_bqf) quad_w3k2
+        write(luq_bqf) quad_w4k2
+        write(luq_bqf) quad_w1k4
+        write(luq_bqf) quad_w2k4
+        write(luq_bqf) quad_w3k4
+        write(luq_bqf) quad_w4k4
+        write(luq_bqf) quad_zz
+        write(luq_bqf) quad_t2
+        write(luq_bqf) quad_t4
 !
-      write(luq_bqf) quad_jac
-      write(luq_bqf) quad_cple
-      write(luq_bqf) quad_sym
-      write(luq_bqf) quad_ws
+        write(luq_bqf) quad_jac
+        write(luq_bqf) quad_cple
+        write(luq_bqf) quad_sym
+        write(luq_bqf) quad_ws
 !
-      lwrite = .true.
-      lastquadfile = bqname
+        lwrite = .true.
+        lastquadfile = bqname
 !
-      if(iq_screen >= 1 .and. iq_test>=1) write(iscreen,'(2a)')     &
+        if(iq_screen >= 1 .and. iq_test>=1) write(iscreen,'(2a)')     &
         'Q_MAKEGRID: LASTQUADFILE: ',lastquadfile
-!
- 9999 continue
+      ENDIF
 !
       if(allocated(xloc)) deallocate(xloc,yloc)
 !
@@ -6632,7 +6667,6 @@
       end if
 !
       call q_stack('-q_makegrid')
-!
       return
       end subroutine
 !------------------------------------------------------------------------------
@@ -7016,7 +7050,9 @@
           if(jerr > 0) then
             iq_err = iq_err + 1
             call q_error('e','INTER','Problem in interpolation process')
-            goto 9999
+            if(allocated(sold)) deallocate(sold,snew)
+            call q_stack('-q_modify')
+            return
           end if
         end if
 !
@@ -7081,8 +7117,6 @@
         write(luq_tst,'(a)') 'Q_MODIFY: sym_mod'
         write(luq_tst,'(20f3.0)') (sym_mod(iloc),iloc=1,nlocus)
       end if
-!
- 9999 continue
 !
       if(allocated(sold)) deallocate(sold,snew)
 !
@@ -7526,8 +7560,6 @@
         end do
       end if
 !
- 9999 continue
-!
       call q_stack('-q_polar2')
 !
       return
@@ -7715,7 +7747,8 @@
         call q_error('e','IQUAD',                               &
 	    'No valid value of iquad has been given, default settings')
         write(luq_err,'(a,i4)') 'Q_SETCONFIG: Value of IQUAD:',iquad
-        goto 9999
+        call q_stack('-q_setconfig')
+        return
       end if
 !-------------------------------------------------------------------------------------------------
 ! Optional test output
@@ -7819,10 +7852,7 @@
         end if
       end if
 !
- 9999 continue
-!
       call q_stack('-q_setconfig')
-!
       return
       end subroutine
 !------------------------------------------------------------------------------
@@ -7960,7 +7990,10 @@
 	           'Q_SEARCHGRID: grid accepted, read whole database'
 !
         call q_ctrgrid(2,igrid)
-        goto 9999
+        q_depth = s_depth
+        write(*,*) 'q_searchgrid q_depth on exit:',q_depth
+        call q_stack('-q_searchgrid')
+        return
       end if
 !
       idepth   = int(s_depth*10+eps)
@@ -8064,7 +8097,10 @@
       else
         call q_error('e','SEARCHGRID',                            &
 	             'No valid nearest grid could be found')
-        goto 9999
+        q_depth = s_depth
+        write(*,*) 'q_searchgrid q_depth on exit:',q_depth
+        call q_stack('-q_searchgrid')
+        return
       end if
 !
       if(iq_prt>=1) write(luq_prt,'(a,2f10.2)')                   &
@@ -8096,8 +8132,6 @@
         write(luq_prt,'(a,i4)')                                  &
 	  'Q_SEARCHGRID: igrid of nearest grid operation:',igrid
       end if
-!
- 9999 continue
 !
 !  restore water depth
 !
@@ -8222,12 +8256,13 @@
       mod_task = mod_name(1:1)
       sub_name = mod_name(2:mod_len)
 !
+    DO WHILE(.TRUE.)
       if(mod_task(1:1) == '+') then
         iq_stack = iq_stack + 1
 !
         if(iq_stack > mq_stack) then
           call q_error('e','STACKMAX',' ')
-          goto 9999
+          EXIT
         else
           cstack(iq_stack) = mod_name(2:mod_len)
         end if
@@ -8241,16 +8276,16 @@
         else
           write(luq_err,'(a)') 'Module name:',mod_name
           call q_error('e','STACKNAME',' ')
-          goto 9999
+          EXIT
         end if
       else
         call q_error('e','STACKCALL',' ')
-        goto 9999
+        EXIT
       end if
+      exit
+    ENDDO
 !
 !!\Z
-!
- 9999 continue
 !
       return
       end subroutine
@@ -8545,8 +8580,6 @@
 	                '----------------------------------------------'
       end if
 !
- 9999 continue
-!
       call q_stack('-q_summary')
 !
       return
@@ -8799,17 +8832,24 @@
       if(iq_test >=2) write(luq_tst,'(a,4i3)')                   &
         'Q_T13V4: ik1,ia1 ik3 ia3:',ik1,ia1,ik3,ia3
 !
-      if(ik1==ik3 .and. ia1==ia3) goto 9999  ! skip routine if k1=k3
+      if(ik1==ik3 .and. ia1==ia3) THEN
+        call q_stack('-q_t13v4')
+        return
+      endif  ! skip routine if k1=k3
 !
 !  obtain information requested locus based on a information
 !  about a precomputed locus, as stored in the database file
 !
       call q_getlocus(ik1,ia1,ik3,ia3,ifnd)
-      if(iq_err/=0) goto 9999
+      if(iq_err/=0) THEN
+        call q_stack('-q_t13v4')
+        return
+      endif
 !
       if(ifnd==0 .or. nlocusx==0) then
         t13 = 0.
-        goto 9999
+        call q_stack('-q_t13v4')
+        return
       end if
 !
 !---------------------------------------------------------------------------------------
@@ -8868,7 +8908,8 @@
           diagk3 = diagk3 + qd3*rterm
 !-----------------------------------------------------------------------------------
         end do
-        goto 9999
+        call q_stack('-q_t13v4')
+        return
       end if
 !---------------------------------------------------------------------------------------
 !  Main loop over the locus
@@ -9005,10 +9046,7 @@
 !!/T   & t_s(nloc),t13
 !!,(dt13(iloc),iloc=1,nloc)
 !
- 9999 continue
-!
       call q_stack('-q_t13v4')
-!
       return
       end subroutine
 !------------------------------------------------------------------------------
@@ -9233,8 +9271,6 @@
 !
       end do
 !
- 9999 continue
-!
       call q_stack('-q_weight')
 !
       return
@@ -9312,7 +9348,7 @@
 !  7. Remarks
 !
 !     Routine based on modified version of routine SHLOCX of Resio and Tracy
-!     On 15/4/2002 a bug fixed in computation of THR when angle of k3 is larger than 90°
+!     On 15/4/2002 a bug fixed in computation of THR when angle of k3 is larger than 90ï¿½
 !
 !     In addition, the assumption that k1y=0 and thus dir1=0 is removed
 !     In bug fix of 20/8/2002 this restriction is removed.
@@ -9585,18 +9621,21 @@
         call q_ctrgrid(2,igrid)
         if(iq_err /= 0) then
           ierror = 1
-          goto 9999
+          call q_stack('-q_xnl4v4')
+          return
         end if
 !
         if(igrid/=0) then
           call q_error('e','NOGRID','No proper grid exists')
           ierror = 2
-          goto 9999
+          call q_stack('-q_xnl4v4')
+          return
         end if
 !
         if(iq_make ==3) then
           call q_error('e','MAKEGRID','Only computation of grid')
-          goto 9999
+          call q_stack('-q_xnl4v4')
+          return
         end if
 !------------------------------------------------------------------------------
 !  set overall scale factor resulting from optional SEARCH for nearest grid
@@ -9619,10 +9658,14 @@
         if(igrid/=0) then
           call q_error('e','NOGRID','No proper grid exists')
           ierror = 3
-          goto 9999
+          call q_stack('-q_xnl4v4')
+          return
         end if
 !
-        if(iq_err /=0) goto 9999
+        if(iq_err /=0) THEN
+          call q_stack('-q_xnl4v4')
+          return
+        ENDIF
       end if
 !
 !------------------------------------------------------------------------------
@@ -9738,7 +9781,8 @@
 !
                 if(iq_err /= 0) then
                   ierror = 4
-                  goto 9999
+                  call q_stack('-q_xnl4v4')
+                  return
                 end if
 !
 !  check contribution T13 as computed with triplet method
@@ -9847,8 +9891,6 @@
         end do
       end do
 !                                                   !
- 9999 continue
-!
       call q_stack('-q_xnl4v4')
 !
       return
@@ -10049,28 +10091,26 @@
 !------------------------------------------------------------------------------
       if (iq_cple < 1 .or. iq_cple > 4) then
         x_cple = 0.
-        goto 9999
-      end if
+      else
 !
-      select case(iq_cple)
+        select case(iq_cple)
 !
 !  1) Deep water coupling coefficient of Webb
 !
-      case(1)
-        x_cple = xc_webb(k1x,k1y,k2x,k2y,k3x,k3y,k4x,k4y,grav_w)
+          case(1)
+            x_cple = xc_webb(k1x,k1y,k2x,k2y,k3x,k3y,k4x,k4y,grav_w)
 !
 !  2) finite depth coupling coefficient of Herterich and Hasselmann
 !     as implemented in the Resio-Tracy program SB5
 !
-      case(2)
-        x_cple = xc_hh(k4x,k4y,k3x,k3y,k2x,k2y,k1x,k1y,depth)
+          case(2)
+            x_cple = xc_hh(k4x,k4y,k3x,k3y,k2x,k2y,k1x,k1y,depth)
 !
 ! x_cple = xc_hh2(k1x,k1y,k2x,k2y,k3x,k3y,depth,grav_w)
 !
-      end select
+        end select
 !
- 9999 continue
-!
+      endif
       return
       end function
 !------------------------------------------------------------------------------

@@ -499,37 +499,36 @@
 
     J1 = 1
     J2 = NZ(I)-1
- 10 CONTINUE
 
-    DO J=J1, J2
-      DDENSITY = DENSITY(J+1) - DENSITY(J)
-      IF(DDENSITY<1.0E-3) DDENSITY = 1.0E-3
-      DV = (UUU(J+1)-UUU(J))**2 + (VVV(J+1)-VVV(J))**2
-      IF(DV<1.0E-6) DV = 1.0E-6
-      R(J) = G*DDDZ*DDENSITY/(DV*RO)
-    ENDDO  
+    DO WHILE(.TRUE.)
+      DO J=J1, J2
+        DDENSITY = DENSITY(J+1) - DENSITY(J)
+        IF(DDENSITY<1.0E-3) DDENSITY = 1.0E-3
+        DV = (UUU(J+1)-UUU(J))**2 + (VVV(J+1)-VVV(J))**2
+        IF(DV<1.0E-6) DV = 1.0E-6
+        R(J) = G*DDDZ*DDENSITY/(DV*RO)
+      ENDDO
 
-    RS = R(1)
-    JS = 1
-    DO J=2,NZ(I)-1
-      IF(R(J)<RS) THEN
-        RS = R(J)
-        JS = J
-      ENDIF 
-    ENDDO
+      RS = R(1)
+      JS = 1
+      DO J=2,NZ(I)-1
+        IF(R(J)<RS) THEN
+          RS = R(J)
+          JS = J
+        ENDIF
+      ENDDO
 
-    IF(RS>GRADIENT_RICHARDSON) RETURN
+      IF(RS>GRADIENT_RICHARDSON) EXIT
 
-    IF(JS>=KCD) KCD = JS + 1
-    CALL STIR(GRADIENT_RICHARDSON,RS,JS)
+      IF(JS>=KCD) KCD = JS + 1
+      CALL STIR(GRADIENT_RICHARDSON,RS,JS)
 !    CALL CAL_DENSITY
-
-    J1 = JS - 2
-    IF(J1<1) J1 = 1
-    J2 = JS + 2
-    IF(J2>NZ(I)-1) J2 = NZ(I)-1
-    GOTO 10
-
+      J1 = JS - 2
+      IF(J1<1) J1 = 1
+      J2 = JS + 2
+      IF(J2>NZ(I)-1) J2 = NZ(I)-1
+    ENDDO
+    RETURN
     END SUBROUTINE GRADIENT_MIXING
 
 !-----------------------------------------------------

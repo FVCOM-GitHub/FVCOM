@@ -81,7 +81,7 @@ MODS  = mod_prec.F	sinter.F	mod_types.F	mod_time.F	\
 	mod_boundschk.F mod_esmf_nesting.F	\
 	mod_cstms_vars.F	mod_flocmod.F	mod_sed_cstms.F		\
 	mod_fluid_mud.F mod_tvd.F mod_mld_rho.F	mod_vegetation.F	\
-	mod_heatflux_sediment.F
+	mod_heatflux_sediment.F mod_vector_projection.F
 # lwang added mod_mld_rho.F
 MODS_W = mod_main_wave.F	swmod1.F	swmod2.F	swmod3.F\
 	mod_action_im.F mod_action_ex.F mod_wavesetup.F 		\

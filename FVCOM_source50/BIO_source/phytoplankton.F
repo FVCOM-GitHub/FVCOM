@@ -24,7 +24,7 @@ SUBROUTINE PHYTOPLANKTON(index_id,i_id,iint_id)
 !=======================================================================
       SMALL = 1.E-30
 
-        DO 10 K=1,KBVM1  !vertical
+    DO K=1,KBVM1  !vertical
 !**************  PAR-PHYTOPLANKTON PRODUCTION    **************************
       TEMPP=T_BIO(K)
       TATANUL=1.0E-10                                  !Total attanuation
@@ -40,8 +40,8 @@ SUBROUTINE PHYTOPLANKTON(index_id,i_id,iint_id)
       END DO
       IF(TRANS.GT.0.0) TATANUL=TATANUL+TRANS*ATANU_D*DELTA_D(K)     ! Detrital attanuation
       IRRAD1=IRRAD0*EXP(-TATANUL)                      ! Irradiance at the layer bottom
-      IRRAD=(IRRAD0-IRRAD1)/TATANUL                    ! Average irradiance 
-      DO 20 J=1,NNP
+      IRRAD=(IRRAD0-IRRAD1)/TATANUL                    ! Average irradiance
+      DO J=1,NNP
         UTR(J)=EXP(-A_TP(J)*ABS(TEMPP-T_OPTP(J)))      ! Temperature forcing on phyto
      ! 	UTR(J)=A_TP(J)**((TEMPP-T_OPTP(J))/10.)
       SELECT CASE (TRIM(L_FUNCTION))                   ! Light function choice
@@ -127,33 +127,31 @@ SUBROUTINE PHYTOPLANKTON(index_id,i_id,iint_id)
      !   P_N(K,J)=0.0
      ! END IF
 !      FVP(K,J)=FVP(K,J)-(P_DOM(K,J)+P_D(K,J)+P_N(K,J))*T_STEP
- 20   CONTINUE
-      GO TO 21  !TO CONFORM JI'S
+      ENDDO
 !**************     CHECK NUTRIENT AVAILABILITY  ***********
-      RATIOT=1.0
-      SINKK=0.
-      RATIO=1.0
-      DO I1=1,NNN
-        DO I2=1,NNP
-           SINKK(I1)=SINKK(I1)+UPTAKE_PN(K,I1,I2)
-        END DO
-        SINKK(I1)=SINKK(I1)*T_STEP
-      END DO
-      DO I1=1,NNN
-        IF (SINKK(I1).GT.FVNN(K,I1).AND.SINKK(I1).GT.0.0) THEN
-          RATIO(I1)=FVNN(K,I1)/(SINKK(I1)+1.E-30)
-          RATIOT=MIN(RATIOT,RATIO(I1))
-        END IF
-      END DO  
-      IF (RATIOT .LT. 1.0) THEN
-        DO I2=1,NNP
-          U_P(K,I2)=U_P(K,I2)*RATIOT
-          DO I1=1,NNN
-            UPTAKE_PN(K,I1,I2)=UPTAKE_PN(K,I1,I2)*RATIOT
-          END DO
-        END DO
-      END IF
- 21   CONTINUE   
+      ! RATIOT=1.0
+      ! SINKK=0.
+      ! RATIO=1.0
+      ! DO I1=1,NNN
+      !   DO I2=1,NNP
+      !      SINKK(I1)=SINKK(I1)+UPTAKE_PN(K,I1,I2)
+      !   END DO
+      !   SINKK(I1)=SINKK(I1)*T_STEP
+      ! END DO
+      ! DO I1=1,NNN
+      !   IF (SINKK(I1).GT.FVNN(K,I1).AND.SINKK(I1).GT.0.0) THEN
+      !     RATIO(I1)=FVNN(K,I1)/(SINKK(I1)+1.E-30)
+      !     RATIOT=MIN(RATIOT,RATIO(I1))
+      !   END IF
+      ! END DO
+      ! IF (RATIOT .LT. 1.0) THEN
+      !   DO I2=1,NNP
+      !     U_P(K,I2)=U_P(K,I2)*RATIOT
+      !     DO I1=1,NNN
+      !       UPTAKE_PN(K,I1,I2)=UPTAKE_PN(K,I1,I2)*RATIOT
+      !     END DO
+      !   END DO
+      ! END IF
 !****************   LIGHT-CONTROLLED NITRIFICATION    *************
       IF (NO3_ON) THEN
         IF (IRRAD0.GT.0.) THEN
@@ -169,7 +167,7 @@ SUBROUTINE PHYTOPLANKTON(index_id,i_id,iint_id)
      END IF
      
       IRRAD0=IRRAD1     !For next level
- 10   CONTINUE
+    ENDDO
 !*******************   CELLS SINKING    ***********
       DO I1=1,NNP             
 !         WSNK_P(1,I1)=(-0.5)*W_P(I1)*(FVP(1,I1)+FVP(2,I1))/DELTA_D(1) 

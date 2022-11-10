@@ -536,8 +536,21 @@ MODULE MOD_DYE
         VISCOF=(FACT*0.5_SP*(VISCOFF(IA)*NN_HVC(IA)+VISCOFF(IB)*NN_HVC(IB)) +  &
 	        FM1*0.5_SP*(NN_HVC(IA)+NN_HVC(IB)))
 
-       TXX=0.5_SP*(PDYEPXD(IA)+PDYEPXD(IB))*VISCOF
-       TYY=0.5_SP*(PDYEPYD(IA)+PDYEPYD(IB))*VISCOF
+!JQI NOV2021
+# if defined (WET_DRY)
+	   !Added by Adi Nugraha
+	   !Allow no diffusive flux between a wet node and a dry node (Wen Long and Tarang Khangaonkar)
+	   IF(ISWETN(IA)==1.AND.ISWETN(IB)==1)THEN
+# endif 	
+        TXX=0.5_SP*(PDYEPXD(IA)+PDYEPXD(IB))*VISCOF
+        TYY=0.5_SP*(PDYEPYD(IA)+PDYEPYD(IB))*VISCOF
+# if defined (WET_DRY)			   
+	   ELSE
+		TXX = 0.0_SP
+		TYY = 0.0_SP
+	   ENDIF
+# endif
+!JQI NOV2021
 
        FXX=-DTIJ(I,K)*TXX*DLTYE(I)
        FYY= DTIJ(I,K)*TYY*DLTXE(I)

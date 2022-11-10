@@ -514,8 +514,22 @@ Module Scalar
 !       viscof=horcon*(fact*(viscoff(ia)+viscoff(ib))*0.5_sp + fm1)
         VISCOF=(FACT*0.5_SP*(VISCOFF(IA)*NN_HVC(IA)+VISCOFF(IB)*NN_HVC(IB)) + FM1*0.5_SP*(NN_HVC(IA)+NN_HVC(IB)))
 
-       txx=0.5_sp*(pfpxd(ia)+pfpxd(ib))*viscof
-       tyy=0.5_sp*(pfpyd(ia)+pfpyd(ib))*viscof
+!JQI NOV2021
+# if defined (WET_DRY)
+       !Added by Adi Nugraha
+	   !Allow no diffusive flux between a wet node and a dry node (Wen Long and Tarang Khangaonkar)
+	   IF(ISWETN(IA)==1.AND.ISWETN(IB)==1)THEN
+# endif 	
+         txx=0.5_sp*(pfpxd(ia)+pfpxd(ib))*viscof
+         tyy=0.5_sp*(pfpyd(ia)+pfpyd(ib))*viscof
+
+# if defined (WET_DRY)			   
+	   ELSE
+		TXX = 0.0_SP
+		TYY = 0.0_SP
+	   ENDIF
+# endif
+!JQI NOV2021
 
        fxx=-dtij(i,k)*txx*dltye(i)
        fyy= dtij(i,k)*tyy*dltxe(i)
@@ -985,7 +999,9 @@ Module Scalar
   implicit none
   real(sp), intent(in   ), dimension(0:mt,kb)      :: f 
   real(sp), intent(inout), dimension(0:mt,kb)      :: fn
-  real(sp), intent(in   ), dimension(iobcn+1,kbm1) :: fflux_obc 
+!JQI NOV2021
+  real(sp), intent(in   ), dimension(iobcn,kbm1) :: fflux_obc  ! KURT GLAESEMANN - remove + 1 from dimension
+!JQI NOV2021
   real(sp), intent(in   ), dimension(iobcn       ) :: f_obc 
   real(sp), intent(in   )                          :: deltat
   real(sp), intent(in   )                          :: alpha_nudge 

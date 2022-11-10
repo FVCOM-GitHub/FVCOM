@@ -41,8 +41,8 @@ SUBROUTINE NUTRIENT
         END DO
       END DO
 !*********************  NUTRIENT SOURCES AND SINKS   **********************
-      DO 10 J=1,NNN
-        DO 20 K=1,KBVM1
+      DO J=1,NNN
+        DO K=1,KBVM1
 !        DO 20 J=1,NNN
           SOURCE=0.
           DO I1=1,NNP
@@ -88,11 +88,11 @@ SUBROUTINE NUTRIENT
             END DO
           END DO
           BIO_N(K,J)=BIO_N(K,J)+SOURCE*T_STEP                !UPDATE
- 20     CONTINUE   !KBVM1
+        ENDDO   !KBVM1
           DO I1=1,NND
              BIO_N(KBVM1,J)=BIO_N(KBVM1,J)+ N2CD(J,I1)*REMINERALIZATION(KBV,I1)*T_STEP   !BENTIHC REMINERALIZATION
           END DO
- 10   CONTINUE   !NNN
+      ENDDO  !NNN
           IF (NO3_ON) THEN
              DO K=1,KBVM1
                 BIO_N(K,1)=BIO_N(K,1)-NH4_NO3(K)*T_STEP

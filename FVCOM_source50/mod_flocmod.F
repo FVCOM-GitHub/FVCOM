@@ -701,8 +701,6 @@ Use Mod_CSTMS_vars
           ENDDO ! loop on full dt
 
         ENDIF ! only if cvtotmud > f_clim
-
-        999 continue
         ! update mass concentration for all mud classes
         DO ised=1,NCS
            susmud(k,ised)=NNin(ised)*sedflocs%f_mass(ised)

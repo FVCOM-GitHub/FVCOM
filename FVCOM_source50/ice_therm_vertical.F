@@ -64,8 +64,12 @@
 
       real (kind=dbl_kind), parameter ::   &
          ferrmax = 1.0e-3_dbl_kind & ! max  allowed energy flux error (W m-2)
-                                   ! rec&ommend ferrmax < 0.01 W m-2
+! afm 20180801 
+#   if !defined (ICE_FRESHWATER)
       ,  hsnomin = 1.0e-6_dbl_kind ! min  thickness for which Tsno computed (m)
+#   else
+      ,  hsnomin = 1.0e-3_dbl_kind ! min  thickness for which Tsno computed (m)
+#   endif
                                          
       real (kind=dbl_kind) ::           &
          salin(nilyr+1)  &! salinity (ppt)
@@ -872,9 +876,13 @@
          hsn(i,j) = vsnon(i,j,ni) / aicen(i,j,ni)
          hin_init(i,j) = hin(i,j)
          hsn_init(i,j) = hsn(i,j)
-    
+! afm 20180802 for GL use, to avoid division by small number 
+#   if !defined (ICE_FRESHWATER) 
          if (hsn(i,j) > hsnomin) then
-            qsn(i,j) = esnon(i,j,ni) / vsnon(i,j,ni)  ! qsn, esnon < 0
+#   else
+         if (vsnon(i,j,ni) > hsnomin) then
+#   endif  
+           qsn(i,j) = esnon(i,j,ni) / vsnon(i,j,ni)  ! qsn, esnon < 0
             Tmax(i,j) = -qsn(i,j)*eps11 / (rhos*cp_ice*vsnon(i,j,ni))
          else
             qsn(i,j) = -rhos * Lfresh
@@ -2015,17 +2023,18 @@
 !EOP
 !
 
-# if defined (ICE_FRESHWATER)
-! EJA 201609212016 
-! i0vis=0.7-->0.068 (Parkinson & Washington 1979, JGR) 17%*0.4=0.068
-      real (kind=dbl_kind) ::   &
-         i0vis                      ! fraction of penetrating solar rad (visible) - set in namelist
-         !i0vis   = 0.068_dbl_kind  ! fraction of penetrating solar rad (visible) - set in namelist
-# else
-      real (kind=dbl_kind) ::   &
-         i0vis                     ! fraction of penetrating solar rad (visible) - set in namelist
-         !i0vis   = 0.70_dbl_kind  ! fraction of penetrating solar rad (visible) - set in namelist
-# endif
+! afm 20180802 commented out. Defined in the namelist
+!# if defined (ICE_FRESHWATER)
+!! EJA 201609212016 
+!! i0vis=0.7-->0.068 (Parkinson & Washington 1979, JGR) 17%*0.4=0.068
+!      real (kind=dbl_kind) ::   &
+!         i0vis                      ! fraction of penetrating solar rad (visible) - set in namelist
+!         !i0vis   = 0.068_dbl_kind  ! fraction of penetrating solar rad (visible) - set in namelist
+!# else
+!      real (kind=dbl_kind) ::   &
+!         i0vis                     ! fraction of penetrating solar rad (visible) - set in namelist
+!         !i0vis   = 0.70_dbl_kind  ! fraction of penetrating solar rad (visible) - set in namelist
+!# endif
 
       integer (kind=int_kind) ::   & 
          i, j           & ! horizontal indices

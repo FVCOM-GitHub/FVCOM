@@ -713,7 +713,7 @@
                    J2-J1+1   , IXQUAD , IXGRID   ,IQERR )       
    END IF                                                              
 
-   DO 450 ITER = 1, ITERMX                                             
+   DO ITER = 1, ITERMX
 
 !    initialise local (thread private) counter for SIP solver          
      INOCNT = 0                                                        
@@ -1154,8 +1154,7 @@
 !                    ACCUR         ,I1MYC         ,I2MYC         )                           
      END IF                                                           
 
-450 CONTINUE                                                            
-470 CONTINUE
+   ENDDO
 
 !---------------------------------------------------------------------- 
 !  Begin deallocate private arrays.                                    
@@ -1751,10 +1750,9 @@
 !print*,'after source 3'
      IF(DTTOT >= 0.9999*DTW) EXIT
 !
-     IF(.NOT.ACUPDA)THEN                                             
-       IF(TESTFL .AND. ITEST >= 30) WRITE (PRINTF, *) ' No update'    
-       GOTO 700                                                        
-     ENDIF                                                             
+     IF(.NOT.ACUPDA)THEN
+       IF(TESTFL .AND. ITEST >= 30) WRITE (PRINTF, *) ' No update'
+     ELSE
 !
 !    preparatory steps before solution of linear system
 !
@@ -1794,7 +1792,7 @@
 !
 !    calculate Dissipation and Leak in all points
 !
-700  CONTINUE                                                          
+     ENDIF
 !     CALL ADDDIS (COMPDA(1,JDISS)    ,COMPDA(1,JLEAK)    ,              &
 !                  AC2                ,LSWMAT(1,1,JABIN)  ,              &
 !		  SWMATR(1,1,JDIS0)  ,SWMATR(1,1,JDIS1)  ,              &
@@ -2052,21 +2050,21 @@
 !     ***   +++++++++++++++++++     +++++++++++++++++++++         ***
 !     ***                                                         ***
 !
-      WETGRDt = 0                                                         
-      DO 101 IX = IX1, IX2
-      DO 100 IY = IY1, IY2
-        INDX = KGRPNT(IX,IY)
-        IF (DEP2(INDX) .GT. DEPMIN) THEN                                  
-          HSACC1(INDX) = MAX( 1.E-20 , HSACC2(INDX) )                     
-          SACC1(INDX)  = MAX( 1.E-20 , SACC2(INDX)  )                     
-          WETGRDt = WETGRDt + 1                                           
-!       Added to initialize HSACC1 and SACC1 values.                      
-        ELSE                                                              
-          HSACC1(INDX) = 0.                                               
-          SACC1(INDX)  = 0.                                               
-        END IF                                                            
- 100  CONTINUE
- 101  CONTINUE
+      WETGRDt = 0
+      DO IX = IX1, IX2
+        DO IY = IY1, IY2
+          INDX = KGRPNT(IX,IY)
+          IF (DEP2(INDX) .GT. DEPMIN) THEN
+            HSACC1(INDX) = MAX( 1.E-20 , HSACC2(INDX) )
+            SACC1(INDX)  = MAX( 1.E-20 , SACC2(INDX)  )
+            WETGRDt = WETGRDt + 1
+!       Added to initialize HSACC1 and SACC1 values.
+          ELSE
+            HSACC1(INDX) = 0.
+            SACC1(INDX)  = 0.
+          END IF
+        ENDDO
+      ENDDO
 !
 !     *** first criterion to terminate the iteration process ***
 !     ***                                                    ***
@@ -2081,41 +2079,41 @@
 !     ***      DTABS  =  Tm2  - Tm1 < PNUMS(3)               ***
 !     ***                                                    ***
 !
-      DO 201 IX = IX1, IX2
-      DO 200 IY = IY1, IY2
-        INDX = KGRPNT(IX,IY)
+      DO IX = IX1, IX2
+        DO IY = IY1, IY2
+          INDX = KGRPNT(IX,IY)
 !
 !       *** Compute the mean ENERGY DENSITY frequency and    ***
 !       *** significant waveheight over the full spectrum    ***
 !       *** per gridpoint                                    ***
 !
-        IF (DEP2(INDX) .GT. DEPMIN) THEN                                  
-          SME_T  = 0.
-          SME_B  = 0.
-          DO 180 IS = 1, MSC
-            DO 170 ID = 1, MDC
-              ACS2  = SPCSIG(IS)**2 * AC2(ID,IS,INDX)                     
-              ACS3  = SPCSIG(IS) * ACS2                                   
-              SME_B = SME_B + ACS2
-              SME_T = SME_T + ACS3
- 170        CONTINUE
- 180      CONTINUE
-          SME_B = SME_B * FRINTF * DDIR                                   
-          SME_T = SME_T * FRINTF * DDIR                                   
+          IF (DEP2(INDX) .GT. DEPMIN) THEN
+            SME_T  = 0.
+            SME_B  = 0.
+            DO IS = 1, MSC
+              DO ID = 1, MDC
+                ACS2  = SPCSIG(IS)**2 * AC2(ID,IS,INDX)
+                ACS3  = SPCSIG(IS) * ACS2
+                SME_B = SME_B + ACS2
+                SME_T = SME_T + ACS3
+              ENDDO
+            ENDDO
+            SME_B = SME_B * FRINTF * DDIR
+            SME_T = SME_T * FRINTF * DDIR
 !
 !         *** mean frequency and significant wave height per gridpoint ***
 !
-          IF ( SME_B .LE. 0. ) THEN
-            SME_B = 1.E-20
-            SACC2(INDX) = 1.E-20                                          
-            HSACC2(INDX) = 1.E-20                                         
-          ELSE
-            SACC2(INDX) = MAX ( 1.E-20 , (SME_T / SME_B) )                
-            HSACC2(INDX) = MAX ( 1.E-20 , (4. * SQRT(SME_B)) )            
+            IF ( SME_B .LE. 0. ) THEN
+              SME_B = 1.E-20
+              SACC2(INDX) = 1.E-20
+              HSACC2(INDX) = 1.E-20
+            ELSE
+              SACC2(INDX) = MAX ( 1.E-20 , (SME_T / SME_B) )
+              HSACC2(INDX) = MAX ( 1.E-20 , (4. * SQRT(SME_B)) )
+            END IF
           END IF
-        END IF
- 200  CONTINUE
- 201  CONTINUE
+        ENDDO
+      ENDDO
 !
 !     *** the mean significant waveheight and the mean  ***
 !     *** relative frequency over the gridpoints which  ***
@@ -2137,151 +2135,148 @@
        SMN2t= 0.                                                          
       NINDXt= 0                                                           
 !
-      DO 301 IX = IX1, IX2
-      DO 300 IY = IY1, IY2
-        INDX = KGRPNT(IX,IY)
-        IF (DEP2(INDX).GT.DEPMIN) THEN                                    
-          HSMN2t = HSMN2t + HSACC2(INDX)                                  
-          SMN2t  =  SMN2t +  SACC2(INDX)                                  
-          NINDXt = NINDXt + 1                                             
-        END IF                                                            
- 300  CONTINUE                                                            
- 301  CONTINUE
+      DO IX = IX1, IX2
+        DO IY = IY1, IY2
+          INDX = KGRPNT(IX,IY)
+          IF (DEP2(INDX).GT.DEPMIN) THEN
+            HSMN2t = HSMN2t + HSACC2(INDX)
+            SMN2t  =  SMN2t +  SACC2(INDX)
+            NINDXt = NINDXt + 1
+          END IF
+        ENDDO
+      ENDDO
 !
-!     Global sum of NINDX                                                 
-!$OMP ATOMIC                                                              
-      NINDX = NINDX + NINDXt                                              
-!$OMP ATOMIC                                                              
-      HSMN2 = HSMN2 + HSMN2t                                              
-!$OMP ATOMIC                                                              
-      SMN2 = SMN2 + SMN2t                                                 
+!     Global sum of NINDX
+!$OMP ATOMIC
+      NINDX = NINDX + NINDXt
+!$OMP ATOMIC
+      HSMN2 = HSMN2 + HSMN2t
+!$OMP ATOMIC
+      SMN2 = SMN2 + SMN2t
 !
-!$OMP BARRIER                                                             
-!$OMP MASTER                                                              
-      ARR(1) = HSMN2                                                      
-      ARR(2) = SMN2                                                       
-      ARR(3) = REAL(NINDX)                                                
-!      CALL SWREDUCE( ARR, 3, SWREAL, SWSUM )                              
-!DOS      CALL SWREDUCE( NINDX, 1, SWINT, SWSUM )                         
-!DOS      ARR(3) = REAL(NINDX)                                            
-!OMP#ifndef _OPENMP                                                       
-      IF (STPNOW()) RETURN                                                
-!OMP#endif                                                                
-      HSMN2 = ARR(1) / ARR(3)                                             
-       SMN2 = ARR(2) / ARR(3)                                             
-!$OMP END MASTER                                                          
-!$OMP BARRIER                                                             
+!$OMP BARRIER
+!$OMP MASTER
+      ARR(1) = HSMN2
+      ARR(2) = SMN2
+      ARR(3) = REAL(NINDX)
+!      CALL SWREDUCE( ARR, 3, SWREAL, SWSUM )
+!DOS      CALL SWREDUCE( NINDX, 1, SWINT, SWSUM )
+!DOS      ARR(3) = REAL(NINDX)
+!OMP#ifndef _OPENMP
+      IF (STPNOW()) RETURN
+!OMP#endif
+      HSMN2 = ARR(1) / ARR(3)
+      SMN2 = ARR(2) / ARR(3)
+!$OMP END MASTER
+!$OMP BARRIER
 !
 !     Calculate a set of accuracy parameters based on relative, absolute
 !     and overall accuracy measures for Hs and Tm
 !
-      LHEAD=.TRUE.                                                        
-      DO 401 IX = IX1, IX2
-      DO 400 IY = IY1, IY2
-        INDX = KGRPNT(IX,IY)
+      LHEAD=.TRUE.
+      DO IX = IX1, IX2
+        DO IY = IY1, IY2
+          INDX = KGRPNT(IX,IY)
 
 !       --- determine whether the point is a test point                   40.41
 
-        TSTFL = .FALSE.                                                   
-        IF (NPTST.GT.0) THEN                                              
-           DO 20 II = 1, NPTST                                            
-              IF (IX.NE.XYTST(2*II-1)) GOTO 20                            
-              IF (IY.NE.XYTST(2*II  )) GOTO 20                            
-              TSTFL = .TRUE.                                              
-  20       CONTINUE                                                       
-        END IF                                                            
+          TSTFL = .FALSE.
+          IF (NPTST.GT.0) THEN
+            DO II = 1, NPTST
+              IF (IX.NE.XYTST(2*II-1)) CYCLE
+              IF (IY.NE.XYTST(2*II  )) CYCLE
+              TSTFL = .TRUE.
+            ENDDO
+          END IF
 
-        IF ( DEP2(INDX) .GT. DEPMIN ) THEN                                
-          TMREL  = ABS ( SACC2(INDX) - SACC1(INDX) ) /                &
-	                 SACC1(INDX)                                      
-          TMABS  = ABS ( ( PI2_W/SACC2(INDX)) - (PI2_W/SACC1(INDX)) )         
-          TMOVAL = ABS ( SACC2(INDX) - SACC1(INDX) ) / SMN2               
+          IF ( DEP2(INDX) .GT. DEPMIN ) THEN
+            TMREL  = ABS ( SACC2(INDX) - SACC1(INDX) ) / SACC1(INDX)
+            TMABS  = ABS ( ( PI2_W/SACC2(INDX)) - (PI2_W/SACC1(INDX)) )
+            TMOVAL = ABS ( SACC2(INDX) - SACC1(INDX) ) / SMN2
 !
-          HSREL  = ABS ( HSACC2(INDX) - HSACC1(INDX) ) /              &
-	                 HSACC1(INDX)                                     
-          HSABS  = ABS ( HSACC2(INDX) - HSACC1(INDX) )                    
-          HSOVAL = ABS ( HSACC2(INDX) - HSACC1(INDX) ) / HSMN2            
+            HSREL  = ABS ( HSACC2(INDX) - HSACC1(INDX) ) / HSACC1(INDX)
+            HSABS  = ABS ( HSACC2(INDX) - HSACC1(INDX) )
+            HSOVAL = ABS ( HSACC2(INDX) - HSACC1(INDX) ) / HSMN2
 !
-          IF (EQREAL(SACC1(INDX),1.E-20) .OR.                         &
-	      EQREAL(SACC2(INDX),1.E-20) ) THEN                           
-             DELTM(INDX) = 0.                                             
-          ELSE                                                            
-             DELTM(INDX) = TMABS
-          END IF                                                          
-          DELHS(INDX) = HSABS
+            IF (EQREAL(SACC1(INDX),1.E-20) .OR.EQREAL(SACC2(INDX),1.E-20) ) THEN
+              DELTM(INDX) = 0.
+            ELSE
+              DELTM(INDX) = TMABS
+            END IF
+            DELHS(INDX) = HSABS
 !
 !         *** gridpoint in which mean period and wave height ***
 !         *** have reached required accuracy                 ***
 !
-          IF ( ITEST .GE. 30 .AND. TESTFL) THEN
-            WRITE(PRINTF,3002) SACC2(INDX), SACC1(INDX),             &
-	                       HSACC2(INDX), HSACC1(INDX)                 
- 3002       FORMAT(' SACCUR: SA2 SA1 HSA2 HSA1       :',4E12.4)
-            WRITE(PRINTF,2002) TMREL, HSREL, TMABS, HSABS
- 2002       FORMAT(' SACCUR: TMREL HSREL TMABS HSABS :',4E12.4)
-          ENDIF
+            IF ( ITEST .GE. 30 .AND. TESTFL) THEN
+              WRITE(PRINTF,3002) SACC2(INDX), SACC1(INDX),             &
+	                       HSACC2(INDX), HSACC1(INDX)
+ 3002         FORMAT(' SACCUR: SA2 SA1 HSA2 HSA1       :',4E12.4)
+              WRITE(PRINTF,2002) TMREL, HSREL, TMABS, HSABS
+ 2002         FORMAT(' SACCUR: TMREL HSREL TMABS HSABS :',4E12.4)
+            ENDIF
 !
-          IF ( (TMREL .LE. PNUMS(1) .OR. TMOVAL .LE. PNUMS(16)) .AND.    &
-	       (HSREL .LE. PNUMS(1) .OR. HSOVAL .LE. PNUMS(15)) ) THEN    
-            IACCURt = IACCURt + 1                                         
-          END IF
+            IF ( (TMREL .LE. PNUMS(1) .OR. TMOVAL .LE. PNUMS(16)) .AND.    &
+	              (HSREL .LE. PNUMS(1) .OR. HSOVAL .LE. PNUMS(15)) ) THEN
+              IACCURt = IACCURt + 1
+            END IF
 !
-          IF (TSTFL) THEN                                                 
-             IF (LHEAD) WRITE(PRINTF,501)                                 
-             WRITE(PRINTF,502) IX+MXF-2, IY+MYF-2, HSREL, HSOVAL,       &
-	                       TMREL, TMOVAL                              
- 501         FORMAT(25X,'dHrel          ','dHoval         ',            &
-                   'dTm01rel       ','dTm01oval ')                   
- 502         FORMAT(1X,SS,'(IX,IY)=(',I5,',',I5,')','  ',               &
+            IF (TSTFL) THEN
+              IF (LHEAD) WRITE(PRINTF,501)
+              WRITE(PRINTF,502) IX+MXF-2, IY+MYF-2, HSREL, HSOVAL,       &
+	                       TMREL, TMOVAL
+ 501          FORMAT(25X,'dHrel          ','dHoval         ',            &
+                   'dTm01rel       ','dTm01oval ')
+ 502          FORMAT(1X,SS,'(IX,IY)=(',I5,',',I5,')','  ',               &
                     1PE13.6E2,'  ',1PE13.6E2,'  ',1PE13.6E2,'  ',       &
-		    1PE13.6E2)                                            
-             LHEAD=.FALSE.                                                
-          END IF                                                          
-        ELSE
+		          1PE13.6E2)
+              LHEAD=.FALSE.
+            END IF
+          ELSE
 !         *** otherwise set arrays equal 0 ***
-          DELTM(INDX) = 0.0
-          DELHS(INDX) = 0.0
-        END IF
+            DELTM(INDX) = 0.0
+            DELHS(INDX) = 0.0
+          END IF
 !
 !       Test output at test points
 !
-        IF ( ITEST .GE. 30 .AND. TESTFL) THEN                             
-           WRITE(PRINTF,1003) TMREL, TMABS, TMOVAL                        
- 1003      FORMAT(' SACCUR: TMREL, TMABS, TMOVAL  :',3E12.4)              
-           WRITE(PRINTF,1004) HSREL, HSABS, HSOVAL                        
- 1004      FORMAT(' SACCUR: HSREL, HSABS, HSOVAL  :',3E12.4)              
-        END IF                                                            
+          IF ( ITEST .GE. 30 .AND. TESTFL) THEN
+            WRITE(PRINTF,1003) TMREL, TMABS, TMOVAL
+ 1003       FORMAT(' SACCUR: TMREL, TMABS, TMOVAL  :',3E12.4)
+            WRITE(PRINTF,1004) HSREL, HSABS, HSOVAL
+ 1004       FORMAT(' SACCUR: HSREL, HSABS, HSOVAL  :',3E12.4)
+          END IF
 !
- 400  CONTINUE
- 401  CONTINUE
+        ENDDO
+      ENDDO
 !
-!     Global sum of IACCUR and WETGRD                                     
-!$OMP ATOMIC                                                              
-      IACCUR = IACCUR + IACCURt                                           
-!$OMP ATOMIC                                                              
-      WETGRD = WETGRD + WETGRDt                                           
+!     Global sum of IACCUR and WETGRD
+!$OMP ATOMIC
+      IACCUR = IACCUR + IACCURt
+!$OMP ATOMIC
+      WETGRD = WETGRD + WETGRDt
 !
-!$OMP BARRIER                                                             
-!$OMP MASTER                                                              
+!$OMP BARRIER
+!$OMP MASTER
 !
-!      CALL SWREDUCE ( IACCUR, 1, SWINT, SWSUM )                           
-!OMP#ifndef _OPENMP                                                       
-      IF (STPNOW()) RETURN                                                
-!OMP#endif                                                                
+!      CALL SWREDUCE ( IACCUR, 1, SWINT, SWSUM )
+!OMP#ifndef _OPENMP
+      IF (STPNOW()) RETURN
+!OMP#endif
       ACCUR  = REAL(IACCUR) * 100. / ARR(3)
-!$OMP END MASTER                                                          
-!$OMP BARRIER                                                             
+!$OMP END MASTER
+!$OMP BARRIER
 !
 !     *** test output ***
 !
-!$OMP MASTER                                                              
-      IF ( ITEST .GE. 30 ) THEN                                           
+!$OMP MASTER
+      IF ( ITEST .GE. 30 ) THEN
         WRITE(PRINTF,1002) PNUMS(1), PNUMS(2), PNUMS(3)
  1002   FORMAT(' SACCUR: PNUMS(1) DHABS DTABS  :',3E12.4)
         WRITE(PRINTF,1008) NINT(ARR(3)),IACCUR,ACCUR
  1008   FORMAT(' SACCUR: WETGRD IACCUR ACCUR   :',2I8,E12.4)
       END IF
-!$OMP END MASTER                                                          
+!$OMP END MASTER
 !
       RETURN
       END SUBROUTINE SACCUR
@@ -3814,12 +3809,12 @@
 !     *** if negative action density occur rescale with a factor ***
 !     *** only the sector computed is rescaled !!                ***
 !
-      DO 180 IS = 1 , ISSTOP
+      DO IS = 1 , ISSTOP
         ATOT   = 0.
         ATOTP  = 0.
         FACTOR = 0.
         NEGVAL = .FALSE.
-        DO 160 IDDUM = IDCMIN(IS), IDCMAX(IS)
+        DO IDDUM = IDCMIN(IS), IDCMAX(IS)
           ID = MOD ( IDDUM - 1 + MDC , MDC ) + 1
           ATOT = ATOT + AC2(ID,IS,KCGRD(1))
           IF ( AC2(ID,IS,KCGRD(1)) .LT. 0. ) THEN
@@ -3828,14 +3823,14 @@
           ELSE
             ATOTP = ATOTP + AC2(ID,IS,KCGRD(1))
           END IF
- 160    CONTINUE
+        ENDDO
         IF (NEGVAL) THEN
           IF ( ATOTP .LT. 1.E-15 ) ATOTP = 1.E-15
           FACTOR = ATOT / ATOTP
 !
 !         *** rescale ***
 !
-          DO 170 IDDUM = IDCMIN(IS), IDCMAX(IS)
+          DO IDDUM = IDCMIN(IS), IDCMAX(IS)
             ID = MOD ( IDDUM - 1 + MDC , MDC ) + 1
             IF ( AC2(ID,IS,KCGRD(1)) .LT. 0.) THEN
               AC2(ID,IS,KCGRD(1)) = 0.
@@ -3843,15 +3838,15 @@
             IF ( FACTOR .GE. 0. ) THEN
               AC2(ID,IS,KCGRD(1)) = FACTOR * AC2(ID,IS,KCGRD(1))
             ENDIF
- 170      CONTINUE
+          ENDDO
 !
           IF ( ITEST .GE. 120 .AND. TESTFL )                       &
-	    WRITE (PRINTF, 171) IXCGRD(1)+MXF-2, IYCGRD(1)+MYF-2, IS,   &
+	          WRITE (PRINTF, 171) IXCGRD(1)+MXF-2, IYCGRD(1)+MYF-2, IS,   &
 	        FACTOR , ATOT, ATOTP
  171      FORMAT(' Rescale in Point, Isig, Factor, ATOT, ATOTP:',     &
                  3I4, 3(1X,E11.4))
         ENDIF
- 180  CONTINUE
+      ENDDO
       RETURN
       END SUBROUTINE RESCALE
 !****************************************************************
@@ -4187,8 +4182,7 @@
 !     --- solve the system by forward and backward substitutions
 !         in an iterative manner
 
- 10   IF ( ICONV.EQ.0 .AND. IT.LT.MAXIT ) THEN
-
+      DO WHILE( ICONV.EQ.0 .AND. IT.LT.MAXIT )
          IT    = IT + 1
          ICONV = 1
          RNORM = 0.
@@ -4302,9 +4296,9 @@
 
          RES(ID,IS) = IMATRA(ID,IS)                         &
 	             -IMATDA(ID,IS)*AC2(ID ,IS ,KCGRD(1))   &
-		     -IMAT5L(ID,IS)*AC2(ID ,ISM,KCGRD(1))   &
-		     -IMATUA(ID,IS)*AC2(IDP,IS ,KCGRD(1))   &
-		     -UPPERI(IS)*AC2(IDDT,IS,KCGRD(1))
+		           -IMAT5L(ID,IS)*AC2(ID ,ISM,KCGRD(1))   &
+		           -IMATUA(ID,IS)*AC2(IDP,IS ,KCGRD(1))   &
+		           -UPPERI(IS)*AC2(IDDT,IS,KCGRD(1))
          RNORM = RNORM + RES(ID,IS)*RES(ID,IS)
          RES(ID,IS) = (RES(ID,IS) - CMAT5L(ID,IS)*RES(ID,ISM))*   &
 	               CMATDA(ID,IS)
@@ -4316,13 +4310,13 @@
 
             RES(ID,IS) = IMATRA(ID,IS)                       &
 	                -IMATDA(ID,IS)*AC2(ID ,IS ,KCGRD(1)) &
-			-IMAT5L(ID,IS)*AC2(ID ,ISM,KCGRD(1)) &
-			-IMATLA(ID,IS)*AC2(IDM,IS ,KCGRD(1)) &
-			-IMATUA(ID,IS)*AC2(IDP,IS ,KCGRD(1))
+		            	-IMAT5L(ID,IS)*AC2(ID ,ISM,KCGRD(1)) &
+		            	-IMATLA(ID,IS)*AC2(IDM,IS ,KCGRD(1)) &
+		             	-IMATUA(ID,IS)*AC2(IDP,IS ,KCGRD(1))
             RNORM = RNORM + RES(ID,IS)*RES(ID,IS)
             RES(ID,IS) = (RES(ID,IS) - CMAT5L(ID,IS)*RES(ID ,ISM)  &
 	                - CMATLA(ID,IS)*RES(IDM,IS ))*             &
-			  CMATDA(ID,IS)
+			              CMATDA(ID,IS)
          END DO
 
          IDDUM = IDMAX(IS)
@@ -4343,7 +4337,7 @@
          IF ( RNORM.GT.1.E8 ) THEN
             IT = MAXIT + 1
             ICONV = 0
-            GOTO 10
+            CYCLE
          END IF
          RNORM=SQRT(RNORM)
          IF ( IAMOUT.EQ.3 .AND. IT.EQ.1 ) RNRM0 = RNORM
@@ -4387,9 +4381,7 @@
          END DO
 
          IF ( RNORM.GT.UNDFLW**2 .AND. RNORM.GT.EPSLIN ) ICONV = 0
-         GOTO 10
-
-      END IF
+      ENDDO
 
 !     --- investigate the reason to stop
 
@@ -4691,8 +4683,7 @@
 
 !     --- start iteration process
 
- 10   IF ( ICONV.EQ.0 .AND. IT.LT.MAXIT ) THEN
-
+      DO WHILE( ICONV.EQ.0 .AND. IT.LT.MAXIT )
          IT    = IT + 1
          ICONV = 1
          RESM  = 0.
@@ -4895,7 +4886,7 @@
          IF ( RESM.GT.1.E8 ) THEN
             IT = MAXIT + 1
             ICONV = 0
-            GOTO 10
+            CYCLE
          END IF
          IF ( IAMOUT.EQ.2 ) THEN
             WRITE (PRINTF,'(A,I3,A,E13.6,A,I3,A,I3,A)')     &
@@ -4905,9 +4896,7 @@
          IF ( IAMOUT.EQ.3 .AND. IT.EQ.1 ) RESM0 = RESM
 
          IF ( RESM.GT.REPS ) ICONV = 0
-         GOTO 10
-
-      END IF
+      ENDDO
 
 !     --- investigate the reason to stop
 
@@ -5374,11 +5363,11 @@
 
             TSTFL = .FALSE.
             IF (NPTST.GT.0) THEN
-               DO 20 II = 1, NPTST
-                  IF (IX.NE.XYTST(2*II-1)) GOTO 20
-                  IF (IY.NE.XYTST(2*II  )) GOTO 20
+               DO II = 1, NPTST
+                  IF (IX.NE.XYTST(2*II-1)) CYCLE
+                  IF (IY.NE.XYTST(2*II  )) CYCLE
                   TSTFL = .TRUE.
-  20           CONTINUE
+               ENDDO
             END IF
 
             DELHS(INDX) = 0.0
@@ -5494,4 +5483,3 @@
 
   RETURN
   END SUBROUTINE ICETT2
-

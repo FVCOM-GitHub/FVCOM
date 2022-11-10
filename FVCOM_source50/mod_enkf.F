@@ -2459,13 +2459,13 @@ MODULE MOD_ENKF
 !!$   RETURN
 !!$   END SUBROUTINE WD_DUMP_EL
 
-   SUBROUTINE READOBS(STLOC,NLOC)
-     
-    USE LIMS
-    USE CONTROL
-    IMPLICIT NONE
-    
-      INTEGER ::  NUM  = 0 
+    SUBROUTINE READOBS(STLOC,NLOC)
+
+      USE LIMS
+      USE CONTROL
+      IMPLICIT NONE
+
+      INTEGER ::  NUM  = 0
       INTEGER ::  NLOC
       INTEGER ::  SWITCH = 0
       INTEGER ::  J,K
@@ -2475,119 +2475,114 @@ MODULE MOD_ENKF
       CHARACTER(LEN=24) HEADINFO
       INTEGER STLOC(ENKF_NOBSMAX)
       INTEGER LAY(ENKF_NOBSMAX)
- 
+      INTEGER :: ierror
+
       FILENAME = TRIM(INPUT_DIR)//"/"//trim(casename)//"_assim_enkf.nml"
-     
+
       OPEN(73,FILE=TRIM(FILENAME),FORM='FORMATTED')
       REWIND(73)
- 
+
       NLOC = 0
       IDUMMY = 0
       STLOC = ZERO
-      
-  100 READ(73,'(A24)',END=200) HEADINFO
-      IF(SWITCH/=1) THEN
-        IF(HEADINFO=='!===READ IN OBSERVATION') THEN
-          SWITCH = 1
-          GOTO 100
-        ELSE
-          GOTO 100
+
+      DO WHILE(.TRUE.)
+        READ(73,'(A24)',IOSTAT=ierror) HEADINFO
+        IF(ierror < 0) EXIT
+        IF(SWITCH/=1) THEN
+          IF(HEADINFO=='!===READ IN OBSERVATION') SWITCH = 1
+          CYCLE
         ENDIF
-      ENDIF 
-      
-      IF(TRIM(HEADINFO)=='!EL') THEN
-        IF(EL_OBS) THEN
-          READ(73,*) NUM
- 	 NLOC = NLOC + NUM
-          IF(NLOC>ENKF_NOBSMAX) THEN
-            WRITE(IPT,*) 'not enough storage for observations:', 'Nloc=', Nloc, 'Nobsmax=', ENKF_NOBSMAX
-            CALL PSTOP
+
+        IF(TRIM(HEADINFO)=='!EL') THEN
+          IF(EL_OBS) THEN
+            READ(73,*) NUM
+ 	          NLOC = NLOC + NUM
+            IF(NLOC>ENKF_NOBSMAX) THEN
+              WRITE(IPT,*) 'not enough storage for observations:', 'Nloc=', Nloc, 'Nobsmax=', ENKF_NOBSMAX
+              CALL PSTOP
+            ENDIF
+ 	          READ(73,*)  (STLOC(K), K=1,NLOC)
           ENDIF
- 	 READ(73,*)  (STLOC(K), K=1,NLOC)	
-        ENDIF  
-        
-        IF(EL_ASSIM) THEN
- 	 IDUMMY = IDUMMY + MGL
-        ENDIF
-             
-      ENDIF
-      
-      IF(TRIM(HEADINFO)=='!UV') THEN
-        IF(UV_OBS) THEN       
-          READ(73,*) NUM
- 	 NLOC = NLOC + NUM
-          IF(NLOC+NUM>ENKF_NOBSMAX) THEN
-            WRITE(IPT,*) 'not enough storage for observations:', 'Nloc=', Nloc+num, 'Nobsmax=', ENKF_NOBSMAX
-            CALL PSTOP
+
+          IF(EL_ASSIM) THEN
+ 	          IDUMMY = IDUMMY + MGL
           ENDIF
- 	 READ(73,*)  (STLOC(K), K=NLOC-NUM+1,NLOC)
- 	 READ(73,*)  (LAY(K),   K=NLOC-NUM+1,NLOC)
-          DO K=NLOC-NUM+1, NLOC
- 	   STLOC(K)=STLOC(K)+IDUMMY+NGL*(LAY(K)-1)
- 	 ENDDO   
-          IDUMMY = IDUMMY + NGL*KBM1
- 	 
- 	 NLOC = NLOC + NUM
- 	 DO K=NLOC-NUM+1, NLOC
- 	   STLOC(K)=STLOC(K-NUM)+NGL*KBM1+NGL*(LAY(K-NUM)-1)	   
- 	 ENDDO
+
         ENDIF
-        
-        IF(UV_ASSIM) THEN  
-           IDUMMY = IDUMMY + NGL*KBM1
-        ENDIF
-      ENDIF
-      
-      IF(TRIM(HEADINFO)=='!T') THEN
-        IF(T_OBS) THEN
-          READ(73,*) NUM
- 	 NLOC = NLOC + NUM
-          IF(NLOC>ENKF_NOBSMAX) THEN
-            WRITE(IPT,*) 'not enough storage for observations:', 'Nloc=', Nloc, 'Nobsmax=', ENKF_NOBSMAX
-            CALL PSTOP
+
+        IF(TRIM(HEADINFO)=='!UV') THEN
+          IF(UV_OBS) THEN
+            READ(73,*) NUM
+ 	          NLOC = NLOC + NUM
+            IF(NLOC+NUM>ENKF_NOBSMAX) THEN
+              WRITE(IPT,*) 'not enough storage for observations:', 'Nloc=', Nloc+num, 'Nobsmax=', ENKF_NOBSMAX
+              CALL PSTOP
+            ENDIF
+ 	          READ(73,*)  (STLOC(K), K=NLOC-NUM+1,NLOC)
+ 	          READ(73,*)  (LAY(K),   K=NLOC-NUM+1,NLOC)
+            DO K=NLOC-NUM+1, NLOC
+ 	            STLOC(K)=STLOC(K)+IDUMMY+NGL*(LAY(K)-1)
+ 	          ENDDO
+            IDUMMY = IDUMMY + NGL*KBM1
+
+ 	          NLOC = NLOC + NUM
+ 	          DO K=NLOC-NUM+1, NLOC
+ 	            STLOC(K)=STLOC(K-NUM)+NGL*KBM1+NGL*(LAY(K-NUM)-1)
+ 	          ENDDO
           ENDIF
- 	 READ(73,*)  (STLOC(K), K=NLOC-NUM+1,NLOC)       
-          READ(73,*)  (LAY(K),   K=NLOC-NUM+1,NLOC)      
-          DO K=NLOC-NUM+1, NLOC
- 	   STLOC(K)=STLOC(K)+IDUMMY+MGL*(LAY(K)-1)
- 	 ENDDO   
-          
-        ENDIF   
-        
-        IF(T_ASSIM) THEN
-          IDUMMY = IDUMMY + MGL*KBM1
-        ENDIF
-      ENDIF
-          
-      IF(TRIM(HEADINFO)=='!S') THEN
-        IF(S_OBS) THEN
-          READ(73,*) NUM
-          PRINT *, 'SALINITY READING OBSERVATION',NUM
- 	 NLOC = NLOC + NUM
-          IF(NLOC>ENKF_NOBSMAX) THEN
-            WRITE(IPT,*) 'not enough storage for observations:', 'Nloc=', Nloc, 'Nobsmax=', ENKF_NOBSMAX
-            CALL PSTOP
+
+          IF(UV_ASSIM) THEN
+            IDUMMY = IDUMMY + NGL*KBM1
           ENDIF
- 	 READ(73,*)  (STLOC(K),K=NLOC-NUM+1,NLOC)        
-          READ(73,*)  (LAY(K),  K=NLOC-NUM+1,NLOC)    
-          DO K=NLOC-NUM+1, NLOC
- 	   STLOC(K)=STLOC(K)+IDUMMY+MGL*(LAY(K)-1)
- 	 ENDDO   
-  
         ENDIF
-        
-        IF(S_ASSIM) THEN
-          IDUMMY = IDUMMY + MGL*KBM1 
-        ENDIF 
-      ENDIF
-      
-      GOTO 100
-  200 CONTINUE
- 
+
+        IF(TRIM(HEADINFO)=='!T') THEN
+          IF(T_OBS) THEN
+            READ(73,*) NUM
+ 	          NLOC = NLOC + NUM
+            IF(NLOC>ENKF_NOBSMAX) THEN
+              WRITE(IPT,*) 'not enough storage for observations:', 'Nloc=', Nloc, 'Nobsmax=', ENKF_NOBSMAX
+              CALL PSTOP
+            ENDIF
+ 	          READ(73,*)  (STLOC(K), K=NLOC-NUM+1,NLOC)
+            READ(73,*)  (LAY(K),   K=NLOC-NUM+1,NLOC)
+            DO K=NLOC-NUM+1, NLOC
+ 	            STLOC(K)=STLOC(K)+IDUMMY+MGL*(LAY(K)-1)
+ 	          ENDDO
+
+          ENDIF
+
+          IF(T_ASSIM) THEN
+            IDUMMY = IDUMMY + MGL*KBM1
+          ENDIF
+        ENDIF
+
+        IF(TRIM(HEADINFO)=='!S') THEN
+          IF(S_OBS) THEN
+            READ(73,*) NUM
+            PRINT *, 'SALINITY READING OBSERVATION',NUM
+ 	          NLOC = NLOC + NUM
+            IF(NLOC>ENKF_NOBSMAX) THEN
+              WRITE(IPT,*) 'not enough storage for observations:', 'Nloc=', Nloc, 'Nobsmax=', ENKF_NOBSMAX
+              CALL PSTOP
+            ENDIF
+ 	          READ(73,*)  (STLOC(K),K=NLOC-NUM+1,NLOC)
+            READ(73,*)  (LAY(K),  K=NLOC-NUM+1,NLOC)
+            DO K=NLOC-NUM+1, NLOC
+ 	            STLOC(K)=STLOC(K)+IDUMMY+MGL*(LAY(K)-1)
+ 	          ENDDO
+
+          ENDIF
+
+          IF(S_ASSIM) THEN
+            IDUMMY = IDUMMY + MGL*KBM1
+          ENDIF
+        ENDIF
+      END DO
       CLOSE(73)
-     
-   RETURN 
-   END SUBROUTINE READOBS 
+      RETURN
+    END SUBROUTINE READOBS
 !-------------old--------------------------------
   SUBROUTINE ENKF_READRESTART_first(NCF)
     USE MOD_INPUT

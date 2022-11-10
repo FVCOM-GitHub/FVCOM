@@ -1,7 +1,12 @@
-FVCOM release 3.0beta
+FVCOM release 5.0 
 
-THIS IS A BETA VERSION OF THE NEW FVCOM CODING
+----------------------------------------------------------
+ more FVCOM/Version
+FVCOM/MEDM Framework: Oct 20, 2022
+===================
 
-CURRENT STATUS:
-in progress, see fvcom.F
+Copyright (c) 2002-2022 The FVCOM/MEDM/WHOI Group
 
+svn: $HeadURL: https://fvcom.smast.umassd.edu
+svn: $LastChangedDate: 2022-10-20 
+------------------------------------------------------------

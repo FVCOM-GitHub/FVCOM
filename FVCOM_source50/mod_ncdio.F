@@ -3641,6 +3641,17 @@ CONTAINS
        IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:WUBOT")
        TAUBM   = 0.0_SP
 
+# if defined (PROJ) && !defined (SPHERICAL)
+       ! Siqi Li, 20221005
+       allocate(U_EAST(NGL,KB),stat=status)
+       IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:U_EAST")
+       U_EAST = 0.0_sp
+
+       allocate(V_NORTH(NGL,KB),stat=status)
+       IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:V_NORTH")
+       V_NORTH = 0.0_sp
+# endif
+
     END IF
 
 
@@ -3786,6 +3797,113 @@ CONTAINS
 
   NCF  => ADD(NCF,VAR)
 
+# if defined (PROJ) && !defined (SPHERICAL)
+    ! Siqi Li, 20221005
+    ! U_EAST
+    VAR  => NC_MAKE_AVAR(name='u_EAST',&
+         & values=U_EAST, DIM1= DIM_nele, DIM2= DIM_siglay, DIM3 = DIM_time)
+
+# if defined(UCF)
+    ATT  => NC_MAKE_ATT(name='long_name',values='East Velocity Component')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='standard_name',values='eastward_sea_water_velocity')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='units',values='m s-1')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='grid',values='grid5')
+    VAR  => ADD(VAR,ATT)
+
+!!$    ATT  => NC_MAKE_ATT(name='grid_location',values='center')
+    ATT  => NC_MAKE_ATT(name='location',values='face')
+    VAR  => ADD(VAR,ATT)
+
+!!$    ATT  => NC_MAKE_ATT(name='coordinates',values='latc lonc siglay_center')
+    ATT  => NC_MAKE_ATT(name='coordinates',values='time siglay latc lonc')
+    VAR  => ADD(VAR,ATT)
+
+# else
+    ATT  => NC_MAKE_ATT(name='long_name',values='Eastward Water Velocity')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='standard_name',values='eastward_sea_water_velocity')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='units',values='meters s-1')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='type',values='data')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='coordinates',values='time siglay latc lonc')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='mesh',values='fvcom_mesh')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='location',values='face')
+    VAR  => ADD(VAR,ATT)
+# endif
+
+    NCF  => ADD(NCF,VAR)
+
+
+    ! V_NORTH
+    VAR  => NC_MAKE_AVAR(name='v_NORTH',&
+         & values=V_NORTH, DIM1= DIM_nele, DIM2= DIM_siglay, DIM3 = DIM_time)
+
+# if defined(UCF)
+    ATT  => NC_MAKE_ATT(name='long_name',values='North Velocity Component')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='standard_name',values='Northward_sea_water_velocity')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='units',values='m s-1')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='grid',values='grid5')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='grid_location',values='center')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='coordinates',values='latc lonc siglay_center')
+    VAR  => ADD(VAR,ATT)
+
+# else
+    ATT  => NC_MAKE_ATT(name='long_name',values='Northward Water Velocity')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='standard_name',values='Northward_sea_water_velocity')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='units',values='meters s-1')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='type',values='data')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='coordinates',values='time siglay latc lonc')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='mesh',values='fvcom_mesh')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='location',values='face')
+    VAR  => ADD(VAR,ATT)
+# endif
+
+    NCF  => ADD(NCF,VAR)
+# endif
 
     IF(DBG_SET(DBG_SBR)) WRITE(IPT,*) "END VELOCITY_FILE_OBJECT"
 
@@ -3872,6 +3990,17 @@ CONTAINS
        IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:VA")
        VA = 0.0_SP
 
+# if defined (PROJ) && !defined (SPHERICAL)
+       ! Siqi Li, 20221005
+       allocate(UA_EAST(NGL),stat=status)
+       IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:UA_EAST")
+       UA_EAST = 0.0_SP
+
+       allocate(VA_NORTH(NGL),stat=status)
+       IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:VA_NORTH")
+       VA_NORTH = 0.0_SP
+# endif
+
     END IF
 
 
@@ -3916,6 +4045,44 @@ CONTAINS
 
     NCF  => ADD(NCF,VAR)
 
+# if defined (PROJ) && !defined (SPHERICAL)
+    ! Siqi Li, 20221005
+    ! UA_EAST
+    VAR  => NC_MAKE_AVAR(name='ua_EAST',&
+         & values=UA_EAST, DIM1= DIM_nele, DIM2= DIM_time)
+
+    ATT  => NC_MAKE_ATT(name='long_name',values='Vertically Averaged Eastward Velocity')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='units',values='meters s-1')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='type',values='data')
+    VAR  => ADD(VAR,ATT)
+
+    NCF  => ADD(NCF,VAR)
+
+    ! VA_NORTH
+    VAR  => NC_MAKE_AVAR(name='va_NORTH',&
+         & values=VA_NORTH, DIM1= DIM_nele, DIM2= DIM_time)
+
+    ATT  => NC_MAKE_ATT(name='long_name',values='Vertically Averaged Northward Velocity')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='units',values='meters s-1')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='type',values='data')
+    VAR  => ADD(VAR,ATT)
+
+    NCF  => ADD(NCF,VAR)
+# endif
 
     IF(DBG_SET(DBG_SBR)) WRITE(IPT,*) "END AVERAGE_VEL_FILE_OBJECT"
 

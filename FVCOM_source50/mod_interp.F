@@ -2358,14 +2358,14 @@ CONTAINS
 !C
 !C     Make initial guess for INDX
  
-    DO 50 I=1,N
-       INDX(I)=I
-50     CONTINUE
+    DO I=1,N
+      INDX(I)=I
+    ENDDO
  
 !C     If array is short, skip QuickSort and go directly to
 !C     the straight insertion sort.
  
-       IF (N.LE.M) GOTO 900
+    IF (N.GT.M) THEN
        
 !C===================================================================
 !C
@@ -2379,11 +2379,11 @@ CONTAINS
 !C     comments, let DATA[I]=DATA(INDX(I)).
  
 !C Q1: Initialize
-       ISTK=0
-       L=1
-       R=N
+      ISTK=0
+      L=1
+      R=N
        
-200    CONTINUE
+      DO WHILE (.TRUE.)
  
 !C Q2: Sort the subsequence DATA[L]..DATA[R].
 !C
@@ -2391,8 +2391,8 @@ CONTAINS
 !C     r &gt; R, and L &lt;= m &lt;= R.  (First time through, there is no
 !C     DATA for l &lt; L or r &gt; R.)
  
-       I=L
-       J=R
+        I=L
+        J=R
  
 !C Q2.5: Select pivot key
 !C
@@ -2401,37 +2401,37 @@ CONTAINS
 !C     so the corresponding DATA values are in increasing order.
 !C     The pivot key, DATAP, is then DATA[P].
  
-       P=(L+R)/2
-       INDXP=INDX(P)
-       DATAP=DATA(INDXP)
+        P=(L+R)/2
+        INDXP=INDX(P)
+        DATAP=DATA(INDXP)
        
-       IF (DATA(INDX(L)) .GT. DATAP) THEN
+        IF (DATA(INDX(L)) .GT. DATAP) THEN
           INDX(P)=INDX(L)
           INDX(L)=INDXP
           INDXP=INDX(P)
           DATAP=DATA(INDXP)
-       ENDIF
+        ENDIF
        
-       IF (DATAP .GT. DATA(INDX(R))) THEN
+        IF (DATAP .GT. DATA(INDX(R))) THEN
           IF (DATA(INDX(L)) .GT. DATA(INDX(R))) THEN
-             INDX(P)=INDX(L)
-             INDX(L)=INDX(R)
+            INDX(P)=INDX(L)
+            INDX(L)=INDX(R)
           ELSE
-             INDX(P)=INDX(R)
+            INDX(P)=INDX(R)
           ENDIF
           INDX(R)=INDXP
           INDXP=INDX(P)
           DATAP=DATA(INDXP)
-       ENDIF
+        ENDIF
  
 !C     Now we swap values between the right and left sides and/or
 !C     move DATAP until all smaller values are on the left and all
 !C     larger values are on the right.  Neither the left or right
 !C     side will be internally ordered yet; however, DATAP will be
 !C     in its final position.
- 
-300    CONTINUE
- 
+
+        DO WHILE ( .TRUE. ) 
+        
 !C Q3: Search for datum on left &gt;= DATAP
 !C
 !C     At this point, DATA[L] &lt;= DATAP.  We can therefore start scanning
@@ -2439,33 +2439,33 @@ CONTAINS
 !C     to terminate since we initially placed DATAP near the middle of
 !C     the subsequence).
  
-       I=I+1
-       IF (DATA(INDX(I)).LT.DATAP) GOTO 300
+          I=I+1
+          IF (DATA(INDX(I)).LT.DATAP) CYCLE 
        
-400    CONTINUE
-       
+          DO WHILE (.TRUE.)  
+          
 !C Q4: Search for datum on right &lt;= DATAP
 !C
 !C     At this point, DATA[R] &gt;= DATAP.  We can therefore start scanning
 !C     down from R, looking for a value &lt;= DATAP (this scan is guaranteed
 !C     to terminate since we initially placed DATAP near the middle of
-!C     the subsequence).
- 
-       J=J-1
-       IF (DATA(INDX(J)).GT.DATAP) GOTO 400
- 
+!C     the subsequence). 
+            J=J-1
+            IF (DATA(INDX(J)).LE.DATAP) EXIT 
+          ENDDO
 !C Q5: Have the two scans collided?
  
-       IF (I.LT.J) THEN
+          IF (I.LT.J) THEN
  
 !C Q6: No, interchange DATA[I] &lt;--&gt; DATA[J] and continue
           
-          INDXT=INDX(I)
-          INDX(I)=INDX(J)
-          INDX(J)=INDXT
-          GOTO 300
-       ELSE
-          
+            INDXT=INDX(I)
+            INDX(I)=INDX(J)
+            INDX(J)=INDXT
+          ELSE
+            EXIT
+          ENDIF
+        ENDDO         
 !C Q7: Yes, select next subsequence to sort
 !C
 !C    At this point, I &gt;= J and DATA[l] &lt;= DATA[I] == DATAP &lt;= DATA[r],
@@ -2475,56 +2475,57 @@ CONTAINS
 !C     elements long, go back and QuickSort it; otherwise, pop a
 !C     subsequence off the stack and QuickSort it.
  
-          IF (R-J .GE. I-L .AND. I-L .GT. M) THEN
-             ISTK=ISTK+1
-             LSTK(ISTK)=J+1
-             RSTK(ISTK)=R
-             R=I-1
-          ELSE IF (I-L .GT. R-J .AND. R-J .GT. M) THEN
-             ISTK=ISTK+1
-             LSTK(ISTK)=L
-             RSTK(ISTK)=I-1
-             L=J+1
-          ELSE IF (R-J .GT. M) THEN
-             L=J+1
-          ELSE IF (I-L .GT. M) THEN
-             R=I-1
-          ELSE
+        IF (R-J .GE. I-L .AND. I-L .GT. M) THEN
+          ISTK=ISTK+1
+          LSTK(ISTK)=J+1
+          RSTK(ISTK)=R
+          R=I-1
+        ELSE IF (I-L .GT. R-J .AND. R-J .GT. M) THEN
+          ISTK=ISTK+1
+          LSTK(ISTK)=L
+          RSTK(ISTK)=I-1
+          L=J+1
+        ELSE IF (R-J .GT. M) THEN
+          L=J+1
+        ELSE IF (I-L .GT. M) THEN
+          R=I-1
+        ELSE
 !C Q8: Pop the stack, or terminate QuickSort if empty
-             IF (ISTK.LT.1) GOTO 900
-             L=LSTK(ISTK)
-             R=RSTK(ISTK)
-             ISTK=ISTK-1
-          ENDIF
-          GOTO 200
-       ENDIF
- 
-900    CONTINUE
+          IF (ISTK.LT.1) EXIT
+          L=LSTK(ISTK)
+          R=RSTK(ISTK)
+          ISTK=ISTK-1
+        ENDIF
+      ENDDO
+    ENDIF
  
 !C===================================================================
 !C
 !C Q9: Straight Insertion sort
  
-       DO 950 I=2,N
-          !         if(mod(I,10000).eq.0) print*,'i=',i
-          IF (DATA(INDX(I-1)) .GT. DATA(INDX(I))) THEN
-             INDXP=INDX(I)
-             DATAP=DATA(INDXP)
-             P=I-1
-920          CONTINUE
-             INDX(P+1) = INDX(P)
-             P=P-1
-             IF (P.GT.0) THEN
-                IF (DATA(INDX(P)).GT.DATAP) GOTO 920
-             ENDIF
-             INDX(P+1) = INDXP
+    DO I=2,N
+    !         if(mod(I,10000).eq.0) print*,'i=',i
+      IF (DATA(INDX(I-1)) .GT. DATA(INDX(I))) THEN
+        INDXP=INDX(I)
+        DATAP=DATA(INDXP)
+        P=I-1
+        DO WHILE (.TRUE.)
+          INDX(P+1) = INDX(P)
+          P=P-1
+          IF (P.GT.0) THEN
+            IF (DATA(INDX(P)).LE.DATAP) EXIT
+          ELSE
+            EXIT
           ENDIF
-950       CONTINUE
+        ENDDO
+        INDX(P+1) = INDXP
+      ENDIF
+    ENDDO
           
 !C===================================================================
 !C
 !C     All done
-          RETURN
+    RETURN
 !       END DO
 !    END DO
   END SUBROUTINE SORTRX

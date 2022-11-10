@@ -139,14 +139,14 @@
       LEAPYR=(MOD(IYEAR,4) == 0 .AND. MOD(IYEAR,100) /= 0) .OR.     &
               MOD(IYEAR,1000) == 0
       IDNOW=0
-      IF(INTTIM(2) > 12)THEN                                           
-        WRITE (PRINTF, 8) INTTIM(2), (INTTIM(II), II=1,6)                 
-   8    FORMAT (' erroneous month ', I2, ' in date/time ', 6I4)           
-      ELSE IF(INTTIM(2) > 1)THEN                                       
-        DO 10 I = 1,INTTIM(2)-1
+      IF(INTTIM(2) > 12)THEN
+        WRITE (PRINTF, 8) INTTIM(2), (INTTIM(II), II=1,6)
+   8    FORMAT (' erroneous month ', I2, ' in date/time ', 6I4)
+      ELSE IF(INTTIM(2) > 1)THEN
+        DO I = 1,INTTIM(2)-1
           IDNOW=IDNOW+IDYMON(I)
-  10    CONTINUE
-      ENDIF                                                               
+        ENDDO
+      ENDIF
       IDNOW=IDNOW+INTTIM(3)
       IF(LEAPYR .AND. INTTIM(2) > 2) IDNOW=IDNOW+1
       IDNOW = IDNOW + IYEAR*365 + IYRM1/4 - IYRM1/100 + IYRM1/1000 + 1
@@ -317,15 +317,16 @@
 ! 13. SOURCE TEXT
 !
    INTEGER IG
+   INTEGER flags
    SAVE IENT
    DATA IENT /0/
    CALL STRACE (IENT, 'INAR2D')
 !
-999  IF(NDSD < 0) RETURN                                               
+   IF(NDSD < 0) RETURN
 !     no reading from file due to open error
 !
 !     *** NUMFIL is the number of that is open in one time step  **
-      NUMFIL = 0                                                          
+   NUMFIL = 0
 !      IF(ITEST >= 100)THEN
 !        WRITE (PRINTF, 12) MXA, MYA, NDSD, IDFM, RFORM,                   40.00
 !     &  IDLA, VFAC, NHED
@@ -334,78 +335,108 @@
 !
 !     Read heading lines, and print the same:
 !
-  11  IF (NHED.GT.0) THEN
-        IF (IDFM.LT.0) THEN                                               
-          IF (ITEST.GE.30)                                      &
-                  WRITE (PRINTF, '(I3,A)') NHED, ' Heading lines'        
-          DO 28 IH=1, NHED
-            READ (NDSD, END=910)                                          
-  28      CONTINUE
-        ELSE
-          DO 30 IH=1, NHED
-            READ (NDSD, '(A80)', end=910) HEDLIN                          
-            IF (IH.EQ.1) WRITE (PRINTF, '(A)') ' **  Heading lines  **'
-            WRITE (PRINTF, '(A4,A80)') ' -> ', HEDLIN
-  30      CONTINUE
-        ENDIF
-      ENDIF
+   DO WHILE(.TRUE.)
+     flags=0
+     IF (NHED.GT.0) THEN
+       IF (IDFM.LT.0) THEN
+         IF (ITEST.GE.30) WRITE (PRINTF, '(I3,A)') NHED, ' Heading lines'
+         DO IH=1, NHED
+           READ (NDSD, IOSTAT=ierr)
+           IF(ierr.lt.0) THEN
+             flags=910
+             EXIT
+           ENDIF
+         ENDDO
+       ELSE
+         DO IH=1, NHED
+           READ (NDSD, '(A80)', IOSTAT=ierr) HEDLIN
+           IF(ierr.lt.0) THEN
+             flags=910
+             EXIT
+           ENDIF
+           IF (IH.EQ.1) WRITE (PRINTF, '(A)') ' **  Heading lines  **'
+           WRITE (PRINTF, '(A4,A80)') ' -> ', HEDLIN
+         ENDDO
+       ENDIF
+     ENDIF
 !
 !     divide existing values in the array by VFAC
 !
-      DO IG = 1, MGA                                                   
-        ARR(IG) = ARR(IG) / VFAC
-      END DO	
+     IF(flags.eq.0) THEN
+       DO IG = 1, MGA
+         ARR(IG) = ARR(IG) / VFAC
+       END DO
 !
 !     start reading of 2D-array
 !
-      READ(NDSD, END=910, ERR=920, IOSTAT=IERR) (ARR(IG), IG=1,MGA)       
-      GOTO 900                                                           
+       READ(NDSD, IOSTAT=IERR) (ARR(IG), IG=1,MGA)
+       IF(ierr .lt. 0) THEN
+         flags=910
+       ELSEIF(ierr .gt. 0)THEN
+         flags=920
+         EXIT
+       ELSE
+         flags=900
+         EXIT
+       ENDIF
+     ENDIF
 !
 !     *** End of data file, in case SERIES next file is opened
 !     *** unit = NDSD is closed before the next one is opened
 !
- 910  CONTINUE
-      CLOSE(NDSD)
-      NUMFIL = NUMFIL + 1
-      IF (NUMFIL .GE. 2) GO TO 911
-      IF (NDSL.GT.0) THEN
-        READ (NDSL, '(A)', END=930) FILENM                                
-        IF (IDFM.NE.-1) THEN
-          IOERR = 0
-          CALL FOR (NDSD, FILENM, 'OF', IOERR)                            
-          IF (STPNOW()) RETURN                                            
-        ELSE
-          IOERR = 0
-          CALL FOR (NDSD, FILENM, 'OU', IOERR)                            
-          IF (STPNOW()) RETURN                                            
-        ENDIF
+     IF(flags.eq.910)THEN
+       CLOSE(NDSD)
+       NUMFIL = NUMFIL + 1
+       IF (NUMFIL .GE. 2) THEN
+         flags=911
+         EXIT
+       ENDIF
+       IF (NDSL.GT.0) THEN
+         READ (NDSL, '(A)', IOSTAT=ierr) FILENM
+         IF(ierr.lt.0) THEN
+           flags=930
+           EXIT
+         ENDIF
+         IF (IDFM.NE.-1) THEN
+           IOERR = 0
+           CALL FOR (NDSD, FILENM, 'OF', IOERR)
+           IF (STPNOW()) RETURN
+         ELSE
+           IOERR = 0
+           CALL FOR (NDSD, FILENM, 'OU', IOERR)
+           IF (STPNOW()) RETURN
+         ENDIF
 !
 !       Read heading lines, and print these:
-!                                                                         
-  2     IF (NHEDF.GT.0) THEN                                              
-          IF (IDFM.LT.0) THEN                                             
-            IF (ITEST.GE.30) WRITE (PRINTF, '(I3,A,A)') NHEDF,      &
-                 ' Heading lines at begin of file ', TRIM(FILENM)        
-            DO 828 IH=1, NHEDF                                            
-              READ (NDSD)                                                 
- 828        CONTINUE
-          ELSE                                                            
-            WRITE (PRINTF, '(A,A,A)') ' **  Heading lines file ',   &
-           TRIM(FILENM), ' **'                                           
-            DO 830 IH=1, NHEDF                                            
-              READ (NDSD, '(A80)') HEDLIN                                 
-              WRITE (PRINTF, '(A4,A80)') ' -> ', HEDLIN                   
- 830        CONTINUE                                                      
-          ENDIF                                                           
-        ENDIF                                                             
-        GO TO 11
-      ENDIF
+!
+  2      IF (NHEDF.GT.0) THEN
+           IF (IDFM.LT.0) THEN
+             IF (ITEST.GE.30) WRITE (PRINTF, '(I3,A,A)') NHEDF,      &
+             ' Heading lines at begin of file ', TRIM(FILENM)
+             DO IH=1, NHEDF
+               READ (NDSD)
+             ENDDO
+           ELSE
+             WRITE (PRINTF, '(A,A,A)') ' **  Heading lines file ',   &
+             TRIM(FILENM), ' **'
+             DO IH=1, NHEDF
+               READ (NDSD, '(A80)') HEDLIN
+               WRITE (PRINTF, '(A4,A80)') ' -> ', HEDLIN
+             ENDDO
+           ENDIF
+         ENDIF
+         CYCLE
+       ENDIF
+     ENDIF
+     EXIT
+   ENDDO
 !
 !     error message when end of file is encountered
 !
 !     --- initialize FILENM so that previous value is not used            40.08
 !         in case unit NDSD does not exist                                40.08
- 911  FILENM='DUMMY'
+    IF(flags.eq. 910 .or. flags .eq. 911) THEN
+      FILENM='DUMMY'
 !     --------------------------------------------------------------------40.08
 !     THIS INQUIRE STATEMENT IS PROBLEMATIC, SINCE (AT LEAST              40.08
 !     SOMETIMES) NDSD HAS ALREADY BEEN CLOSED, SO THE INQUIRE             40.08
@@ -413,42 +444,46 @@
 !     --------------------------------------------------------------------40.08
       INQUIRE (UNIT=NDSD, NAME=FILENM)
       CALL MSGERR (2, 'Unexpected end of file while reading '//       &
-                      TRIM(FILENM))                                      
-      NDSD = 0                                                            
+                      TRIM(FILENM))
+      NDSD = 0
       IDLA = -1
 !     Value of IDLA=-1 signals end of file to calling program
 !
-      GOTO 900
+      flags=900
+    ENDIF
 !
-!     --- initialize FILENM                                               
- 920  FILENM='DUMMY'                                                      
-      INQUIRE (UNIT=NDSD, NAME=FILENM)                                    
-      CALL MSGERR (2, 'Error while reading file '//TRIM(FILENM))          
-      WRITE (PRINTF, 922) IERR                                            
- 922  FORMAT (' i/o status ', I6)                                         
-      IDLA = -2                                                           
+!     --- initialize FILENM
+    IF(flags.eq.920)THEN
+      FILENM='DUMMY'
+      INQUIRE (UNIT=NDSD, NAME=FILENM)
+      CALL MSGERR (2, 'Error while reading file '//TRIM(FILENM))
+      WRITE (PRINTF, 922) IERR
+922   FORMAT (' i/o status ', I6)
+      IDLA = -2
+    ENDIF
 !     Value of IDLA=-2 signals read error to calling program
 !
 !     Multiply all values in the array by VFAC
 !
- 900  DO IG = 1, MGA                                                  
+    IF(flags .eq. 900 .or. flags .eq. 920)THEN
+ 900  DO IG = 1, MGA
         ARR(IG) = ARR(IG) * VFAC
-      END DO	
+      END DO
 !
- 990  IF (ITEST.GE.100 .OR. IDLA.LT.0) THEN
+      IF (ITEST.GE.100 .OR. IDLA.LT.0) THEN
 !        DO 996 IY=MYA, 1, -1
 !          WRITE (PRINTF, 994) (ARR(IX,IY), IX=1,MXA)
 ! 994      FORMAT ((1X, 10E12.4))
 ! 996    CONTINUE
       ENDIF
-      RETURN
-
+    ELSEIF(flags .eq. 930)THEN
 !     No more files in NDSL:
-!     --- initialize FILENM                                               
- 930  FILENM='DUMMY'                                                      
-      INQUIRE (UNIT=NDSL, NAME=FILENM)                                    
-      CALL MSGERR (2, 'Series of input files ended in '//TRIM(FILENM))    
-      RETURN                                                              
+!     --- initialize FILENM
+ 930  FILENM='DUMMY'
+      INQUIRE (UNIT=NDSL, NAME=FILENM)
+      CALL MSGERR (2, 'Series of input files ended in '//TRIM(FILENM))
+    ENDIF
+      RETURN
 
       END SUBROUTINE INAR2D
 !
@@ -1091,11 +1126,20 @@
          IOSTAT= IENUNF
        ENDIF
      END IF
-     OPEN (UNIT=IUNIT,ERR=999,IOSTAT=IOSTTM,FILE=DDNAME,              &
+     OPEN (UNIT=IUNIT,IOSTAT=IOSTTM,FILE=DDNAME,              &
 !/Cray     RECL=1000,                                                 &
 !/SGI      RECL=1000,                                                 &
 !CVIS      SHARED,                                                    &
-           STATUS=FISTAT(IS),ACCESS='SEQUENTIAL',FORM=FORM(IFO))      
+           STATUS=FISTAT(IS),ACCESS='SEQUENTIAL',FORM=FORM(IFO))
+     IF(IOSTTM .gt. 0) THEN
+       IF(IOSTAT > -2)THEN
+         CALL MSGERR (3, 'File open failed, filename: '//DDNAME_L)
+         WRITE (PRINTF,15) DDNAME, IOSTTM, SF
+       ENDIF
+       IUNIT = -1
+       IOSTAT= IOSTTM
+       RETURN
+     ENDIF
    ELSE
      INQUIRE (UNIT=IUNIT, NAME=FILTTM, IOSTAT=IOSTTM,                 &
               EXIST=EXIST, OPENED=OPENED)
@@ -1118,49 +1162,70 @@
          IOSTAT = IEDDNM
 !          close old file and open new one with given filename
          CLOSE (IUNIT)
-         OPEN (UNIT=IUNIT,ERR=999,IOSTAT=IOSTTM,STATUS=FISTAT(IS),    &
+         OPEN (UNIT=IUNIT,IOSTAT=IOSTTM,STATUS=FISTAT(IS),    &
 !/Cray         RECL=1000,                                             &
 !/SGI          RECL=1000,                                             &
 !CVIS          SHARED,                                                &
                FILE=DDNAME,ACCESS='SEQUENTIAL',FORM=FORM(IFO))
-         IF(IOSTTM /= IESUCC) IOSTAT = IOSTTM
-         GOTO 80
+         IF(IOSTTM .gt. 0) THEN
+           IF(IOSTAT > -2)THEN
+             CALL MSGERR (3, 'File open failed, filename: '//DDNAME_L)
+             WRITE (PRINTF,15) DDNAME, IOSTTM, SF
+           ENDIF
+           IUNIT = -1
+           IOSTAT= IOSTTM
+           RETURN
+         ELSEIF(IOSTTM .lt. 0) THEN
+           IF(IOSTTM /= IESUCC) IOSTAT = IOSTTM
+           IF(ITEST >= 30) WRITE (PRINTF, 82) IUNIT, DDNAME, SF
+           RETURN
+         ENDIF
        ENDIF
        IOSTAT = IEOPEN
        RETURN
      END IF
      IF(DDNAME /= EMPTY)THEN
-       OPEN (UNIT=IUNIT,ERR=999,IOSTAT=IOSTTM,STATUS=FISTAT(IS),      &
-!/Cray       RECL=1000,                                               &         
-!/SGI        RECL=1000,                                               &         
-!CVIS        SHARED,                                                  & 
+       OPEN (UNIT=IUNIT,IOSTAT=IOSTTM,STATUS=FISTAT(IS),      &
+!/Cray       RECL=1000,                                               &
+!/SGI        RECL=1000,                                               &
+!CVIS        SHARED,                                                  &
              FILE=DDNAME,ACCESS='SEQUENTIAL',FORM=FORM(IFO))
+       IF(IOSTTM .gt. 0) THEN
+         IF(IOSTAT > -2)THEN
+           CALL MSGERR (3, 'File open failed, filename: '//DDNAME_L)
+           WRITE (PRINTF,15) DDNAME, IOSTTM, SF
+         ENDIF
+         IUNIT = -1
+         IOSTAT= IOSTTM
+         RETURN
+       ENDIF
      ELSE
-       OPEN (UNIT=IUNIT,ERR=999,IOSTAT=IOSTTM,STATUS=FISTAT(IS),      &
+       OPEN (UNIT=IUNIT,IOSTAT=IOSTTM,STATUS=FISTAT(IS),      &
 !/Cray       RECL=1000,                                               &
 !/SGI        RECL=1000,                                               &
 !CVIS        SHARED,                                                  &
              ACCESS='SEQUENTIAL',FORM=FORM(IFO))
+       IF(IOSTTM .gt. 0) THEN
+         IF(IOSTAT > -2)THEN
+           CALL MSGERR (3, 'File open failed, filename: '//DDNAME_L)
+           WRITE (PRINTF,15) DDNAME, IOSTTM, SF
+         ENDIF
+         IUNIT = -1
+         IOSTAT= IOSTTM
+         RETURN
+       ENDIF
      END IF
    END IF
    HIOPEN = IFUN
-80 IF(ITEST >= 30) WRITE (PRINTF, 82) IUNIT, DDNAME, SF
+   IF(ITEST >= 30) WRITE (PRINTF, 82) IUNIT, DDNAME, SF
 82 FORMAT (' File opened: ', I6, 2X, A36, 2X, A2)
+15 FORMAT (' File -> ', A36, 2X, ' IOSTAT=', I6, 4X, A2)
    RETURN
 !
 !  in case file cannot be opened:
 !
-999 IF(IOSTAT > -2)THEN
-     CALL MSGERR (3, 'File open failed, filename: '//DDNAME_L)         
-     WRITE (PRINTF,15) DDNAME, IOSTTM, SF
-15   FORMAT (' File -> ', A36, 2X, ' IOSTAT=', I6, 4X, A2)
-   ENDIF
-   IUNIT = -1
-   IOSTAT= IOSTTM
-
-   RETURN
    END SUBROUTINE FOR
- 
+
 !***********************************************************************
 !                                                                      *
     LOGICAL FUNCTION EQREAL (REAL1, REAL2 )                            

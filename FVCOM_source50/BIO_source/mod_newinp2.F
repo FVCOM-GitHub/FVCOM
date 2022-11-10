@@ -766,6 +766,7 @@ contains
   !------------------------------------------
   character(len=80)  :: temp,temp2,text_line,inpline
   integer            :: locex,eqloc,length,i,linecnt
+  integer            :: ioerror
 
   ierr   = 0
   open(10,file=trim(fname)) ; rewind(10) 
@@ -780,7 +781,11 @@ contains
   endif
 
    do while(.true.)
-     read(10,'(A)',end=20) inpline 
+     read(10,'(A)',IOSTAT=ioerror) inpline
+     IF(ioerror .lt. 0) THEN
+       ierr = 1
+       EXIT
+     ENDIF
      linecnt = linecnt + 1
 
     ! determine location of comment character and remove blanks
@@ -791,7 +796,7 @@ contains
 
     ! set line length
     length = len_trim(text_line)
-   
+
     ! ensure "=" exist and determine location
     eqloc = index(text_line,"=")
 
@@ -801,8 +806,7 @@ contains
     if(adjustl(trim(temp2)) == trim(argname))then
       argval  = adjustl(text_line(eqloc+1:length))
       line    = linecnt
-      close(10)
-      return
+      EXIT
     endif
 
     ! exit if finish is present
@@ -812,11 +816,9 @@ contains
   end do
 
   ! not found, return error = 1
-  20 continue
-  ierr = 1
   close(10)
-
-  End Subroutine Extract_Val_String  
+  RETURN
+  End Subroutine Extract_Val_String
 
   !---------------------------------------------------------------------
   !check argument type (string,float,integer,logical)         

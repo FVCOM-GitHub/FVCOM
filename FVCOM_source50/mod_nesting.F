@@ -718,20 +718,17 @@ CONTAINS
        REWIND NESTUNIT
 
        DO WHILE(.TRUE.)
-          READ(NESTUNIT,*,IOSTAT=IOS,END=199)N1,N2,N3
+          READ(NESTUNIT,*,IOSTAT=IOS)N1,N2,N3
           if (IOS == 0) then
              BackSpace NESTUNIT
              exit
+          elseif(IOS < 0) then
+            Call FATAL_ERROR('Improper formatting of NESTING NODE FILE:',&
+                &'Reached end of file with out finding NESTING data?',&
+                &'FORMAT: NEST# SUBDOMAIN# LARGEDOMAIN# (ALL INTEGERS)')
           end if
-
-          CYCLE
-
-199       Call FATAL_ERROR('Improper formatting of NESTING NODE FILE:',&
-               &'Reached end of file with out finding NESTING data?',&
-               &'FORMAT: NEST# SUBDOMAIN# LARGEDOMAIN# (ALL INTEGERS)')
-
        END DO
-       
+
        ALLOCATE(nodes(nnode))
 
        I = 0
@@ -1375,8 +1372,8 @@ SUBROUTINE GENMAP_NESTING(NG,LG)
      !<--- Added by Dr. Lai 2021-01-15
      
      LG%H = TEMP3(0:NCNT)
-     LG%ZZ = TEMP4(0:NCNT,1:KBM1)
-     LG%Z  = TEMP5(0:NCNT,1:KB)  ! Added by Dr. Lai 2021-01-15
+     LG%ZZ = TEMP4(0:NCNT,1:LG%KBM1)
+     LG%Z  = TEMP5(0:NCNT,1:LG%KB)  ! Added by Dr. Lai 2021-01-15
 
      DEALLOCATE(TEMP3)
      DEALLOCATE(TEMP4)
@@ -1429,7 +1426,7 @@ SUBROUTINE GENMAP_NESTING(NG,LG)
      if(status /= 0) call fatal_error("GENMAP_NESTING: can not allocate:LG%ZZ1")
      
      LG%H1 = TEMP3(0:NCNT)
-     LG%ZZ1 = TEMP4(0:NCNT,1:KBM1)
+     LG%ZZ1 = TEMP4(0:NCNT,1:LG%KBM1)
 
      DEALLOCATE(TEMP3)
      DEALLOCATE(TEMP4)

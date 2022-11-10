@@ -92,14 +92,24 @@
 # if defined (ICE_FRESHWATER)
 ! afm 20160613 & EJA 20160921 -  best value suggested from the sensitivity study 
 ! from mu_rdg=0.5-4
+! afm 20210527 P*=275kPa for freshwater
+! larger value for freshwater is supported by lab test
+! (Fig. 34 of W. Weeks and A. Asure, The mechanical properties of sea
+! ice, US Army Cold Regions Research and Engineering Monograph DA
+! Project (1967))
+! and scale consideration (Fig.4.15 The Drift of Sea Ice” By Lepparanta
+! 2011.) 
       ,  mu_rdg = c2i             &! gives e-folding scale of ridged ice (m^.5)
                                   ! (krdg_redist = 1)
+      ,  Pstar = 2.75e5_dbl_kind &! constant in Hibler strength formula
+                                  ! (kstrength = 0)
 # else
       ,  mu_rdg = c4i             &! gives e-folding scale of ridged ice (m^.5)
                                   ! (krdg_redist = 1)
-# endif
       ,  Pstar = 2.75e4_dbl_kind &! constant in Hibler strength formula
                                   ! (kstrength = 0)
+# endif
+
       ,  Cstar = c20              ! constant in Hibler strength formula
                                  ! (kstrength = 0)
 

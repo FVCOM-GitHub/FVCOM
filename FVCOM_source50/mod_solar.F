@@ -332,31 +332,31 @@ MODULE MOD_SOLAR
 !.. CHECK IF MEASURED OR MODELED RADIATION DATA ARE AVAILABLE.
 !.. IF DATA ARE AVAILABLE USE IN PLACE OF PRESENT ALGORITHM.
 !.
-      IF(CST .LE. 0.) GOTO 30
-      ALB=.045/CST
-      ALBEDO=ALB
+      IF(CST .GT. 0.) THEN
+        ALB=.045/CST
+        ALBEDO=ALB
       !EJA - fixed assumed bug in ALBEDO - 05/03/2016
       !ALBEDO=0.
-      IF(ALB .GT. 1.) ALBEDO=1.
+        IF(ALB .GT. 1.) ALBEDO=1.
 !.  
-      CLD=C0 +C1*SC +C2*SC*SC +C3*SC*SC*SC
-      M=MONTH
-      N=1
-      IF(RM .GT. 12.) N=2
-      SRCS=A0(M,N) +A1(N)*CST +A2(N)*CST*CST +A3(N)*CST*CST*CST
+        CLD=C0 +C1*SC +C2*SC*SC +C3*SC*SC*SC
+        M=MONTH
+        N=1
+        IF(RM .GT. 12.) N=2
+        SRCS=A0(M,N) +A1(N)*CST +A2(N)*CST*CST +A3(N)*CST*CST*CST
 !
-      IF(SRCS.LT.0.0)SRCS=0.0
+        IF(SRCS.LT.0.0)SRCS=0.0
 !.
 !..CONVERT FROM KJ/HR TO W/M**2 AND INCLUDE ALBEDO
 !.
-      Q0=SRCS*CLD*(1.-ALBEDO)/3.6
+        Q0=SRCS*CLD*(1.-ALBEDO)/3.6
 !      MR=MONTH
 !      NR=N
 !      CLDR=CLD
 !      ALBEDOR=ALBEDO
 !      SRCSR=SRCS
 !.
- 30   CONTINUE
+      ENDIF
 !     IF(RAD .NE. -999.) Q0=RAD
 !.
 !.
@@ -416,17 +416,17 @@ MODULE MOD_SOLAR
 
       DATA INIT /0/
       IF(INIT.EQ.0) THEN
-       INIT=1
-       Z=10
-       DO 20 I=1,51
-        WSX=FLOAT(I-1)
-        DO 10 J=1,101
-         TDX=FLOAT(J-51)
-         CALL UZL(WSX, Z, TDX, CD, CH, Z0, FL)
-         CD10(I,J)=CD
-         CH10(I,J)=CH
-10      CONTINUE
-20     CONTINUE
+        INIT=1
+        Z=10
+        DO I=1,51
+          WSX=FLOAT(I-1)
+          DO J=1,101
+            TDX=FLOAT(J-51)
+            CALL UZL(WSX, Z, TDX, CD, CH, Z0, FL)
+            CD10(I,J)=CD
+            CH10(I,J)=CH
+          ENDDO
+        ENDDO
       ENDIF
       IF(WS.LT.0.) THEN
        PRINT *,'***WS LT 0 IN SUBROUTINE UZL10***'
@@ -498,6 +498,7 @@ MODULE MOD_SOLAR
       REAL(SP) :: EPS,UM,FK,TBAR,ALPHA,BETA,GAMM,GAMT,UST1,H,DTHETA
       REAL(SP) :: S,X,FLI,X1,ARG1,ARG2,A,B,AA,BB,CC,ROOT,X2,TSTAR,USTAR,Z0NEW
       INTEGER :: ITER,I
+      LOGICAL :: flag_30
 
       DATA C1, C2, C3 /.684E-4, 4.28E-3, -4.43E-4/
       DATA B1, B2, B3 /1.7989E-3, 4.865E-4, 3.9028E-5/
@@ -529,14 +530,15 @@ MODULE MOD_SOLAR
 !       INITIAL GUESS FOR L
 !
       FL = S / X
-      DO 60 ITER = 1, 20
+      DO ITER = 1, 20
+        flag_30=.FALSE.
 # if defined (DOUBLE_PRECISION)
         X = DLOG(H/Z0)
 # else
         X = ALOG(H/Z0)
 # endif      
         IF (ABS(FL) .GT. 500.) FL = SIGN(500.,FL)
-        IF (FL .GT. 0.) GO TO 20
+        IF (FL .LE. 0.) THEN
 !
 ! UNSTABLE SECTION (L LT 0 OR DT LT 0)
 !
@@ -544,82 +546,92 @@ MODULE MOD_SOLAR
 !
 ! ASSUME 5 ITERATIONS SUFFICIENT
 !
-        DO 10 I = 1, 5
-          X1 = GAMT * FLI
-          ARG1 = SQRT(1. - X1*H)
-          ARG2 = SQRT(1. - X1*Z0)
-          A = BETA * LOG((ARG1 - 1.)*(ARG2 + 1.)/((ARG1 + 1.)*(ARG2 -0.999999)))
-          X1 = GAMM * FLI
-          ARG1 = (1. - X1*H) ** (.25)
-          ARG2 = (1. - X1*Z0) ** (.25)
-          B = LOG((ARG1 - 1.)*(ARG2 + 1.)/((ARG1 + 1.)*(ARG2 - 0.999999))) +2. * (ATAN(ARG1) - ATAN(ARG2))
-          FL = S * A / (B*B)
-          IF (ABS(FL) .GT. 500.) FL = SIGN(500.,FL)
-          FLI = 1. / FL
-   10   CONTINUE
-        GO TO 50
+          DO I = 1, 5
+            X1 = GAMT * FLI
+            ARG1 = SQRT(1. - X1*H)
+            ARG2 = SQRT(1. - X1*Z0)
+            A = BETA * LOG((ARG1 - 1.)*(ARG2 + 1.)/((ARG1 + 1.)*(ARG2 -0.999999)))
+            X1 = GAMM * FLI
+            ARG1 = (1. - X1*H) ** (.25)
+            ARG2 = (1. - X1*Z0) ** (.25)
+            B = LOG((ARG1 - 1.)*(ARG2 + 1.)/((ARG1 + 1.)*(ARG2 - 0.999999))) +2. * (ATAN(ARG1) - ATAN(ARG2))
+            FL = S * A / (B*B)
+            IF (ABS(FL) .GT. 500.) FL = SIGN(500.,FL)
+            FLI = 1. / FL
+          ENDDO
+        ELSE
 !
 ! STABLE SECTION
 !
 ! TRY MILDLY STABLE-
 !
-   20   CONTINUE
-        AA = X * X
-        X1 = H - Z0
-        BB = 9.4 * X1 * X - .74 * S * X
-        CC = 4.7 * X1
-        CC = CC * CC - CC * S
-        ROOT = BB * BB - 4. * AA * CC
-        IF (ROOT .LT. 0.) GO TO 30
-        FL = (-BB + SQRT(ROOT)) / (2.*AA)
-        IF (FL .LE. H) GO TO 30
-        B = X + 4.7 * X1 / FL
-        A = BETA * X + 4.7 * X1 / FL
-        GO TO 50
+          DO WHILE(.TRUE.)
+            AA = X * X
+            X1 = H - Z0
+            BB = 9.4 * X1 * X - .74 * S * X
+            CC = 4.7 * X1
+            CC = CC * CC - CC * S
+            ROOT = BB * BB - 4. * AA * CC
+            IF (ROOT .LT. 0.) THEN
+              flag_30=.TRUE.
+              EXIT
+            ENDIF
+            FL = (-BB + SQRT(ROOT)) / (2.*AA)
+            IF (FL .LE. H) THEN
+              flag_30=.TRUE.
+              EXIT
+            ENDIF
+            B = X + 4.7 * X1 / FL
+            A = BETA * X + 4.7 * X1 / FL
+            EXIT
+          ENDDO
 !
 ! STRONGLY STABLE-
 !
-   30   CONTINUE
-        IF (FL .LE. Z0) FL = Z0 + 1.E-5
-        DO 40 I = 1, 5
-          ARG1 = FL / Z0
-          X1 = LOG(ARG1)
+          IF(flag_30) THEN
+            IF (FL .LE. Z0) FL = Z0 + 1.E-5
+            DO I = 1, 5
+              ARG1 = FL / Z0
+              X1 = LOG(ARG1)
 # if defined (DOUBLE_PRECISION)
-          X2 = DLOG(H/FL)
+              X2 = DLOG(H/FL)
 # else
-          X2 = ALOG(H/FL)
-# endif      
-         ARG1 = 1. - 1. / ARG1
-          A = .74 * X1 + 4.7 * ARG1 + 5.44 * X2
-          B = X1 + 4.7 * ARG1 + 5.7 * X2
-          FL = A * S / (B*B)
-          IF (FL .LE. Z0) FL = Z0 + 1.E-5
-          IF (FL .GT. H) FL = H
-   40   CONTINUE
+              X2 = ALOG(H/FL)
+# endif
+              ARG1 = 1. - 1. / ARG1
+              A = .74 * X1 + 4.7 * ARG1 + 5.44 * X2
+              B = X1 + 4.7 * ARG1 + 5.7 * X2
+              FL = A * S / (B*B)
+              IF (FL .LE. Z0) FL = Z0 + 1.E-5
+              IF (FL .GT. H) FL = H
+            ENDDO
+          ENDIF
 !
 ! CALCULATE USTAR AND Z0NEW
 !
-   50   CONTINUE
+        ENDIF
         TSTAR = FK * DTHETA / A
         USTAR = FK * UM / B
         Z0NEW = .00459 * USTAR * USTAR
-        IF (ITER .GT. 5 .AND. ABS((USTAR - UST1)/UST1) .LT. EPS) GO TO 80
+        IF (ITER .GT. 5 .AND. ABS((USTAR - UST1)/UST1) .LT. EPS) EXIT
         UST1 = USTAR
         Z0 = Z0NEW
-   60 CONTINUE
+      ENDDO
 !
 ! IF COME HERE, TOO MANY ITERATIONS (UGH - UGH)
 !
-      WRITE (6,70)
-   70 FORMAT ('0TOO MANY ITERATIONS ON Z0 IN SUBROUTINE UZL - CHECK ','METEOROLOGICAL DATA - PROGRAM TERMINATED')
-   WRITE(6,*)'U, ZM, TD, CD, CH, Z0, FL'
-   WRITE(6,*)U, ZM, TD, CD, CH, Z0, FL
-      STOP
-   80 CONTINUE
-      Z0 = Z0NEW
-      CD = (USTAR/UM) ** 2
-      CH = FK * FK / (A*B)
-   90 RETURN
+      IF(ITER .gt. 20) THEN
+        WRITE (6,70)
+   70   FORMAT ('0TOO MANY ITERATIONS ON Z0 IN SUBROUTINE UZL - CHECK ','METEOROLOGICAL DATA - PROGRAM TERMINATED')
+        WRITE(6,*)'U, ZM, TD, CD, CH, Z0, FL'
+        WRITE(6,*)U, ZM, TD, CD, CH, Z0, FL
+        STOP
+      ELSE
+        Z0 = Z0NEW
+        CD = (USTAR/UM) ** 2
+        CH = FK * FK / (A*B)
+      ENDIF
+      RETURN
       END SUBROUTINE UZL
 # endif
 END MODULE MOD_SOLAR

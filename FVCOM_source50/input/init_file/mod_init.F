@@ -260,21 +260,21 @@ contains
    ! FIND FIRST LINE of )BC ARRAY
     rewind INITUNIT
     DO WHILE(.TRUE.)
-       READ(INITUNIT,*,IOSTAT=IOS,END=99) (TSL(1,K), K=1,KSL)
+       READ(INITUNIT,*,IOSTAT=IOS) (TSL(1,K), K=1,KSL)
        if (IOS == 0) then
           BackSpace INITUNIT
           exit
+       elseif (IOS < 0) then
+         Call FATAL_ERROR('Improper formatting of INIT file:',&
+                    &'Reached end of file with out finding t&s data?')
        end if
 
        CYCLE
-       
-99 Call FATAL_ERROR('Improper formatting of INIT file:',&
-           &'Reached end of file with out finding t&s data?')
     END DO
 
-    
 
-    DO I=1,MGL 
+
+    DO I=1,MGL
        READ(INITUNIT,*) (TSL(I,K), K=1,KSL)
        READ(INITUNIT,*) (SSL(I,K), K=1,KSL)
     END DO
@@ -285,8 +285,8 @@ contains
 
 
   END SUBROUTINE READ_OLD_INIT_TS
- 
-  
+
+
   SUBROUTINE DUMP_INIT
     IMPLICIT NONE
     TYPE(NCDIM), POINTER :: DIM_KSL
@@ -304,12 +304,12 @@ contains
    NCF => NEW_FILE()
 
    ALLOCATE(NCF%FTIME)
-   
-   NCF%FNAME=trim(output_dir)//"initfile.nc" 
-   
+
+   NCF%FNAME=trim(output_dir)//"initfile.nc"
+
    NCF => ADD(NCF,GRID_FILE_OBJECT(mygrid) )
 
-   ! time                                                                                               
+   ! time
    VAR => FLOAT_TIME_OBJECT &
         &(USE_MJD=use_real_world_time, &
         & DIM=DIM_TIME)
@@ -317,14 +317,14 @@ contains
    NCF  => ADD(NCF,VAR)
 
 
-   ! Itime                                                           
+   ! Itime
    VAR  => ITIME_OBJECT &
         &(Use_MJD=use_real_world_time, &
         & DIM=DIM_TIME)
 
    NCF  => ADD(NCF,VAR)
 
-   ! Itime2                                                                                       
+   ! Itime2
    VAR => ITIME2_OBJECT &
         &(Use_MJD=use_real_world_time, &
         & DIM=DIM_TIME)
@@ -343,25 +343,25 @@ contains
 
 
    VAR => NC_MAKE_AVAR(name='zsl',values=dpthsl,DIM1=DIM_ksl)
-   ATT  => NC_MAKE_ATT(name='long_name',values='Standard Depths') 
+   ATT  => NC_MAKE_ATT(name='long_name',values='Standard Depths')
    VAR  => ADD(VAR,ATT)
    NCF  => ADD(NCF,VAR)
 
    VAR => NC_MAKE_AVAR(name='tsl',values=tsl, &
         & DIM1=DIM_node,DIM2=DIM_ksl,DIM3=DIM_time)
-   ATT  => NC_MAKE_ATT(name='long_name',values='Temperature') 
+   ATT  => NC_MAKE_ATT(name='long_name',values='Temperature')
    VAR  => ADD(VAR,ATT)
    NCF  => ADD(NCF,VAR)
 
    VAR => NC_MAKE_AVAR(name='ssl',values=ssl,&
         & DIM1=DIM_node,DIM2=DIM_ksl,DIM3=DIM_time)
-   ATT  => NC_MAKE_ATT(name='long_name',values='Salinity') 
+   ATT  => NC_MAKE_ATT(name='long_name',values='Salinity')
    VAR  => ADD(VAR,ATT)
    NCF  => ADD(NCF,VAR)
-   
+
    ! WRITE THE STATIC VARIABLES
    CALL NC_WRITE_FILE(NCF)
-   
+
    ! WRITE THE CURRENT STATE VARIABLES
    CALL UPDATE_IODATA(NCF,NOW)
 
@@ -369,9 +369,8 @@ contains
    CALL NC_WRITE_FILE(NCF)
 
    IF(DBG_SET(DBG_SBR)) WRITE(IPT,*) "END DUMP_RESTART"
-   
+
  END SUBROUTINE DUMP_INIT
 
 
 end module mod_init
-

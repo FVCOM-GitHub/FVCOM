@@ -860,10 +860,14 @@ CONTAINS
       INTEGER :: I,K
       REAL(SP):: ZTMP(KB)
       !orginal formula to set sigma   
-      IF(P_SIGMA == 1)THEN
+!      IF(P_SIGMA == 1)THEN
+      IF(ABS(P_SIGMA - 1.0) < 1.0E-6)THEN
          DO K=1,KB
-            ZTMP(K) = -((K-1)/FLOAT(KB-1))**P_SIGMA 
-         END DO
+!JQI NOV2021
+!            ZTMP(K) = -((K-1)/FLOAT(KB-1))**P_SIGMA 
+            ZTMP(K) = -((K-1)/FLOAT(KB-1))**P_SIGMA_DISTRIBUTION        !PNNL added this option P_SIGMA_DISTRIBUTION 
+!JQI NOV2021
+        END DO
       ELSE
          DO K=1,(KB+1)/2
             ZTMP(K) = -((K-1)/FLOAT((KB+1)/2-1))**P_SIGMA/2 

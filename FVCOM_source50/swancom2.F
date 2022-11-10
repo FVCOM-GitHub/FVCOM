@@ -175,10 +175,9 @@
            CDUM  = ADUM
            DDUM  = ( ADUM + LOG10(ADUM) - XDUM ) / ( 1.+ ( 1. / ADUM) )
            ADUM  = ADUM - DDUM
-           IF(ABS(CDUM - ADUM) < 1.E-4) GOTO 29
+           IF(ABS(CDUM - ADUM) < 1.E-4) EXIT
          END DO	   
-         WRITE(*,*) ' error in iteration fw: Madsen formulation'
-29       CONTINUE
+         IF(J .eq. 51 ) WRITE(*,*) ' error in iteration fw: Madsen formulation'
 !                                                 1               1
 !        *** computation of FW -->  A = ----- --> FW = -----
 !                                              4 uFW          16 A**2

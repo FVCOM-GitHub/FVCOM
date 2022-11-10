@@ -692,56 +692,57 @@
 
 	theta=180.+atan2(u10(i,j,k,1),v10(i,j,k,1))*180./3.1415926
 
-
+		DO WHILE(.TRUE.)
       IF(theta.GT.270.)THEN
       AG=3.14159/180.*(theta-270.)
       stress_u(i,j,k)=tauxx*COS(AG)
       stress_v(i,j,k)=-tauxx*SIN(AG)
-      GO TO 55
+      EXIT
       ENDIF
 
       IF(theta.GT.0.AND.theta.LT.90.)THEN
       AG=3.14159/180.*(90.-theta)
       stress_u(i,j,k)=-tauxx*COS(AG)
       stress_v(i,j,k)=-tauxx*SIN(AG)
-      GO TO 55
+      EXIT
       ENDIF
 
       IF(theta.GT.90.AND.theta.LT.180)THEN
       AG=3.14159/180.*(theta-90.)
       stress_u(i,j,k)=-tauxx*COS(AG)
       stress_v(i,j,k)=tauxx*SIN(AG)
-      GO TO 55
+      EXIT
       ENDIF
 
       IF(theta.EQ.90.)THEN
       stress_u(i,j,k)=-tauxx
       stress_v(i,j,k)=0.0
-      GO TO 55
+      EXIT
       ENDIF
 
       IF(theta.EQ.180.)THEN
       stress_u(i,j,k)=0.0
       stress_v(i,j,k)=tauxx
-      GO TO 55
+      EXIT
       ENDIF
 
       IF(theta.EQ.270.)THEN
       stress_u(i,j,k)=tauxx
       stress_v(i,j,k)=0.0
-      GO TO 55
+      EXIT
       ENDIF
 
       IF(theta.EQ.360.OR.theta.EQ.0)THEN
       stress_u(i,j,k)=0.0
       stress_v(i,j,k)=-tauxx
-      GO TO 55
+      EXIT
       ENDIF
 
       AG=3.14159/180.*(theta-180.)
       stress_u(i,j,k)=tauxx*SIN(AG)
       stress_v(i,j,k)=tauxx*COS(AG)
-55    continue 
+			EXIT
+    ENDDO
 
 
 !---------longwave, sensible and latent heat flux-------------------------------------

@@ -2113,93 +2113,90 @@ write(myid+2000,*) seof
    USE CONTROL
    IMPLICIT NONE
    
-     INTEGER ::  NUM  = 0 
-     INTEGER ::  NLOC
-     INTEGER ::  SWITCH = 0
-     INTEGER ::  J,K
-     INTEGER ::  IDUMMY
-     INTEGER ::  TMP
-     CHARACTER(LEN=80) FILENAME
-     CHARACTER(LEN=24) HEADINFO
-     INTEGER STLOC(RRK_NOBSMAX)
-     INTEGER LAY(RRK_NOBSMAX)
+   INTEGER ::  NUM  = 0 
+   INTEGER ::  NLOC
+   INTEGER ::  SWITCH = 0
+   INTEGER ::  J,K
+   INTEGER ::  IDUMMY
+   INTEGER ::  TMP
+   INTEGER ::  ioerr
+   CHARACTER(LEN=80) FILENAME
+   CHARACTER(LEN=24) HEADINFO
+   INTEGER STLOC(RRK_NOBSMAX)
+   INTEGER LAY(RRK_NOBSMAX)
 
-     FILENAME = TRIM(INPUT_DIR)//"/"//trim(casename)//"_assim_rrkf.nml"
+   FILENAME = TRIM(INPUT_DIR)//"/"//trim(casename)//"_assim_rrkf.nml"
     
-     OPEN(73,FILE=TRIM(FILENAME),FORM='FORMATTED')
-     REWIND(73)
+   OPEN(73,FILE=TRIM(FILENAME),FORM='FORMATTED')
+   REWIND(73)
 
-     NLOC = 0
-     IDUMMY = 0
-     STLOC = ZERO
-     
- 100 READ(73,'(A24)',END=200) HEADINFO
+   NLOC = 0
+   IDUMMY = 0
+   STLOC = ZERO
+
+   DO WHILE(.TRUE.)
+     READ(73,'(A24)',IOSTAT=ioerr) HEADINFO
+     IF(ioerr .ne. 0) EXIT
      IF(SWITCH/=1) THEN
-       IF(HEADINFO=='!=== READ IN OBSERVATION') THEN
-         SWITCH = 1
-         GOTO 100
-       ELSE
-         GOTO 100
-       ENDIF
-     ENDIF 
-     
+       IF(HEADINFO=='!=== READ IN OBSERVATION') SWITCH = 1
+       CYCLE
+     ENDIF
+   
      IF(TRIM(HEADINFO)=='!EL') THEN
        IF(EL_OBS) THEN
          READ(73,*) NUM
-	 NLOC = NLOC + NUM
+         NLOC = NLOC + NUM
          IF(NLOC>RRK_NOBSMAX) THEN
            WRITE(IPT,*) 'not enough storage for observations:', 'Nloc=', Nloc, 'Nobsmax=', RRK_NOBSMAX
            CALL PSTOP
          ENDIF
-	 READ(73,*)  (STLOC(K), K=1,NLOC)	
+         READ(73,*)  (STLOC(K), K=1,NLOC)	
        ENDIF  
-       
+     
        IF(EL_ASSIM) THEN
-	 IDUMMY = IDUMMY + MGL
+         IDUMMY = IDUMMY + MGL
        ENDIF
-            
      ENDIF
      
      IF(TRIM(HEADINFO)=='!UV') THEN
        IF(UV_OBS) THEN       
          READ(73,*) NUM
-	 NLOC = NLOC + NUM
+         NLOC = NLOC + NUM
          IF(NLOC+NUM>RRK_NOBSMAX) THEN
            WRITE(IPT,*) 'not enough storage for observations:', 'Nloc=', Nloc+num, 'Nobsmax=', RRK_NOBSMAX
            CALL PSTOP
          ENDIF
-	 READ(73,*)  (STLOC(K), K=NLOC-NUM+1,NLOC)
-	 READ(73,*)  (LAY(K),   K=NLOC-NUM+1,NLOC)
+         READ(73,*)  (STLOC(K), K=NLOC-NUM+1,NLOC)
+         READ(73,*)  (LAY(K),   K=NLOC-NUM+1,NLOC)
          DO K=NLOC-NUM+1, NLOC
-	   STLOC(K)=STLOC(K)+IDUMMY+NGL*(LAY(K)-1)
-	 ENDDO   
+	         STLOC(K)=STLOC(K)+IDUMMY+NGL*(LAY(K)-1)
+         ENDDO   
          IDUMMY = IDUMMY + NGL*KBM1
 	 
-	 NLOC = NLOC + NUM
-	 DO K=NLOC-NUM+1, NLOC
-	   STLOC(K)=STLOC(K-NUM)+NGL*KBM1+NGL*(LAY(K-NUM)-1)	   
-	 ENDDO
+         NLOC = NLOC + NUM
+         DO K=NLOC-NUM+1, NLOC
+           STLOC(K)=STLOC(K-NUM)+NGL*KBM1+NGL*(LAY(K-NUM)-1)	   
+         ENDDO
        ENDIF
        
        IF(UV_ASSIM) THEN  
-          IDUMMY = IDUMMY + NGL*KBM1
+         IDUMMY = IDUMMY + NGL*KBM1
        ENDIF
      ENDIF
      
      IF(TRIM(HEADINFO)=='!T') THEN
        IF(T_OBS) THEN
          READ(73,*) NUM
-	 NLOC = NLOC + NUM
+         NLOC = NLOC + NUM
          IF(NLOC>RRK_NOBSMAX) THEN
            WRITE(IPT,*) 'not enough storage for observations:', 'Nloc=', Nloc, 'Nobsmax=', RRK_NOBSMAX
            CALL PSTOP
          ENDIF
-	 READ(73,*)  (STLOC(K), K=NLOC-NUM+1,NLOC)       
+         READ(73,*)  (STLOC(K), K=NLOC-NUM+1,NLOC)       
          READ(73,*)  (LAY(K),   K=NLOC-NUM+1,NLOC)      
          DO K=NLOC-NUM+1, NLOC
-	   STLOC(K)=STLOC(K)+IDUMMY+MGL*(LAY(K)-1)
-	 ENDDO   
-         
+           STLOC(K)=STLOC(K)+IDUMMY+MGL*(LAY(K)-1)
+         ENDDO     
        ENDIF   
        
        IF(T_ASSIM) THEN
@@ -2210,30 +2207,26 @@ write(myid+2000,*) seof
      IF(TRIM(HEADINFO)=='!S') THEN
        IF(S_OBS) THEN
          READ(73,*) NUM
-	 NLOC = NLOC + NUM
+         NLOC = NLOC + NUM
          IF(NLOC>RRK_NOBSMAX) THEN
            WRITE(IPT,*) 'not enough storage for observations:', 'Nloc=', Nloc, 'Nobsmax=', RRK_NOBSMAX
            CALL PSTOP
          ENDIF
-	 READ(73,*)  (STLOC(K),K=NLOC-NUM+1,NLOC)        
+         READ(73,*)  (STLOC(K),K=NLOC-NUM+1,NLOC)        
          READ(73,*)  (LAY(K),  K=NLOC-NUM+1,NLOC)    
          DO K=NLOC-NUM+1, NLOC
-	   STLOC(K)=STLOC(K)+IDUMMY+MGL*(LAY(K)-1)
-	 ENDDO   
- 
+           STLOC(K)=STLOC(K)+IDUMMY+MGL*(LAY(K)-1)
+         ENDDO   
        ENDIF
        
        IF(S_ASSIM) THEN
          IDUMMY = IDUMMY + MGL*KBM1 
        ENDIF 
      ENDIF
-     
-     GOTO 100
- 200 CONTINUE
-
-     CLOSE(73)
+   ENDDO     
+   CLOSE(73)
     
-  RETURN 
+   RETURN 
   END SUBROUTINE READOBS  
 
   SUBROUTINE READRESTART_STATE(NCF,STATE)

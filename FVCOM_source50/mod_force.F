@@ -1046,9 +1046,10 @@ CONTAINS
     ! THE TIDAL FORCING FILE
 # if !defined (EQUI_TIDE)
     IF (.NOT. OBC_ELEVATION_FORCING_ON ) THEN
-       IF(DBG_SET(DBG_LOG)) write(IPT,*) "! TIDAL ELEVATION FORCING IS OFF!"
+       IF(DBG_SET(DBG_LOG)) write(IPT,*) &
+        "! TIDAL ELEVATION FORCING IS EITHER IN NESTING OR OFF!"
        ALLOCATE(TIDE_FORCING_COMMENTS(1))
-       TIDE_FORCING_COMMENTS="TIDAL ELEVATION FORCING IS OFF!"
+       TIDE_FORCING_COMMENTS="TIDAL ELEVATION FORCING IS EITHER IN NESTING OR OFF!"
        RETURN
     END IF
 # endif
@@ -12802,17 +12803,13 @@ CONTAINS
              HEAT_RLN(I)  = emmiss*(DLW_AIR(I)+ulw_airf)	     
 	   END IF  
 	 ELSE IF(TRIM(COARE_VERSION) == 'COARE40VN')THEN
-           RAIN(I) = QPREC(I)*3600*1000  ! change unit to mm/hr  from m/s
+           RAIN(I) = QPREC(I)*3600.0_SP*1000.0_SP  ! change unit to mm/hr  from m/s
 	   ZI40 = fmiss
            CP40 = Cwave(I)
            SIGH = HSC1(I)
 !---> Siqi Li, 2021-01-27
            CALL COARE40VN(WDS,ZUU,T_AIR(I),ZTT,RH_AIR(I),ZQQ,PA_AIR(I),T1(I,1),  &
                 DLW_AIR(I),DSW_AIR(I),TAU,HSB,HLB,CORR(I),ZI40(I),RAIN(I),CP40(I),SIGH(I),fmiss,USR,DTER,Cd_node(I)) 
-!if (I==156) write(IPT,*) WDS,ZUU,T_AIR(I),ZTT,RH_AIR(I),ZQQ,PA_AIR(I),T1(I,1),  &
-!                DLW_AIR(I),DSW_AIR(I),TAU,HSB,HLB,CORR(I),ZI40(I),RAIN(I),CP40(I),SIGH(I),fmiss,USR,DTER,Cd_node(I)
-!           CALL COARE40VN(WDS,ZUU,T_AIR(I),ZTT,RH_AIR(I),ZQQ,PA_AIR(I),T1(I,1),  &
-!                DLW_AIR(I),DSW_AIR(I),TAU,HSB,HLB,CORR(I),ZI40(I),RAIN(I),CP40(I),SIGH(I),fmiss,USR,DTER) !MDR include USR, DTER
            TAU_node(I) = TAU
            USR_node(I) = USR
 !<--- Siqi Li, 2021-01-27
@@ -12848,12 +12845,7 @@ CONTAINS
        END DO
 
 !---> Siqi Li, 2021-01-27
-!#      if defined (MULTIPROCESSOR)
-!       IF(PAR) CALL AEXCHANGE(NC,MYID,NPROCS,TAU_node)
-!       IF(PAR) CALL AEXCHANGE(NC,MYID,NPROCS,USR_node)
-!#      endif
        DO I = 1, NT
-!if (I==154) write(IPT,*) '--->', TAU_node(NV(I,1)),TAU_node(NV(I,2)),TAU_node(NV(I,3))
          TAU_WIND(I) = (TAU_node(NV(I,1))+TAU_node(NV(I,2))+TAU_node(NV(I,3))) / 3.0_SP
          U_star(I) = (USR_node(NV(I,1))+USR_node(NV(I,2))+USR_node(NV(I,3))) / 3.0_SP
          Cd(I) = (Cd_node(NV(I,1))+Cd_node(NV(I,2))+Cd_node(NV(I,3))) / 3.0_SP
@@ -13000,7 +12992,7 @@ CONTAINS
              HEAT_RLN(I)  = emmiss*(DLW_AIR(I)+ulw_airf)	     
 	   END IF  
 	 ELSE IF(TRIM(COARE_VERSION) == 'COARE40VN')THEN
-           RAIN(I) = QPREC(I)*3600*1000  ! change unit to mm/hr  from m/s
+           RAIN(I) = QPREC(I)*3600.0_SP*1000.0_SP  ! change unit to mm/hr  from m/s
 	   ZI40 = fmiss
            CP40 = Cwave(I)
            SIGH = HSC1(I)
@@ -13150,7 +13142,7 @@ CONTAINS
              HEAT_RLN(I)  =emmiss*(DLW_AIR(I)+ulw_airf)	     
 	   END IF  
 	 ELSE IF(TRIM(COARE_VERSION) == 'COARE40VN')THEN
-           RAIN(I) = QPREC(I)*3600*1000  ! change unit to mm/hr  from m/s
+           RAIN(I) = QPREC(I)*3600.0_SP*1000.0_SP  ! change unit to mm/hr  from m/s
 	   ZI40 = fmiss
            CP40 = Cwave(I)
            SIGH = HSC1(I)
@@ -13204,7 +13196,6 @@ CONTAINS
 !       IF(PAR) CALL AEXCHANGE(NC,MYID,NPROCS,USR_node)
 !#      endif
     DO I = 1, N
-!if (I==154) write(IPT,*) '--->', TAU_node(NV(I,1)),TAU_node(NV(I,2)),TAU_node(NV(I,3))
        TAU_WIND(I) = (TAU_node(NV(I,1))+TAU_node(NV(I,2))+TAU_node(NV(I,3))) / 3.0_SP
        U_star(I) = (USR_node(NV(I,1))+USR_node(NV(I,2))+USR_node(NV(I,3))) / 3.0_SP
        Cd(I) = (Cd_node(NV(I,1))+Cd_node(NV(I,2))+Cd_node(NV(I,3))) / 3.0_SP

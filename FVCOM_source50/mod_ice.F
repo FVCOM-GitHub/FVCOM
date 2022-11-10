@@ -562,7 +562,6 @@ MODULE MOD_ICE
 # endif
           cldf(i,j)  = CLOUD(I)
        !!======================================================
-
           fsnow(i,j)=0.0_SP
           fsnow(i,j) = (QPREC(I)+QEVAP(I))*RHOFRESH   !m/s---> kg/m^2/s
           frain(i,j) = c0i
@@ -1186,6 +1185,10 @@ LWRAD_WATTS(I) = flwitot(I,1)*aice(I,1) + flwtot(I,1)*(c1i-aice(i,jlo))
 !!--------------------------------------------------------------------------
 
      Irbuf=0.0_SP
+     
+! afm 20210226 initialize xflux_ice_obc (bug)
+     xflux_ice_obc = 0.0_SP
+
      DO K=1,narr
        Irbuf(1:M)=works(1:M,K)
 # if defined (MULTIPROCESSOR)
@@ -1286,7 +1289,6 @@ LWRAD_WATTS(I) = flwitot(I,1)*aice(I,1) + flwtot(I,1)*(c1i-aice(i,jlo))
          enddo
       enddo
 
-150     continue
       call check_state
 
      call aggregate           ! aggregate state variables over categories
@@ -1309,6 +1311,73 @@ LWRAD_WATTS(I) = flwitot(I,1)*aice(I,1) + flwtot(I,1)*(c1i-aice(i,jlo))
          END IF
       enddo
 !
+!! begin afm 20210225 for ice river outflow
+     j=1
+     IF(RIVER_INFLOW_LOCATION == 'node') THEN
+       IF(NUMQBC > 0) THEN
+         DO I=1,NUMQBC
+             IF(qdis(I) < 0.0_SP) THEN    ! IF THE FLOW IS OUT OF THE DOMAIN
+             ! neighboring node is not defined for river.
+             ! just remove when outflowing 
+             aice(INODEQ(I),j) = 0.0_SP
+             vice(INODEQ(I),j) = 0.0_SP
+             vicen(INODEQ(I),j,:) = 0.0_DP
+             aicen(INODEQ(I),j,:) = 0.0_DP
+             vsnon(INODEQ(I),j,:) = 0.0_SP
+             esnon(INODEQ(I),j,:) = 0.0_SP
+             eicen(INODEQ(I),j,:) = 0.0_SP
+             aice0(INODEQ(I),j) = 1.0_SP
+            ENDIF
+          ENDDO
+      ENDIF
+     ELSE IF(RIVER_INFLOW_LOCATION == 'edge') THEN
+       IF(NUMQBC > 0) THEN
+         DO I=1,NUMQBC
+             IF(qdis(I) < 0.0_SP) THEN    ! IF THE FLOW IS OUT OF THE DOMAIN
+             ! neighboring node is not defined for river.
+             ! just remove when outflowing 
+             do k = 1,2
+             aice(N_ICELLQ(I,k),j) = 0.0_SP
+             vice(N_ICELLQ(I,k),j) = 0.0_SP
+             vicen(N_ICELLQ(I,k),j,:) = 0.0_DP
+             aicen(N_ICELLQ(I,k),j,:) = 0.0_DP
+             vsnon(N_ICELLQ(I,k),j,:) = 0.0_SP
+             esnon(N_ICELLQ(I,k),j,:) = 0.0_SP
+             eicen(N_ICELLQ(I,k),j,:) = 0.0_SP
+             aice0(N_ICELLQ(I,k),j) = 1.0_SP
+             end do
+            ENDIF
+          ENDDO
+        ENDIF
+       ENDIF
+! end afm 20210225 for ice river outflow
+
+
+! begin afm 20210414  limit vice by water depth
+# if defined (ICE_FRESHWATER)
+      J=1
+      do i = 1,imt_local
+         IF (VICE(I,J) >= D(I) ) then
+        print*, 'vice >  water depth, scale vice. d=h+el, local node:', D(I),VICE(I,J),i
+         do ni=1,ncat
+             vicen(i,j,ni) = vicen(i,j,ni)*D(I)/vice(i,j)
+             aicen(i,j,ni) = aicen(i,j,ni)*D(I)/vice(i,j)
+             vsnon(i,j,ni) = vsnon(i,j,ni)*D(I)/vice(i,j)
+             esnon(i,j,ni) = esnon(i,j,ni)*D(I)/vice(i,j)
+          do k = 1, nilyr
+              eicen(i,j,ilyr1(ni)+k-1)=eicen(i,j,ilyr1(ni)+k-1)*D(I)/vice(i,j)
+          end do
+         enddo
+! comment out. aggregation will be done later.
+       !  aice0 (i,j)=0.0
+       !  aice(i,j)=1.0
+         END IF
+      enddo
+# endif
+! end afm 20210414  limit vice by water depth
+
+
+
      call ridge_ice(Delta,divu) ! ridging
 
       ENDDO  !! KTICE  sub loop for ice dynamics

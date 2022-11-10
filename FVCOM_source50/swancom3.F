@@ -278,17 +278,16 @@
 !  *** minimum FPM is equal : 2 * pi * 0.13 * grav / pwind(12) ***
 !  *** is equal 8 rad/s = 1.27 Hz                              ***
 !
-   ISFPM = MSC                                                         
-   FACINT = 0.                                                         
+   ISFPM = MSC
+   FACINT = 0.
    DO IS = 1, MSC
-     SIG = SPCSIG(IS)                                                  
+     SIG = SPCSIG(IS)
      IF(FRINTH * SIG > (0.7 * FPM))THEN
        ISFPM =  IS
        FACINT = (FRINTH - 0.7*FPM/SIG) / (FRINTH - 1./FRINTH)
-       GOTO 11
+       EXIT
      END IF
    ENDDO
-11 CONTINUE
 !
 !  *** calculate the energy in the wind sea part of the spectrum ***
 !  *** from ISFPM.                                               ***
@@ -845,13 +844,12 @@
 !        *** if coeffcient BETA = 0. for a frequency over ***
 !        *** all directions is zero skip loop             ***
 !
-         IF(AUX == 0.) GOTO 5000
+         IF(AUX == 0.) EXIT
 !
        ENDDO
-
+       IF(AUX == 0.) EXIT
        SIGHF1 = SIGHF2
      ENDDO
-5000 CONTINUE
 
      TAUTOT = RHOA * UFRIC2
 !    *** wave stress ***
@@ -887,12 +885,11 @@
 !
        TAUNEW = TAUTOT - FCEN / DCEN
 !
-       IF(TAUNEW <= TAUW) TAUNEW = .5 * (TAUTOT + TAUW)           
-       IF(ABS( TAUNEW - TAUTOT ) <= 1.E-5 ) GOTO 3000
+       IF(TAUNEW <= TAUW) TAUNEW = .5 * (TAUTOT + TAUW)
+       IF(ABS( TAUNEW - TAUTOT ) <= 1.E-5 ) EXIT
 !
        TAUTOT = TAUNEW
      ENDDO
-3000 CONTINUE
 !
      UFRIC  = SQRT ( TAUTOT / RHOA )
 !
@@ -1483,4 +1480,3 @@
    RETURN
 
    END SUBROUTINE WNDPAR
-

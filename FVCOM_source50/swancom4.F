@@ -921,202 +921,199 @@
       SNL(:,:) = 0.                                                       
 !
 !     =================
-      DO 130 IW4=1,LMAX
+      DO IW4=1,LMAX
 !     =================
 !
-      W4=W(IW4)
-
-!     WAVE converts nondimensional Sqr(w)d/g to nondimensional kd
-
-      AK4=WAVE(W4**2*H/G)/H
-
-!     CGCMP computes group velocity
-
-      CALL CGCMP(G,AK4,H,CGK4)
-
-!     Calculates the coefficient in equation (17) of Hashimoto (1998)
-
-      DNA=2.*W4*AK4/CGK4
-
-      IW3L=MAX0(1,NINT(IW4-ALOG(3.)/DQ))
-
-!     ------------------------------------------------------------
-      CALL PRESET(LMAX,N,IW3L,IW4,N2,G,H,W4,AK4,W,DQ,DQ2,DT,DT2,P)        
-!     ------------------------------------------------------------
-!
-!     ==============
-      DO 130 IT4=1,N
-!     ==============
-!
-!     ================
-      CURRIAM => FRIAM                                                    
-      DO                !    (W1 - W3 - W4 - W2)                          
-!     ================
-!
-      K1=CURRIAM%II(1)+IW4                                                
-      K2=CURRIAM%II(2)+IW4                                                
-      K3=CURRIAM%II(3)+IW4                                                
-!
-      IF(K1.LT.1   ) GO TO 120                                            
-      IF(K2.GT.LMAX) GO TO 120                                            
-!
-      GG=CURRIAM%SSS*DNA                                                  
-!
-      M1P= CURRIAM%JJ(1)+IT4                                              
-      M1N=-CURRIAM%JJ(1)+IT4                                              
-      M2P= CURRIAM%JJ(2)+IT4                                              
-      M2N=-CURRIAM%JJ(2)+IT4                                              
-      M3P= CURRIAM%JJ(3)+IT4                                              
-      M3N=-CURRIAM%JJ(3)+IT4                                              
-!
-      M1P=MOD(M1P,N)
-      M1N=MOD(M1N,N)
-      M2P=MOD(M2P,N)
-      M2N=MOD(M2N,N)
-      M3P=MOD(M3P,N)
-      M3N=MOD(M3N,N)
-!
-      IF(M1P.LT.1) M1P=M1P+N
-      IF(M1N.LT.1) M1N=M1N+N
-      IF(M2P.LT.1) M2P=M2P+N
-      IF(M2N.LT.1) M2N=M2N+N
-      IF(M3P.LT.1) M3P=M3P+N
-      IF(M3N.LT.1) M3N=M3N+N
-!
-      A4=ACT(IW4,IT4)
-!
-      IF(MINT.EQ.1) THEN
-!
-        K01=0
-        K02=0
-        K03=0
-        M01=0
-        M02=0
-        M03=0
-        IF(CURRIAM%DI(1).LE.1.) K01= 1                                    
-        IF(CURRIAM%DI(2).LE.1.) K02= 1                                    
-        IF(CURRIAM%DI(3).LE.1.) K03= 1                                    
-        IF(CURRIAM%DJ(1).LE.1.) M01=-1                                    
-        IF(CURRIAM%DJ(2).LE.1.) M02=-1                                    
-        IF(CURRIAM%DJ(3).LE.1.) M03=-1                                    
-!
-        K11=K1+K01
-        K21=K2+K02
-        K31=K3+K03
-        IF(K11.GT.LMAX) K11=LMAX
-        IF(K21.GT.LMAX) K21=LMAX
-        IF(K31.GT.LMAX) K31=LMAX
-!
-        K111=K1+K01-1
-        K211=K2+K02-1
-        K311=K3+K03-1
-        IF(K111.LT.1) K111=1
-        IF(K211.LT.1) K211=1
-        IF(K311.LT.1) K311=1
-!
-        M1P1=M1P+M01
-        M2P1=M2P+M02
-        M3P1=M3P+M03
-        IF(M1P1.LT.1) M1P1=N
-        IF(M2P1.LT.1) M2P1=N
-        IF(M3P1.LT.1) M3P1=N
-!
-        M1N1=M1N-M01
-        M2N1=M2N-M02
-        M3N1=M3N-M03
-        IF(M1N1.GT.N) M1N1=1
-        IF(M2N1.GT.N) M2N1=1
-        IF(M3N1.GT.N) M3N1=1
-!
-        M1P11=M1P+M01+1
-        M2P11=M2P+M02+1
-        M3P11=M3P+M03+1
-        IF(M1P11.GT.N) M1P11=1
-        IF(M2P11.GT.N) M2P11=1
-        IF(M3P11.GT.N) M3P11=1
-!
-        M1N11=M1N-M01-1
-        M2N11=M2N-M02-1
-        M3N11=M3N-M03-1
-        IF(M1N11.LT.1) M1N11=N
-        IF(M2N11.LT.1) M2N11=N
-        IF(M3N11.LT.1) M3N11=N
-!
-        DI1=CURRIAM%DI(1)                                                 
-        DI2=CURRIAM%DI(2)                                                 
-        DI3=CURRIAM%DI(3)                                                 
-        DJ1=CURRIAM%DJ(1)                                                 
-        DJ2=CURRIAM%DJ(2)                                                 
-        DJ3=CURRIAM%DJ(3)                                                 
-!
-        A1P=(DI1*(DJ1*ACT(K11, M1P1)+ACT(K11, M1P11))                 &
-	        + DJ1*ACT(K111,M1P1)+ACT(K111,M1P11))                 &
-		/((1.+DI1)*(1.+DJ1))                                      
-!
-        A1N=(DI1*(DJ1*ACT(K11, M1N1)+ACT(K11, M1N11))                 &
-	        + DJ1*ACT(K111,M1N1)+ACT(K111,M1N11))                 &
-		/((1.+DI1)*(1.+DJ1))                                  
-!
-        A2P=(DI2*(DJ2*ACT(K21, M2P1)+ACT(K21, M2P11))                 &
-	        + DJ2*ACT(K211,M2P1)+ACT(K211,M2P11))                 &
-		/((1.+DI2)*(1.+DJ2))                                  
-!
-        A2N=(DI2*(DJ2*ACT(K21, M2N1)+ACT(K21, M2N11))                 &
-	        + DJ2*ACT(K211,M2N1)+ACT(K211,M2N11))                 &
-		/((1.+DI2)*(1.+DJ2))                                
-!
-        A3P=(DI3*(DJ3*ACT(K31, M3P1)+ACT(K31, M3P11))                 &
-	        + DJ3*ACT(K311,M3P1)+ACT(K311,M3P11))                 &
-		/((1.+DI3)*(1.+DJ3))                                 
-!
-        A3N=(DI3*(DJ3*ACT(K31, M3N1)+ACT(K31, M3N11))                 &
-	        + DJ3*ACT(K311,M3N1)+ACT(K311,M3N11))                 &
-		/((1.+DI3)*(1.+DJ3))                                 
-!
-      ELSE
-!
-        IF(K1.LT.1) K1=1
-        IF(K2.LT.1) K2=1
-        IF(K3.LT.1) K3=1
-!
-        A1P=ACT(K1,M1P)
-        A1N=ACT(K1,M1N)
-        A2P=ACT(K2,M2P)
-        A2N=ACT(K2,M2N)
-        A3P=ACT(K3,M3P)
-        A3N=ACT(K3,M3N)
-!
-      ENDIF
-!
-      W1P2P=A1P+A2P
-      W1N2N=A1N+A2N
-      S1P2P=A1P*A2P
-      S1N2N=A1N*A2N
-      W3P4 =A3P+A4
-      W3N4 =A3N+A4
-      S3P4 =A3P*A4
-      S3N4 =A3N*A4
-!
-      XP=S1P2P*W3P4-S3P4*W1P2P
-      XN=S1N2N*W3N4-S3N4*W1N2N
-!
-      SNL( K1,M1P)=SNL( K1,M1P)-XP*GG
-      SNL( K1,M1N)=SNL( K1,M1N)-XN*GG
-      SNL( K2,M2P)=SNL( K2,M2P)-XP*GG
-      SNL( K2,M2N)=SNL( K2,M2N)-XN*GG
-      SNL( K3,M3P)=SNL( K3,M3P)+XP*GG
-      SNL( K3,M3N)=SNL( K3,M3N)+XN*GG
-      SNL(IW4,IT4)=SNL(IW4,IT4)+(XP+XN)*GG
-!
-! ============
-  120 CONTINUE
-      IF (.NOT.ASSOCIATED(CURRIAM%NEXTRIAM)) EXIT                         
-      CURRIAM => CURRIAM%NEXTRIAM                                         
-      END DO                                                              
-! ============
-!
-! ============
-  130 CONTINUE
+        W4=W(IW4)
+  
+  !     WAVE converts nondimensional Sqr(w)d/g to nondimensional kd
+  
+        AK4=WAVE(W4**2*H/G)/H
+  
+  !     CGCMP computes group velocity
+  
+        CALL CGCMP(G,AK4,H,CGK4)
+  
+  !     Calculates the coefficient in equation (17) of Hashimoto (1998)
+  
+        DNA=2.*W4*AK4/CGK4
+  
+        IW3L=MAX0(1,NINT(IW4-ALOG(3.)/DQ))
+  
+  !     ------------------------------------------------------------
+        CALL PRESET(LMAX,N,IW3L,IW4,N2,G,H,W4,AK4,W,DQ,DQ2,DT,DT2,P)        
+  !     ------------------------------------------------------------
+  !
+  !     ==============
+        DO IT4=1,N
+    !     ==============
+    !
+    !     ================
+          CURRIAM => FRIAM                                                    
+          DO                !    (W1 - W3 - W4 - W2)                          
+    !     ================
+    !
+            K1=CURRIAM%II(1)+IW4                                                
+            K2=CURRIAM%II(2)+IW4                                                
+            K3=CURRIAM%II(3)+IW4                                                
+      !
+            IF((K1.GE.1) .AND. (K2.LE.LMAX)) THEN                                                                   
+      !
+              GG=CURRIAM%SSS*DNA                                                  
+        !
+              M1P= CURRIAM%JJ(1)+IT4                                              
+              M1N=-CURRIAM%JJ(1)+IT4                                              
+              M2P= CURRIAM%JJ(2)+IT4                                              
+              M2N=-CURRIAM%JJ(2)+IT4                                              
+              M3P= CURRIAM%JJ(3)+IT4                                              
+              M3N=-CURRIAM%JJ(3)+IT4                                              
+        !
+              M1P=MOD(M1P,N)
+              M1N=MOD(M1N,N)
+              M2P=MOD(M2P,N)
+              M2N=MOD(M2N,N)
+              M3P=MOD(M3P,N)
+              M3N=MOD(M3N,N)
+        !
+              IF(M1P.LT.1) M1P=M1P+N
+              IF(M1N.LT.1) M1N=M1N+N
+              IF(M2P.LT.1) M2P=M2P+N
+              IF(M2N.LT.1) M2N=M2N+N
+              IF(M3P.LT.1) M3P=M3P+N
+              IF(M3N.LT.1) M3N=M3N+N
+        !
+              A4=ACT(IW4,IT4)
+        !
+              IF(MINT.EQ.1) THEN
+        !
+                K01=0
+                K02=0
+                K03=0
+                M01=0
+                M02=0
+                M03=0
+                IF(CURRIAM%DI(1).LE.1.) K01= 1                                    
+                IF(CURRIAM%DI(2).LE.1.) K02= 1                                    
+                IF(CURRIAM%DI(3).LE.1.) K03= 1                                    
+                IF(CURRIAM%DJ(1).LE.1.) M01=-1                                    
+                IF(CURRIAM%DJ(2).LE.1.) M02=-1                                    
+                IF(CURRIAM%DJ(3).LE.1.) M03=-1                                    
+        !
+                K11=K1+K01
+                K21=K2+K02
+                K31=K3+K03
+                IF(K11.GT.LMAX) K11=LMAX
+                IF(K21.GT.LMAX) K21=LMAX
+                IF(K31.GT.LMAX) K31=LMAX
+        !
+                K111=K1+K01-1
+                K211=K2+K02-1
+                K311=K3+K03-1
+                IF(K111.LT.1) K111=1
+                IF(K211.LT.1) K211=1
+                IF(K311.LT.1) K311=1
+        !
+                M1P1=M1P+M01
+                M2P1=M2P+M02
+                M3P1=M3P+M03
+                IF(M1P1.LT.1) M1P1=N
+                IF(M2P1.LT.1) M2P1=N
+                IF(M3P1.LT.1) M3P1=N
+        !
+                M1N1=M1N-M01
+                M2N1=M2N-M02
+                M3N1=M3N-M03
+                IF(M1N1.GT.N) M1N1=1
+                IF(M2N1.GT.N) M2N1=1
+                IF(M3N1.GT.N) M3N1=1
+        !
+                M1P11=M1P+M01+1
+                M2P11=M2P+M02+1
+                M3P11=M3P+M03+1
+                IF(M1P11.GT.N) M1P11=1
+                IF(M2P11.GT.N) M2P11=1
+                IF(M3P11.GT.N) M3P11=1
+        !
+                M1N11=M1N-M01-1
+                M2N11=M2N-M02-1
+                M3N11=M3N-M03-1
+                IF(M1N11.LT.1) M1N11=N
+                IF(M2N11.LT.1) M2N11=N
+                IF(M3N11.LT.1) M3N11=N
+        !
+                DI1=CURRIAM%DI(1)                                                 
+                DI2=CURRIAM%DI(2)                                                 
+                DI3=CURRIAM%DI(3)                                                 
+                DJ1=CURRIAM%DJ(1)                                                 
+                DJ2=CURRIAM%DJ(2)                                                 
+                DJ3=CURRIAM%DJ(3)                                                 
+        !
+                A1P=(DI1*(DJ1*ACT(K11, M1P1)+ACT(K11, M1P11))                 &
+        	        + DJ1*ACT(K111,M1P1)+ACT(K111,M1P11))                 &
+        		/((1.+DI1)*(1.+DJ1))                                      
+        !
+                A1N=(DI1*(DJ1*ACT(K11, M1N1)+ACT(K11, M1N11))                 &
+        	        + DJ1*ACT(K111,M1N1)+ACT(K111,M1N11))                 &
+        		/((1.+DI1)*(1.+DJ1))                                  
+        !
+                A2P=(DI2*(DJ2*ACT(K21, M2P1)+ACT(K21, M2P11))                 &
+        	        + DJ2*ACT(K211,M2P1)+ACT(K211,M2P11))                 &
+        		/((1.+DI2)*(1.+DJ2))                                  
+        !
+                A2N=(DI2*(DJ2*ACT(K21, M2N1)+ACT(K21, M2N11))                 &
+        	        + DJ2*ACT(K211,M2N1)+ACT(K211,M2N11))                 &
+        		/((1.+DI2)*(1.+DJ2))                                
+        !
+                A3P=(DI3*(DJ3*ACT(K31, M3P1)+ACT(K31, M3P11))                 &
+        	        + DJ3*ACT(K311,M3P1)+ACT(K311,M3P11))                 &
+        		/((1.+DI3)*(1.+DJ3))                                 
+        !
+                A3N=(DI3*(DJ3*ACT(K31, M3N1)+ACT(K31, M3N11))                 &
+        	        + DJ3*ACT(K311,M3N1)+ACT(K311,M3N11))                 &
+        		/((1.+DI3)*(1.+DJ3))                                 
+        !
+              ELSE
+        !
+                IF(K1.LT.1) K1=1
+                IF(K2.LT.1) K2=1
+                IF(K3.LT.1) K3=1
+        !
+                A1P=ACT(K1,M1P)
+                A1N=ACT(K1,M1N)
+                A2P=ACT(K2,M2P)
+                A2N=ACT(K2,M2N)
+                A3P=ACT(K3,M3P)
+                A3N=ACT(K3,M3N)
+        !
+              ENDIF
+        !
+              W1P2P=A1P+A2P
+              W1N2N=A1N+A2N
+              S1P2P=A1P*A2P
+              S1N2N=A1N*A2N
+              W3P4 =A3P+A4
+              W3N4 =A3N+A4
+              S3P4 =A3P*A4
+              S3N4 =A3N*A4
+        !
+              XP=S1P2P*W3P4-S3P4*W1P2P
+              XN=S1N2N*W3N4-S3N4*W1N2N
+        !
+              SNL( K1,M1P)=SNL( K1,M1P)-XP*GG
+              SNL( K1,M1N)=SNL( K1,M1N)-XN*GG
+              SNL( K2,M2P)=SNL( K2,M2P)-XP*GG
+              SNL( K2,M2N)=SNL( K2,M2N)-XN*GG
+              SNL( K3,M3P)=SNL( K3,M3P)+XP*GG
+              SNL( K3,M3N)=SNL( K3,M3N)+XN*GG
+              SNL(IW4,IT4)=SNL(IW4,IT4)+(XP+XN)*GG
+      !
+      ! ============
+            ENDIF
+            IF (.NOT.ASSOCIATED(CURRIAM%NEXTRIAM)) EXIT                         
+            CURRIAM => CURRIAM%NEXTRIAM                                         
+          END DO                                                              
+        ENDDO
+      ENDDO
 ! ============
 !
       RETURN
@@ -2707,19 +2704,23 @@
 !  Transforms nondimensional Sqr(w)d/g into nondimensional kd using the
 !  dispersion relation and an iterative method
 
-   IF(D-10.) 2,2,1
- 1 XX=D
-   GO TO 6
- 2 IF(D-1.) 3,4,4
- 3 X=SQRT(D)
-   GO TO 5
- 4 X=D
- 5 COTHX=1.0/TANH(X)
-   XX=X-(X-D*COTHX)/(1.+D*(COTHX**2-1.))
-   E=1.-XX/X
-   X=XX
-   IF(ABS(E)-0.0005) 6,5,5
- 6 WAVE=XX
+    IF(D-10. .GT. 0) THEN
+      XX=D
+    ELSE
+      IF(D-1. .LT. 0) THEN
+        X=SQRT(D)
+      ELSE
+        X=D
+      ENDIF
+      DO WHILE(.TRUE.)
+        COTHX=1.0/TANH(X)
+        XX=X-(X-D*COTHX)/(1.+D*(COTHX**2-1.))
+        E=1.-XX/X
+        X=XX
+        IF(ABS(E)-0.0005 .LT. 0) EXIT
+      ENDDO
+    ENDIF
+    WAVE=XX
    RETURN
    END FUNCTION WAVE
 
@@ -2785,7 +2786,7 @@
    REAL :: W(LMAX)                                                     
 !
 !  ================
-   DO 120 IT34=1,N2
+   DO IT34=1,N2
 !  ================
 !
      T34=DT*(IT34-1)
@@ -2793,7 +2794,7 @@
      IF(IT34 == 1 .OR. IT34 == N2) DT3=DT2
 !
 !    ===================
-     DO 110 IW3=IW3L,IW4
+     DO IW3=IW3L,IW4
 !    ===================
 !
        W3=W(IW3)
@@ -2811,7 +2812,7 @@
        IT1S=NINT(TL/DT)+1
 !
 !     ===================
-       DO 100 IT1A=IT1S,N2
+       DO IT1A=IT1S,N2
 !     ===================
 !
          T1A=DT*(IT1A-1)
@@ -2822,7 +2823,7 @@
 !     -----------------------------------------------------------------
          CALL FINDW1W2(LMAX,IW3,W,G,H,W1,W2,W3,WA,AK1,AK2,AKA,T1A,T2A,IND)   
 !     -----------------------------------------------------------------
-         IF(IND < 0) GO TO 100
+         IF(IND < 0) CYCLE
 !
          IF(W1 <= W3 .AND. W3 <= W4 .AND. W4 <= W2)THEN
 !JQI        CALL KERNEL(N,G,H,W1,W2,W3,W4,AK1,AK2,AK3,AK4,AKA,           &
@@ -2830,9 +2831,9 @@
          ENDIF
 !
 ! ============
-  100 CONTINUE
-  110 CONTINUE
-  120 CONTINUE
+       ENDDO
+     ENDDO
+   ENDDO
 ! ============
 !
    RETURN
@@ -2848,21 +2849,22 @@
    X2=W3
 !
 !     ---------------------------------------
-110 CALL FDW1(G,H,AKA,T1A,WA,X1,X2,X,EPS,M)
+   CALL FDW1(G,H,AKA,T1A,WA,X1,X2,X,EPS,M)
 !     ---------------------------------------
 !
-   IF(M.EQ.0) GO TO 999
-!
-   W1=X
-!
-   AK1=WAVE(W1**2*H/G)/H
-   AK2=SQRT(AKA*AKA+AK1*AK1-2.*AKA*AK1*COS(T1A))
-   W2=SQRT(G*AK2*TANH(AK2*H))
-   IF(W1.GT.W2) GO TO 999
-   T2A=ATAN2(-AK1*SIN(T1A),AKA-AK1*COS(T1A))
-   RETURN
-!
-999 IND=-999
+   IF(M.NE.0) THEN
+     W1=X
+     AK1=WAVE(W1**2*H/G)/H
+     AK2=SQRT(AKA*AKA+AK1*AK1-2.*AKA*AK1*COS(T1A))
+     W2=SQRT(G*AK2*TANH(AK2*H))
+     IF(W1.LE.W2) THEN
+       T2A=ATAN2(-AK1*SIN(T1A),AKA-AK1*COS(T1A))
+     ELSE
+       IND=-999
+     ENDIF
+   ELSE
+     IND=-999
+   ENDIF
    RETURN
    END SUBROUTINE FINDW1W2
 
@@ -2871,28 +2873,37 @@
    M=0
    F1=FUNCW1(G,H,X1,AKA,T1A,WA)
    F2=FUNCW1(G,H,X2,AKA,T1A,WA)
-20 IF(F1*F2) 18,19,21
-18 M=M+1
-   X=X2-((X2-X1)/(F2-F1)*F2)
-   IF((ABS(X-X2)/ABS(X))-EPS) 22,23,23
-23 IF((ABS(X-X1)/ABS(X))-EPS) 22,24,24
-22 RETURN
-24 F=FUNCW1(G,H,X,AKA,T1A,WA)
-   FM=F*F1
-   IF(FM) 25,22,26
-25 X2=X
-   F2=F
-   GO TO 20
-26 X1=X
-   F1=F
-   GO TO 20
-19 M=M+1
-   IF(F1) 17,16,17
-16 X=X1
-   GO TO 22
-17 X=X2
-   GO TO 22
-21 M=0
+   DO WHILE(.TRUE.)
+     IF(F1*F2 .lt. 0) THEN
+       M=M+1
+       X=X2-((X2-X1)/(F2-F1)*F2)
+       IF((ABS(X-X2)/ABS(X))-EPS .ge. 0) THEN
+         IF((ABS(X-X1)/ABS(X))-EPS .ge. 0) THEN
+           F=FUNCW1(G,H,X,AKA,T1A,WA)
+           FM=F*F1
+           IF(FM .lt. 0) THEN
+             X2=X
+             F2=F
+             CYCLE
+           ELSEIF(FM .gt. 0) THEN
+             X1=X
+             F1=F
+             CYCLE
+           ENDIF
+         ENDIF
+       ENDIF
+     ELSEIF(F1*F2 .EQ. 0) THEN
+       M=M+1
+       IF(F1 .eq. 0) THEN
+         X=X1
+       ELSE
+         X=X2
+       ENDIF
+     ELSE
+       M=0
+     ENDIF
+     EXIT
+   ENDDO
    RETURN
    END SUBROUTINE FDW1
 

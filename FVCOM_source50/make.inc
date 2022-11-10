@@ -283,7 +283,7 @@ dashL= $(empty) -L
 #       RIVER INPUT FILES!
 #--------------------------------------------------------------------------
 
-#            FLAG_14 = -DRIVER_FLOAT
+            FLAG_14 = -DRIVER_FLOAT
 
 #--------------------------------------------------------------------------
 #        The TVD (total variational diminishing) option for FVCOM was developed by 
@@ -292,7 +292,7 @@ dashL= $(empty) -L
 #        diffusion and better shape preserving properties than the standard scheme. 
 #--------------------------------------------------------------------------
 
-#            FLAG_44 = -DTVD
+            FLAG_44 = -DTVD
 
 #--------------------------------------------------------------------------
 #        Using A fully multidimensional positive definite advection
@@ -301,7 +301,7 @@ dashL= $(empty) -L
 #        Physics, 54, 325-362, 1984
 #--------------------------------------------------------------------------
 
-#            FLAG_15 = -DMPDATA
+            FLAG_15 = -DMPDATA
 
 #--------------------------------------------------------------------------
 #         Run Two-D Barotropic Mode Only

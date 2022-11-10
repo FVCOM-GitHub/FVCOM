@@ -54,6 +54,8 @@ MODULE MOD_ICE2D
   SAVE
   
   Logical :: EVP_ON   
+! afm 20210527
+  Logical :: basalstress   
   REAL(SP), PARAMETER   :: ECC = 4.0_SP
   REAL(SP), PARAMETER   :: ECCI = C1I/ECC
   real (kind=dbl_kind) :: &
@@ -67,7 +69,10 @@ MODULE MOD_ICE2D
   
   real(SP), ALLOCATABLE :: strocnxE(:),strocnyE(:)! ice-ocean stress
   real(SP), ALLOCATABLE :: STRAIRXE(:),STRAIRYE(:)
-  
+! afm 20200505 basal stress  
+!Yoyo 20200604 for output taubx tauby
+  real(SP), ALLOCATABLE :: Tbu(:),taubx(:),tauby(:),vice_elem(:)
+ 
   REAL(SP), ALLOCATABLE :: AICETMP(:),AIU(:)
   REAL(SP), ALLOCATABLE :: UICE2(:),VICE2(:),UICE2F(:),VICE2F(:)
 
@@ -419,10 +424,30 @@ end if !dwang
 !------BEGIN MAIN LOOP OVER EXTERNAL MODEL 4 STAGE RUNGE-KUTTA INTEGRATION-----!
 !
       EVP_ON= .TRUE.
+! afm 20210527
+      basalstress= .TRUE.
+!      basalstress= .false.
       
       IF(EVP_ON) THEN
 
          !CALL ICEOCEAN_STRESS
+
+! afm & YY add basal stress flag 20200506
+         allocate(Tbu(0:NT),taubx(0:NT),tauby(0:NT),vice_elem(0:NT))
+         Tbu = 0.0_DP; taubx = 0.0_DP; tauby = 0.0_DP; vice_elem = 0.0_DP
+!         allocate(Tbu(0:NT), vice_elem(0:NT))
+!         Tbu = 0.0_DP; vice_elem = 0.0_DP
+
+         IF (basalstress) THEN
+         call basal_stress 
+         END IF
+
+# if defined(MULTIPROCESSOR)
+            IF(PAR)CALL AEXCHANGE(NC,MYID,NPROCS,Tbu)
+            IF(PAR)CALL AEXCHANGE(NC,MYID,NPROCS,taubx,tauby) 
+# endif
+! afm 20200505 basal stress
+
          DO KID=1,ndte              ! subcycling
             
             UICE2N=0.0_SP;VICE2N=0.0_SP
@@ -455,17 +480,8 @@ end if !dwang
                CALL ICE_UV(K)
                UICE2  = UICE2F
                VICE2  = VICE2F
-
-!dwang
-               !for global case: limit ice velocity of the new ice near the open water
-               IF(K==4) then
-                  DO I=1,N
-                     UICE2(I)=MAX(MIN(UICE2(i),1.00_SP),-1.00_SP)
-                     VICE2(I)=MAX(MIN(VICE2(i),1.00_SP),-1.00_SP)
-                  END DO
-               ENDIF
-
-!dwang
+!                UICE2 = 0.0_SP
+!                VICE2 = 0.0_SP
 
                !EXCHANGE ELEMENT-BASED VALUES ACROSS THE INTERFACE
 #     if defined (MULTIPROCESSOR)
@@ -506,16 +522,6 @@ end if !dwang
       Divu(1:M,1) =DivuN(1:M)
       Delta(1:M,1)=DeltaN(1:M)
 
-      !gao for global case
-      DO I=1,M
-       !IF(I==NODE_NORTHPOLE) THEN
-       IF(VY(I)>=89.5_SP) THEN
-          Divu (I,1)=0.0_SP
-          Delta(I,1)=0.0_SP
-       END IF
-      END DO
-
-
 !==========================================================================
       DEALLOCATE(UICE2N,VICE2N)
       
@@ -529,6 +535,13 @@ end if !dwang
       DEALLOCATE(TAUXWI,TAUYWI,vrel)
       DEALLOCATE(STRAIRXE,STRAIRYE)
    
+!      IF (basalstress) THEN
+      DEALLOCATE(Tbu)
+      DEALLOCATE(taubx)
+      DEALLOCATE(tauby)
+      DEALLOCATE(vice_elem)
+!      END IF
+
       RETURN
     END SUBROUTINE ICE_RUNGE_KUTTA
 !==========================================================================
@@ -556,6 +569,66 @@ end if !dwang
       RETURN
     END SUBROUTINE ICEOCEAN_STRESS
     !==============================================================================|
+
+! afm basal stress 20200505 
+!=======================================================================
+! Computes basal stress Tbu coefficients (landfast ice)
+!
+! Lemieux, J. F., B. Tremblay, F. Dupont, M. Plante, G.C. Smith, D. Dumont
+! (2015). 
+! A basal stress parameterization form modeling landfast ice, J. Geophys. Res. 
+! Oceans, 120, 3157-3173.
+!
+! Lemieux, J. F., F. Dupont, P. Blain, F. Roy, G.C. Smith, G.M. Flato (2016). 
+! Improving the simulation of landfast ice by combining tensile strength and a
+! parameterization for grounded ridges, J. Geophys. Res. Oceans, 121.
+!
+! note: Tbu is a part of the Cb as defined in Lemieux et al. 2015 and 2016.
+    !==============================================================================|
+    subroutine basal_stress
+
+      IMPLICIT NONE
+
+      INTEGER  :: I
+
+      real (DP) :: &
+         hu,  & ! volume per unit area of ice at u location (mean thickness)
+         hwu, & ! water depth at u location
+         hcu, & ! critical thickness at u location
+!         Tbu, & ! coefficient for basal stress (N/m^2)
+!         k1 = 8.0_DP , &  ! first free parameter for landfast parametrization 
+! afm 20210527 a larger k1 for Great Lakes, based on the preliminary evaluation
+         k1 = 16.0_DP , &  ! first free parameter for landfast parametrization 
+         k2 = 15.0_DP , &  ! second free parameter (N/m^3) for landfast parametrization 
+         alphab = 20.0_DP  ! alphab=Cb factor in Lemieux et al 2015
+
+      ! convert vice values to that at elements 
+      call  N2E2D(vice(:,1),vice_elem)
+
+      DO I=1,N !T
+         IF(ISICEC(I) == 1)THEN
+           
+            ! convert quantities to u-location
+            hwu = h1(i)
+            hu  = vice_elem(i)
+            
+            ! 1- calculate critical thickness
+            ! aiu is aice (on nodes) interpolated onto elements
+            hcu = aiu(i) * hwu / k1
+
+            ! 2- calculate basal stress factor                    
+            Tbu(i) = k2 * max(0.0_DP,(hu - hcu)) * exp(-alphab * (1.0_DP - aiu(I)))
+
+            ! basal stress for outputs
+            taubx(i) = -uice2(i)*Tbu(i) / (sqrt(uice2(i)**2 + vice2(i)**2) + 0.0001_DP)
+            tauby(i) = -vice2(i)*Tbu(i) / (sqrt(uice2(i)**2 + vice2(i)**2) + 0.0001_DP )
+
+         END IF
+      END DO
+
+      RETURN
+    END SUBROUTINE BASAL_STRESS
+    !==============================================================================|
     !
     !==============================================================================|
     !     ACCUMLATE FLUXES FOR ICE                                                 |
@@ -580,6 +653,9 @@ end if !dwang
       real(SP) :: WIND_SP
       real(SP) :: cca,ccb,ab2,cc1,cc2
       real(SP) :: TAUX, TAUY
+!afm & YY: for Basal stress Cb 20200506
+      real(SP) :: Cb
+      real    (kind=dbl_kind) :: u0 = 5.e-5_dbl_kind    ! residual velocity for basal stress (m/s)
       
       !==============================================================================|
       !
@@ -593,7 +669,21 @@ end if !dwang
          IF(ISICEC(I) == 1)THEN
             !--UPDATE----------------------------------------------------------------------|
             ! alpha, beta are defined in Hunke and Dukowicz (1997), section 3.2
-            cca = imass1(i)/Tdte + vrel(I) * cosw*ALPHA_RK(K) ! alpha, kg/m^2 s
+
+!afm & YY: for Basal stress Cb 20200506
+!            cca = imass1(i)/Tdte + vrel(I) * cosw*ALPHA_RK(K) ! alpha, kg/m^2 s
+            Cb = 0.0_SP
+            IF (basalstress) THEN
+            Cb  = Tbu(I) / (sqrt(UICE2(I)**2 + VICE2(I)**2) + u0) ! for basal stress
+!! afm debug
+!if (cb > 0.0_SP .and. vice_elem(i)>=0.5_SP ) then
+!print*, "cca terms 1:", imass1(i)/Tdte, vrel(i)* cosw*ALPHA_RK(K), cb
+!print*, "cca terms 2:",  h1(i), vice_elem(i),alpha_rk(k),k 
+!endif
+            END IF 
+
+            ! revp = 0 for classic evp, 1 for revised evp
+            cca = imass1(i)/Tdte + vrel(I) * cosw*ALPHA_RK(K) + Cb ! alpha, kg/m^2 s
             ccb = (cor(i)*imass1(i) + vrel(I) * sinw)*ALPHA_RK(K)  ! beta,  kg/m^2 s
             ab2 = cca**2 + ccb**2
             
@@ -1026,6 +1116,9 @@ end if !dwang
       real(SP) :: cca,ccb,ab2,cc1,cc2
       real(SP) :: UW_TMP,VW_TMP
       real(SP) :: TAUXWI_tmp,TAUYWI_tmp
+!afm & YY: for Basal stress Cb 20200506
+      real(SP) :: Cb
+      real    (kind=dbl_kind) :: u0 = 5.e-5_dbl_kind    ! residual velocity for basal stress (m/s)
       !==============================================================================|
       !
       !--ACCUMULATE RESIDUALS FOR ICE EQUATIONS--------------------------------------|
@@ -1055,7 +1148,13 @@ end if !dwang
             !
             ! alpha, beta are defined in Hunke and Dukowicz (1997), section 3.2
             !        cca = imass1(i)/dtice + vrel * cosw         ! alpha, kg/m^2 s
-            cca = imass1(i)/Tdte + vrel(I) * cosw*ALPHA_RK(K) ! alpha, kg/m^2 s
+!afm & YY add Cb for basal stress 20200506
+            Cb = 0.0_SP
+            IF (basalstress) THEN
+            Cb  = Tbu(I) / (sqrt(UICE2(I)**2 + VICE2(I)**2) + u0) ! for basal stress
+            END IF
+!            cca = imass1(i)/Tdte + vrel(I) * cosw*ALPHA_RK(K) ! alpha, kg/m^2 s
+            cca = imass1(i)/Tdte + vrel(I) * cosw*ALPHA_RK(K) + Cb ! alpha, kg/m^2 s
             !        ccb = fm(i,j)        + vrel * sinw        ! beta,  kg/m^2 s
             ccb = (cor(i)*imass1(i) + vrel(I) * sinw)*ALPHA_RK(K)  ! beta,  kg/m^2 s
             

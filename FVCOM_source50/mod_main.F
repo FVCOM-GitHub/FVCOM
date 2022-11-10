@@ -315,7 +315,7 @@ MODULE CONTROL
 # endif
          & NC_BIO,           &
          & NC_WQM,           &
-# if defined (DATA_ASSIM)
+!JQI# if defined (DATA_ASSIM)
 	 & NC_VORTICITY,     &
     
     ! lwang added for mld_output Jul 09, 2019
@@ -323,9 +323,9 @@ MODULE CONTROL
     ! lwang added for ERSEM oflline Aug 26, 2019
          & NC_UARD_OBCN
     ! lwang
-# else
-	 & NC_VORTICITY
-# endif
+!JQI# else
+!JQI	 & NC_VORTICITY
+!JQI# endif
 
 
     !--Parameters in NameList NML_NETCDF_SURFACE
@@ -669,11 +669,16 @@ MODULE CONTROL
     CHARACTER(LEN=80) RIVER_INFO_FILE ! RIVERS INFORMATION FILE
     ! SPECIFIED FOR NODES OR EDGES
     INTEGER RIVER_NUMBER ! THE NUMBER OF RIVERS
-
+!JQI NOV2021
+    CHARACTER(LEN=80) TS_ADJUST_METHOD  ! The methods of TS adjustment when RIVER_TS_SETTING is 'calculated'
+!JQI NOV2021
     NAMELIST /NML_RIVER_TYPE/               &
          & RIVER_NUMBER,                    &
          & RIVER_KIND,                      &
          & RIVER_TS_SETTING,                &
+!JQI NOV2021
+         & TS_ADJUST_METHOD,                &
+!JQI NOV2021
          & RIVER_INFO_FILE,                 &
          & RIVER_INFLOW_LOCATION
     
@@ -1091,7 +1096,9 @@ MODULE CONTROL
    CHARACTER(LEN=80), PARAMETER :: STYPE_RESTART= "RESTART"
 !--Sigma Level Parameters for case GEOMETRIC OF UNIFORM------------------------!
    REAL(SP) :: P_SIGMA      !!PARAMETER CONTROLLING SIGMA LEVEL DISTRIBUTION
-
+!JQI NOV2021
+   REAL(SP) :: P_SIGMA_DISTRIBUTION !!ANOTHER PARAMETER CONTROLLING SIGMA LEVEL DISTRIBUTION WHEN P_SIGMA = 1 
+!JQI NOV2021
 !--General Vertical Level Parameters for case TANH ----------------------------!
    REAL(SP) :: DU2          !!PARAMETER CONTROLLING LEVEL DISTRIBUTION OF SURFACE
    REAL(SP) :: DL2          !!PARAMETER CONTROLLING LEVEL DISTRIBUTION OF BOTTOM
@@ -1658,6 +1665,19 @@ MODULE ALL_VARS
 
   REAL(SP), ALLOCATABLE,TARGET :: HYW(:,:)
 
+
+# if defined (PROJ) && !defined (SPHERICAL)
+  !--------------------------UV-PROJECTION------------------------------------------!
+  ! Siqi Li, 20221005
+   REAL(SP), ALLOCATABLE,TARGET :: ACLON_X(:)  !PROJECTED Ux ON EAST
+   REAL(SP), ALLOCATABLE,TARGET :: ACLON_Y(:)  !PROJECTED Vy ON EAST
+   REAL(SP), ALLOCATABLE,TARGET :: ALAT_X(:)   !PROJECTED Ux ON NORTH
+   REAL(SP), ALLOCATABLE,TARGET :: ALAT_Y(:)   !PROJECTED Vy ON NORTH
+   REAL(SP), ALLOCATABLE,TARGET :: UA_EAST(:)   !VERTICALLY AVERAGED EASTWARD U   
+   REAL(SP), ALLOCATABLE,TARGET :: VA_NORTH(:)   !VERTICALLY AVERAGED NORTHWARD V  
+   REAL(SP), ALLOCATABLE,TARGET :: U_EAST(:,:)  !EASTWARD U
+   REAL(SP), ALLOCATABLE,TARGET :: V_NORTH(:,:)  !NORTHWARD V 
+# endif
 
   !-----Surface drag coefficient----------------------------------------------------!
   ! Siqi Li, 2021-01-27
@@ -2227,6 +2247,19 @@ CONTAINS
 
 
    ALLOCATE(HYW(0:MT,KB))        ;HYW     = ZERO
+
+# if defined (PROJ) && !defined (SPHERICAL)
+  !--------------------------UV-PROJECTION------------------------------------------!
+  ! Siqi Li, 20221005
+   ALLOCATE(ACLON_X(0:NT))      ;ACLON_X = ZERO   !PROJECTED Ux ON EAST
+   ALLOCATE(ACLON_Y(0:NT))      ;ACLON_Y = ZERO   !PROJECTED Vy ON EAST
+   ALLOCATE(ALAT_X(0:NT))       ;ALAT_X = ZERO    !PROJECTED Ux ON NORTH
+   ALLOCATE(ALAT_Y(0:NT))       ;ALAT_Y = ZERO    !PROJECTED Vy ON NORTH
+   ALLOCATE(UA_EAST(0:NT))      ;UA_EAST = ZERO   !VERTICALLY AVERAGED EASTWARD U 
+   ALLOCATE(VA_NORTH(0:NT))     ;VA_NORTH = ZERO  !VERTICALLY AVERAGED NORTHWARD V 
+   ALLOCATE(U_EAST(0:NT,KB))    ;U_EAST  = ZERO   !EASTWARD U
+   ALLOCATE(V_NORTH(0:NT,KB))   ;V_NORTH  = ZERO  !NORTHWARD V 
+# endif
 
   !-----Surface drag coefficient----------------------------------------------------!
   ! Siqi Li, 2021-01-27

@@ -30,7 +30,8 @@
       SUBROUTINE GET_PARAMETER(fname)
       character(len=*)    :: fname
       logical             :: fexist
-      INTEGER                        ::  I,J,K
+      INTEGER             ::  I,J,K
+      LOGICAL             :: MULTIPLE_PRINT
 
 !************************    BEGINNING EXECUTABLE    **********************
       KBVM1=KBV-1
@@ -46,9 +47,9 @@
       OPEN (1, FILE=trim(fname),status='old')
       REWIND (1)
       READ(1,*)PARMINDEX
-      DO 10 WHILE (PARMINDEX .NE. 'STRUCTURE')             !DETERMING MODEL STRUCTURE
-      READ(1,*)PARMINDEX
- 10   CONTINUE
+      DO WHILE (PARMINDEX .NE. 'STRUCTURE')             !DETERMING MODEL STRUCTURE
+        READ(1,*)PARMINDEX
+      END DO
       READ(1,*)PARMINDEX
       MODEL_STRUCTURE=PARMINDEX
       SELECT CASE (PARMINDEX)
@@ -244,7 +245,7 @@
 	    DETRITUS_UNIT(2)   = 'mmole Si m-3'
             BACTERIA_NAME(1)   = 'Bacteria'
 	    BACTERIA_UNIT(1)   = 'mmole C m-3'
-	            
+
           CASE ('N2P2Z2D2SB')
             NNN=2
             NNP=2
@@ -296,7 +297,7 @@
 
          CASE('NEW')
            READ(1,*)PARMINDEX
-           DO 20 WHILE (PARMINDEX.NE.'L_FUNCTION')     
+           DO WHILE (PARMINDEX.NE.'L_FUNCTION')
              SELECT CASE (PARMINDEX)                        !ASSIGNMENT FOR NEW MODEL
                CASE ('PHYTOPLANKTON')
                  READ(1,*)NNP
@@ -348,7 +349,7 @@
                  END DO
              END SELECT
              READ(1,*)PARMINDEX
- 20       CONTINUE
+           END DO
             NTT=NNN+NNP+NNZ+NNM+NNB+NND+NNA   !TOTAL VARIABLE NUMBER FOR VERTICAL MIXING
             INN=1
             INP=INN+NNN
@@ -556,11 +557,11 @@
       ALLOCATE (UPTAKE_PN(KBV,NNN,NNP))  ;  UPTAKE_PN   =  0.0_SPP  !NUTRIENT UPTAKE BY PHYTO
 
 !*************************     FUNCTIONS AND PARAMETER VALUES    ***************
-      DO 30 WHILE (PARMINDEX .NE. 'END')
+      DO WHILE (PARMINDEX .NE. 'END')
         SELECT CASE (PARMINDEX)
-          CASE ('L_FUNCTION') 
+          CASE ('L_FUNCTION')
             READ (1,*) L_FUNCTION
-          CASE ('G_FUNCTION') 
+          CASE ('G_FUNCTION')
             READ (1,*) G_FUNCTION
           CASE ('ALPHAP');                                 !LIGHT FUNCTION COEFFICIENT
             READ(1,*) (ALPHAP(I),I=1,NNP)
@@ -688,9 +689,9 @@
           CASE ('ALPHA_ZD')                                !FEEDING LOSS FROM ZOO TO DETRITUS
             READ(1,*) (((ALPHA_ZD(I,J,K),I=1,NND),J=1,NNZ),K=1,NNZ)
           CASE ('D_D')                                     !DISSOLUTION COEFFICIENT
-            READ(1,*) (D_D(I),I=1,NND) 
+            READ(1,*) (D_D(I),I=1,NND)
           CASE ('D_0')                                     !DETRITUS THRESHOLD
-            READ(1,*) (D_0(I),I=1,NND) 
+            READ(1,*) (D_0(I),I=1,NND)
           CASE ('D_RN')                                    !REMINERALIZATION COEFFICIENT
             READ(1,*) (D_RN(I),I=1,NND)
           CASE ('EPSILON_PD')                              !PHYTO MORTALITY TO DETRITUS
@@ -736,9 +737,8 @@
             READ(1,*) R_AN
          END SELECT
          READ (1,*)PARMINDEX
- 30    CONTINUE
+       END DO
        CLOSE(1)
-!       GOTO 99
 !*******************************************************************!
 ! *********   CHECKING GROWTH EFFICIENCY AND FEEDLING LOSSES    ****!
 !*******************************************************************!
@@ -866,8 +866,8 @@
              STOP
            END IF
        END DO !I=1,NNP
-! 99    continue
-       GOTO 88  !MOVED TO BIO_INITIAL TO PREVENT MULTIPLE PRINT
+      MULTIPLE_PRINT=.false.
+      IF(MULTIPLE_PRINT) THEN!MOVED TO BIO_INITIAL TO PREVENT MULTIPLE PRINT
 !*******************************************************************!
 ! *********     PRINT OUT MODEL SETUP AND PARAMETER VALUES      ****!
 !*******************************************************************!
@@ -910,22 +910,22 @@
           PRINT*,'D ATTANUATION          : ', ATANU_D
           PRINT*,'WATER ATTANUATION      : ', ATANU_W
         IF(L_FUNCTION.EQ.'PGH80_LIGHT'.OR.L_FUNCTION.EQ.'V65_LIGHT'.OR. &
-           L_FUNCTION.EQ.'BWDC9_LIGHT') THEN       
+           L_FUNCTION.EQ.'BWDC9_LIGHT') THEN
           PRINT*,'BETAP                  : ', (BETAP(I),I=1,NNP)
         END IF
           PRINT*,'CHL:C                  : ',(CHL2C(I),I=1,NNP)
           PRINT*,'ACTIVE DOM EXUD.       : ',(D_DOM(I),I=1,NNP)
           PRINT*,'PASSIVE DOM EXUD.      : ', (DPDOM(I),I=1,NNP)
         IF(L_FUNCTION.EQ.'SL62_LIGHT'.OR.L_FUNCTION.EQ.'V65_LIGHT'.OR. &
-           L_FUNCTION.EQ.'PE78_LIGHT') THEN       
+           L_FUNCTION.EQ.'PE78_LIGHT') THEN
           PRINT*,'OPTIMAL LIGHT          : ',(I_OPT(I),I=1,NNP)
         END IF
-        IF(L_FUNCTION.EQ.'MM_LIGHT'.OR.L_FUNCTION.EQ.'LB_LIGHT') THEN 
+        IF(L_FUNCTION.EQ.'MM_LIGHT'.OR.L_FUNCTION.EQ.'LB_LIGHT') THEN
           PRINT*,'LIGHT HALF SATURATTION : ', (K_LIGHT(I),I=1,NNP)
         END IF
           PRINT*,'MORTALITY              : ', (MPD(I),I=1,NNP)
           PRINT*,'MORTALITY POWER        : ', (M_P(I),I=1,NNP)
-        IF(L_FUNCTION.EQ.'LB_LIGHT'.OR.L_FUNCTION.EQ.'V65_LIGHT') THEN 
+        IF(L_FUNCTION.EQ.'LB_LIGHT'.OR.L_FUNCTION.EQ.'V65_LIGHT') THEN
           PRINT*,'POWER OF LIGHT         : ', (N_P(I),I=1,NNP)
         END IF
           PRINT*,'THRESHOLD              : ', (P_0(I),I=1,NNP)
@@ -950,13 +950,13 @@
           PRINT*,'EFFICIENCY ON ZOO      : ',((EFFIZ(I,J),I=1,NNZ),J=1,NNZ)
           PRINT*,'MAX GRAIZING RATE      : ',(G_MAX(I),I=1,NNZ)
         IF(G_FUNCTION.EQ.'RECTI_G'.OR.G_FUNCTION.EQ.'MM1_G' .AND. &
-           G_FUNCTION.EQ.'MM2_G') THEN 
+           G_FUNCTION.EQ.'MM2_G') THEN
           PRINT*,'HALF SATURATION        : ', (K_ZG(I),I=1,NNZ)
         END IF
           PRINT*,'GRAZING POWER          : ',(M_G(I),I=1,NNZ)
           PRINT*,'MORALITY               : ',(MZD(I),I=1,NNZ)
           PRINT*,'MORTALITY POWER        : ',(M_Z(I),I=1,NNZ)
-        IF(G_FUNCTION.EQ.'MM2_G') THEN 
+        IF(G_FUNCTION.EQ.'MM2_G') THEN
           PRINT*,'GRAZING THRESHOLD      : ',(P_C(I),I=1,NNZ)
         END IF
         IF (NNZ.GE.1) THEN
@@ -1053,8 +1053,8 @@
        PRINT*,'*********    END OF BIOLOGICAL MODEL     ************'
        PRINT*,'*****************************************************'
        PRINT*
- 88    CONTINUE
-       RETURN
+      ENDIF
+      RETURN
 END SUBROUTINE GET_PARAMETER
 
 
@@ -1067,6 +1067,7 @@ END SUBROUTINE GET_PARAMETER
       INTEGER  ::  I,J,K
       integer  :: linenum,k1,iscan
       real(spp),allocatable :: tmp(:)
+      logical             :: MULTIPLE_PRINT
 !************************    BEGINNING EXECUTABLE    **********************
       KBVM1=KBV-1
 
@@ -2230,8 +2231,8 @@ END SUBROUTINE GET_PARAMETER
              STOP
            END IF
        END DO !I=1,NNP
-! 99    continue
-       GOTO 88  !MOVED TO BIO_INITIAL TO PREVENT MULTIPLE PRINT
+      MULTIPLE_PRINT = .false.
+      IF(MULTIPLE_PRINT) THEN !MOVED TO BIO_INITIAL TO PREVENT MULTIPLE PRINT
 !*******************************************************************!
 ! *********     PRINT OUT MODEL SETUP AND PARAMETER VALUES      ****!
 !*******************************************************************!
@@ -2417,7 +2418,7 @@ END SUBROUTINE GET_PARAMETER
        PRINT*,'*********    END OF BIOLOGICAL MODEL     ************'
        PRINT*,'*****************************************************'
        PRINT*
- 88    CONTINUE
+     END IF
        RETURN
      END SUBROUTINE GET_PARAMETER_NEW
 

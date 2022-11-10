@@ -169,9 +169,8 @@ contains
     endif
     do idx=1,len_sng
        ! Look for first abnormal character
-       if (sng(idx:idx) == ' ' .or. sng(idx:idx) == '=') goto 100
+       if (sng(idx:idx) == ' ' .or. sng(idx:idx) == '=') EXIT
     end do                    ! end loop over characters
-100 continue
     ftn_opt_lng_get=idx-1-dsh_nbr
     ! Strings initialized to '' should have length 0
     if (ftn_opt_lng_get < 0 .or. sng == '') ftn_opt_lng_get=0
@@ -648,21 +647,27 @@ contains
     integer lng2
     integer idx1
     integer idx2
+    LOGICAL flag
     ! Initialize
     idx2=0 ! CEWI for lf95
     ! Main Code
     lng1=ftn_strlen(sng1) ! [nbr] Length of string
     lng2=ftn_strlen(sng2) ! [nbr] Length of string
     do idx1=1,lng1
+       flag=.FALSE.
        if (sng1(idx1:idx1) == sng2(1:1)) then
           do idx2=2,lng2
-             if (sng1(idx1+idx2-1:idx1+idx2-1) /= sng2(idx2:idx2)) goto 200
+             if (sng1(idx1+idx2-1:idx1+idx2-1) /= sng2(idx2:idx2)) then
+               flag=.TRUE.
+               EXIT
+             endif
           end do              ! end loop over characters
-          goto 100
+          if(.not.flag) THEN
+            EXIT
+          ENDIF
        endif                  ! endif
-200    continue
     end do                    ! end loop over characters
-100 continue
+
     if (idx2 == lng2+1) then
        ftn_strstr=idx1
     else
@@ -735,9 +740,8 @@ contains
     lng=len(sng)
     do idx=lng,1,-1
        ! Look for last normal character
-       if (sng(idx:idx) /= ' '.and.sng(idx:idx) /= char(0)) goto 100
+       if (sng(idx:idx) /= ' '.and.sng(idx:idx) /= char(0)) EXIT
     end do                    ! end loop over characters
-100 continue
     ftn_strlsc=idx
     return
   end function ftn_strlsc
@@ -760,9 +764,8 @@ contains
     lng=len(sng)
     do idx=1,lng
        ! Look for first abnormal character
-       if (sng(idx:idx) == char(0) .or. iachar(sng(idx:idx)) > 127) goto 100
+       if (sng(idx:idx) == char(0) .or. iachar(sng(idx:idx)) > 127) EXIT
     end do                    ! end loop over characters
-100 continue
     ftn_strfic=idx ! [idx] First NUL or 8-bit character position
     return
   end function ftn_strfic
@@ -872,6 +875,7 @@ contains
     integer lng1
     integer lng2
     integer lng_min
+    logical flag
     ! Main Code
     len1=len(sng1)
     len2=len(sng2)
@@ -887,6 +891,7 @@ contains
        call ftn_strprn(sng2) ! [fnc] Print character values of string
     endif                     ! endif
     lng_min=min(lng1,lng2)
+    flag=.FALSE.
     do idx=1,lng_min
        ! Prevent memory overruns
        ! Characters are equal, proceed to next character
@@ -899,25 +904,26 @@ contains
        endif               ! endif
        
        ! Characters were unequal, exit with appropriate value
-       goto 100            ! Exit Branch
+       flag=.TRUE.
+       EXIT
     end do
-    
-    if (lng1 == lng2) then
+
+    if(.not.flag) THEN
+      if (lng1 == lng2) then
        ! All significant values of both strings were equal in all positions
        ! Thus the strings are equal by our criterion
-       ftn_strcmp=0           ! [fnc] Compare sng1 to sng2: -1,0,1 iff sng1 <,=,> sng2
-    else
+        ftn_strcmp=0           ! [fnc] Compare sng1 to sng2: -1,0,1 iff sng1 <,=,> sng2
+      else
        ! All significant values of both strings were equal in all mutually legal positions
        ! However, one string has more significant characters than the other
        ! Thus return value depends on which string is longer
-       if (lng1 > lng2) then
+        if (lng1 > lng2) then
           ftn_strcmp=1        ! [fnc] Compare sng1 to sng2: -1,0,1 iff sng1 <,=,> sng2
-       else 
+        else
           ftn_strcmp=-1       ! [fnc] Compare sng1 to sng2: -1,0,1 iff sng1 <,=,> sng2
-       endif                  ! endif
-    endif ! endif lng1 == lng2
-    
-100 continue                  ! Exit branch for unequal values inside loop
+        endif                  ! endif
+      endif ! endif lng1 == lng2
+    ENDIF
     return
   end function ftn_strcmp
   

@@ -388,6 +388,7 @@ END SUBROUTINE GET_VALUE
    CHARACTER(LEN=20 ), DIMENSION(200)  :: SET
    INTEGER I,NVAL,J,NSET,NLINE,NREP
    LOGICAL SETYES,ALLSET,CHECK,LOGVAL
+   INTEGER ioerror
 
 
    SCAN_FILE = 0
@@ -408,29 +409,33 @@ END SUBROUTINE GET_VALUE
 
    NSET = 0
    NLINE = 0
-   DO WHILE(.TRUE.)
-     TLINE(1:LEN(TLINE)) = ' ' 
+   out: DO WHILE(.TRUE.)
+     TLINE(1:LEN(TLINE)) = ' '
      NREP  = 0
      NLINE = NLINE + 1
-     READ(10,'(a)',END=20) INPLINE
+     READ(10,'(a)',IOSTAT=ioerror) INPLINE
+     IF(ioerror .ne. 0) EXIT out
      TLINE(1:80) = INPLINE(1:80)
 
 !----PROCESS LINE CONTINUATIONS------------------------------------------------!
- 110 CONTINUE
-     I = LEN_TRIM(INPLINE)
-     IF(I /= 0)THEN
+     DO WHILE(.TRUE.)
+       I = LEN_TRIM(INPLINE)
+       IF(I /= 0)THEN
 #    if defined (COMPAQ) || defined (INTEL) || defined (IRIX)
-     IF( INPLINE(I-1:I) == '\\')THEN
+         IF( INPLINE(I-1:I) == '\\')THEN
 #    else
-     IF( INPLINE(I-1:I) == '\\\\')THEN
+         IF( INPLINE(I-1:I) == '\\\\')THEN
 #    endif
-       NREP = NREP + 1
-       READ(10,'(a)',END=20) INPLINE
-       NLINE = NLINE + 1
-       TLINE( NREP*80 + 1 : NREP*80 +80) = INPLINE(1:80)
-       GOTO 110
-     END IF
-     END IF
+           NREP = NREP + 1
+           READ(10,'(a)',IOSTAT=ioerror) INPLINE
+           IF(ioerror .ne. 0) EXIT out
+           NLINE = NLINE + 1
+           TLINE( NREP*80 + 1 : NREP*80 +80) = INPLINE(1:80)
+           CYCLE
+         END IF
+       END IF
+       EXIT
+     ENDDO
      IF(NREP > 4)CALL PERROR(6,"CANNOT HAVE > 4 LINE CONTINUATIONS")
 
 !----REMOVE LINE CONTINUATION CHARACTER \\-------------------------------------!
@@ -443,7 +448,7 @@ END SUBROUTINE GET_VALUE
 #        endif
        END DO
      END IF
-       
+
 !----PROCESS THE LINE----------------------------------------------------------!
      CALL GET_VAL(NLINE,LEN_TRIM(TLINE),ADJUSTL(TLINE),VARNAME,VARTYPE,LOGVAL,&
                  STRINGVAL,REALVAL,INTVAL,NVAL)
@@ -520,12 +525,11 @@ END SUBROUTINE GET_VALUE
          SCAN_FILE = -5
        END IF
      END IF  !!VARIABLE IS CORRECT
-            
-   END DO !!LOOP OVER INPUT FILE
- 20 CLOSE(10) 
+   END DO !!LOOP OVER INPUT FILE !LOOP out
+   CLOSE(10)
    SCAN_FILE = -2
 
-   RETURN 
+   RETURN
    END FUNCTION SCAN_FILE
 !==============================================================================|
 
@@ -580,6 +584,7 @@ END SUBROUTINE GET_VALUE
      CHARACTER(LEN=20 ), DIMENSION(200)  :: SET
      INTEGER I,NVAL,J,NSET,NLINE,NREP
      LOGICAL SETYES,ALLSET,CHECK,LOGVAL
+     INTEGER ioerror
 
 
      SCAN_FILE2 = 0
@@ -592,7 +597,7 @@ END SUBROUTINE GET_VALUE
         RETURN
      END IF
 
-     OPEN(10,FILE=TRIM(FNAME)) ; REWIND(10) 
+     OPEN(10,FILE=TRIM(FNAME)) ; REWIND(10)
 
      !==============================================================================|
      !            SCAN THE FILE FOR THE VARIABLE NAME                               |
@@ -600,29 +605,33 @@ END SUBROUTINE GET_VALUE
 
      NSET = 0
      NLINE = 0
-     DO WHILE(.TRUE.)
-        TLINE(1:LEN(TLINE)) = ' ' 
+     out: DO WHILE(.TRUE.)
+        TLINE(1:LEN(TLINE)) = ' '
         NREP  = 0
         NLINE = NLINE + 1
-        READ(10,'(a)',END=20) INPLINE
+        READ(10,'(a)',IOSTAT=ioerror) INPLINE
+        IF(ioerror .ne. 0) EXIT out
         TLINE(1:80) = INPLINE(1:80)
 
         !----PROCESS LINE CONTINUATIONS------------------------------------------------!
-110     CONTINUE
-        I = LEN_TRIM(INPLINE)
-        IF(I > 2)THEN
+        DO WHILE(.TRUE.)
+          I = LEN_TRIM(INPLINE)
+          IF(I > 2)THEN
 #    if defined (COMPAQ) || defined (INTEL) || defined (IRIX)
-           IF( INPLINE(I-1:I) == '\\')THEN
+            IF( INPLINE(I-1:I) == '\\')THEN
 #    else
-              IF( INPLINE(I-1:I) == '\\')THEN
+            IF( INPLINE(I-1:I) == '\\')THEN
 #    endif
-                 NREP = NREP + 1
-                 READ(10,'(a)',END=20) INPLINE
-                 NLINE = NLINE + 1
-                 TLINE( NREP*80 + 1 : NREP*80 +80) = INPLINE(1:80)
-                 GOTO 110
-              END IF
-           END IF
+              NREP = NREP + 1
+              READ(10,'(a)',IOSTAT=ioerror) INPLINE
+              IF(ioerror .ne. 0) EXIT out
+              NLINE = NLINE + 1
+              TLINE( NREP*80 + 1 : NREP*80 +80) = INPLINE(1:80)
+              CYCLE
+            END IF
+          END IF
+          EXIT
+        ENDDO
            IF(NREP > 4)CALL PERROR(6,"CANNOT HAVE > 4 LINE CONTINUATIONS")
            !IF(NREP > 4)CALL Fatal_Error("CANNOT HAVE > 4 LINE CONTINUATIONS")
 
@@ -664,7 +673,7 @@ END SUBROUTINE GET_VALUE
                  END IF
               ELSE IF(PRESENT(CVAL))THEN
                  IF(VARTYPE == 'string')THEN
-                    CVAL = STRINGVAL(1) 
+                    CVAL = STRINGVAL(1)
                     CLOSE(10)
                     RETURN
                  ELSE
@@ -672,7 +681,7 @@ END SUBROUTINE GET_VALUE
                  END IF
               ELSE IF(PRESENT(LVAL))THEN
                  IF(VARTYPE == 'logical')THEN
-                    LVAL = LOGVAL 
+                    LVAL = LOGVAL
                     CLOSE(10)
                     RETURN
                  ELSE
@@ -680,18 +689,18 @@ END SUBROUTINE GET_VALUE
                  END IF
               ELSE IF(PRESENT(IVEC))THEN
                  IF(VARTYPE == 'integer')THEN
-                    IVEC(1:NVAL) = INTVAL(1:NVAL) 
+                    IVEC(1:NVAL) = INTVAL(1:NVAL)
                     NSZE = NVAL
-                    CLOSE(10)         
+                    CLOSE(10)
                     RETURN
                  ELSE
                     SCAN_FILE2 = -3
                  END IF
               ELSE IF(PRESENT(FVEC))THEN
                  IF(VARTYPE == 'float')THEN
-                    FVEC(1:NVAL) = REALVAL(1:NVAL) 
-                    NSZE = NVAL 
-                    CLOSE(10)          
+                    FVEC(1:NVAL) = REALVAL(1:NVAL)
+                    NSZE = NVAL
+                    CLOSE(10)
                     RETURN
                  ELSE
                     SCAN_FILE2 = -3
@@ -699,7 +708,7 @@ END SUBROUTINE GET_VALUE
               ELSE IF(PRESENT(CVEC))THEN
                  IF(VARTYPE == 'string')THEN
                     CVEC(1:NVAL) = STRINGVAL(2:NVAL+1)
-                    NSZE = NVAL 
+                    NSZE = NVAL
                     CLOSE(10)
                     RETURN
                  ELSE
@@ -709,13 +718,12 @@ END SUBROUTINE GET_VALUE
                  SCAN_FILE2 = -5
               END IF
            END IF  !!VARIABLE IS CORRECT
+     END DO !!LOOP OVER INPUT FILE
+20   CLOSE(10)
+     SCAN_FILE2 = -2
 
-        END DO !!LOOP OVER INPUT FILE
-20      CLOSE(10) 
-        SCAN_FILE2 = -2
-
-        RETURN 
-      END FUNCTION SCAN_FILE2
+     RETURN
+   END FUNCTION SCAN_FILE2
 
 !==============================================================================|
 

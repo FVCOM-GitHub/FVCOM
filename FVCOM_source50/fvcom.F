@@ -527,6 +527,10 @@ PROGRAM FVCOM
   USE MOD_STATION_TIMESERIES 
   USE MOD_SPARSE_TIMESERIES
 
+# if defined (PROJ) && !defined (SPHERICAL)
+  USE MOD_VECTOR_PROJECTION  ! Siqi Li, 20221005
+# endif
+
   !------------------------------------------------------------------------------|
   IMPLICIT NONE
 
@@ -777,6 +781,15 @@ PROGRAM FVCOM
   !==============================================================================!
   CALL BCOND_GCN(8,0)
   
+# if defined (PROJ) && !defined (SPHERICAL)
+  !==============================================================================!
+  ! CALCULATE PARAMETERS FOR UV-PROJECTION                                       !
+  !==============================================================================!
+  ! Siqi Li, 20221005
+  CALL SETUP_UV_PROJECTION
+  CALL UV_PROJECTION
+# endif
+
   CALL ARCHIVE
   ! ORDER MATTERS - ARCHIVE_NEST MUST GO AFTER ARCHIVE DURING SETUP!
   CALL ARCHIVE_NEST
