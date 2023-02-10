@@ -94,7 +94,7 @@ dashL= $(empty) -L
 #                           SET PATH TO LIBRARIES WITH IOLIBS      
 #                           SET PATH TO INCLUDE FILES (netcdf.mod) WITH IOINCS
 #--------------------------------------------------------------------------
-#            FLAG_USE_NETCDF4     = -DUSE_NETCDF4
+            FLAG_USE_NETCDF4     = -DUSE_NETCDF4
 #            FLAG_USE_COMPRESSION = -DUSE_COMPRESSION
              IOLIBS       =  -lnetcdff -lnetcdf #-lhdf5_hl -lhdf5 -lz -lcurl -lm
 #             IOLIBS       =  -lnetcdf #-L/hosts/mao/usr/medm/install/netcdf/3.6.3/em64t/lib -lnetcdf
@@ -125,7 +125,7 @@ dashL= $(empty) -L
 #            FLAG_1 =  -DDOUBLE_PRECISION 
 
 ## SINGLE PRECISION OUTPUT FOR VISIT
-#            FLAG_1 =  -DDOUBLE_PRECISION -DSINGLE_OUTPUT
+            FLAG_1 =  -DDOUBLE_PRECISION -DSINGLE_OUTPUT
 
 #--------------------------------------------------------------------------
 #        SPHERICAL          SELECT SPHERICAL COORDINATES FOR INTEGRATION
@@ -133,7 +133,7 @@ dashL= $(empty) -L
 #                           UNCOMMENT TO SELECT SPHERICAL COORDINATES
 #--------------------------------------------------------------------------
 
-#            FLAG_2 = -DSPHERICAL
+            FLAG_2 = -DSPHERICAL
 
 #--------------------------------------------------------------------------
 #        FLOODYING/DRYING   INCLUDE WET/DRY TREATMENT OF DOMAIN
@@ -143,7 +143,7 @@ dashL= $(empty) -L
 #                           UNCOMMENT TO INCLUDE FLOODYING/DRYING
 #--------------------------------------------------------------------------
 
-#             FLAG_3 = -DWET_DRY
+             FLAG_3 = -DWET_DRY
 
 #--------------------------------------------------------------------------
 #        MULTI_PROCESSOR    INCLUDES PARALLELIZATION WITH MPI
@@ -283,7 +283,7 @@ dashL= $(empty) -L
 #       RIVER INPUT FILES!
 #--------------------------------------------------------------------------
 
-            FLAG_14 = -DRIVER_FLOAT
+#            FLAG_14 = -DRIVER_FLOAT
 
 #--------------------------------------------------------------------------
 #        The TVD (total variational diminishing) option for FVCOM was developed by 
@@ -518,7 +518,7 @@ dashL= $(empty) -L
 #    with command 'make libfvcom'.
 #--------------------------------------------------------------------------
 
-#             FLAG_81 = -DNUOPC
+             FLAG_81 = -DNUOPC
 
 #--------------------------------------------------------------------------
 #        SELECT COMPILER/PLATFORM SPECIFIC DEFINITIONS
