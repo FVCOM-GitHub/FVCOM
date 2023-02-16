@@ -1,0 +1,11 @@
+##############################################################################
+# This is the .gitignore file for the FVCOM model                            #
+#                                                                            #
+# Ignored file types include all the files created after compilation         #
+##############################################################################
+
+fvcom
+libfvcom.a
+*.mod
+*.o
+*.f90
