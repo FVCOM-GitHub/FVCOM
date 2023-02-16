@@ -12,7 +12,7 @@ git clone https://github.com/FVCOM-GitHub/FVCOM.git
 
 To obtain an old version of FVCOM:<br>
 git clone --branch <strong>VERSION</strong> https://github.com/FVCOM-GitHub/FVCOM.git<br>
-where <strong>VERSION</strong> is the version number. All available verions can be found on **********.
+where <strong>VERSION</strong> is the version number. All available verions can be found on https://github.com/FVCOM-GitHub/FVCOM/releases.
 
 
 ## Required libraries
