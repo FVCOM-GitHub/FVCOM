@@ -1,4 +1,4 @@
-# FVCOM 5.0
+# FVCOM 4.4.2
 
 http://fvcom.smast.umassd.edu/
 
