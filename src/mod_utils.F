@@ -141,7 +141,7 @@ CONTAINS
 !  FVCOM VERSION                                                               !
 !==============================================================================!
 
-   FVCOM_VERSION     = 'FVCOM_5.0'
+   FVCOM_VERSION     = 'FVCOM_5.0.1'
    FVCOM_WEBSITE     = 'http://fvcom.smast.umassd.edu, http://codfish.smast.umassd.edu'
    INSTITUTION       = 'School for Marine Science and Technology'
 
