@@ -2134,8 +2134,12 @@ CONTAINS
 
    isintriangle = .false. 
 
-   xt = vx(nv(i,1:3))
-   yt = vy(nv(i,1:3))
+!---> Siqi Li, 20230221
+   xt = reshape(vx(nv(i,1:3)), (/3/))
+   yt = reshape(vy(nv(i,1:3)), (/3/))
+!   xt = vx(nv(i,1:3))
+!   yt = vy(nv(i,1:3))
+!<--- Siqi Li
 
    isintriangle = ISINTRI(X0,Y0,Xt,Yt)
 

@@ -48,7 +48,7 @@ SUBROUTINE SETUP_DOMAIN
   IMPLICIT NONE
   INTEGER :: SENDER,STATUS
   INTEGER :: nvals, IERR, I, EGL
-  
+  INTEGER :: J   ! Siqi Li, 20230221
 
      if (dbg_set(dbg_log)) &
           & write(IPT,*) "! SETTING UP FVCOM PROCESSOR ENVIRONMENT"
@@ -133,7 +133,13 @@ SUBROUTINE SETUP_DOMAIN
         
         DO I=1,NT
            !(MUST HAVE GLOBAL NODE NUMBERING)
-           NV(I,1:4) = NLID_X(NVG(EGID_X(I),1:4))! NV is the local connectivity
+!---> Siqi Li, 20230221
+           DO J = 1, 4
+             NV(I,J) = NLID_X(NVG(EGID_X(I),J))! NV is the local connectivity
+           END DO
+!           NV(I,1:4) = NLID_X(NVG(EGID_X(I),1:4))! NV is the local connectivity
+!<--- Siqi Li
+
         END DO
         NV(0,:) = 0
 

@@ -9749,7 +9749,8 @@ END SUBROUTINE LOAD_SUBDOMAIN_FILE
            IF(STATUS /=0) CALL FATAL_ERROR("FVCOM2GRID: COULD NOT ALLOCATE G%NV")
            G%NV=0
            DO I = 1,G%NT
-              G%NV(I,:) = G%NGID_X(NV(I,1:3))
+              G%NV(I,:) = G%NGID_X( reshape(NV(I,1:3),(/3/)) ) ! Siqi Li, 20230221
+              ! G%NV(I,:) = G%NGID_X(NV(I,1:3))
            END DO
         
 
@@ -9757,7 +9758,8 @@ END SUBROUTINE LOAD_SUBDOMAIN_FILE
            IF(STATUS /=0) CALL FATAL_ERROR("FVCOM2GRID: COULD NOT ALLOCATE G%NBE")
            G%NBE = 0
            DO I = 1,N
-              G%NBE(I,:) = G%EGID_X(NBE(I,:))
+              G%NBE(I,:) = G%EGID_X( reshape(NBE(I,:),(/3/)) ) ! Siqi Li, 20230221
+              ! G%NBE(I,:) = G%EGID_X(NBE(I,:))
            END DO
 
 
@@ -9770,9 +9772,11 @@ END SUBROUTINE LOAD_SUBDOMAIN_FILE
            G%NBVE = 0
 
            DO I = 1,M
-              G%NBVE(I,:) = G%EGID_X(NBVE(I,:))
+              G%NBVE(I,:) = G%EGID_X( reshape(NBVE(I,:),(/MX_NBR_ELEM+1/)) ) ! Siqi Li, 20230221
+              ! G%NBVE(I,:) = G%EGID_X(NBVE(I,:))
 
-              G%NBSN(I,:) = G%NGID_X(NBSN(I,:))
+              G%NBSN(I,:) = G%NGID_X( reshape(NBSN(I,:),(/MX_NBR_ELEM+3/)) ) ! Siqi Li, 20230221
+              ! G%NBSN(I,:) = G%NGID_X(NBSN(I,:))
            END DO
 
 
