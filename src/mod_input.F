@@ -4130,8 +4130,12 @@ CONTAINS
     END if
     
     IF(MSR)THEN
-      X_CW(1:3)=XG2(NVG(1,1:3))
-      Y_CW(1:3)=YG2(NVG(1,1:3))
+!---> Siqi Li, 20230221
+      X_CW(1:3)=reshape(XG2(NVG(1,1:3)), (/3/))
+      Y_CW(1:3)=reshape(YG2(NVG(1,1:3)), (/3/))
+!      X_CW(1:3)=XG2(NVG(1,1:3))
+!      Y_CW(1:3)=YG2(NVG(1,1:3))
+!<--- Siqi Li
       CALL IS_TRI_CW(X_CW,Y_CW,IS_CW)
       IF(IS_CW /= 1) CALL FATAL_ERROR('Three nodes on each triangular cell in file *_grd.dat should be identified', &
                                       & 'counter-clockwise...')
