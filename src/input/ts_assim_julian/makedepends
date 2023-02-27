@@ -1,2 +1,0 @@
-mod_ts_clim.o : mod_ts_clim.F 
-main.o : main.F mod_ts_clim.o 
