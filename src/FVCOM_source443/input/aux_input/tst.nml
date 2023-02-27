@@ -1,0 +1,9 @@
+ &NML_AUX
+ INPUT_DIR       = '/data00/jqi/AFINAL/case1/tstinp'
+ OUTPUT_DIR      = '/data00/jqi/AFINAL/case1'
+ PROJECTION_REFERENCE    = 'none',
+ GRID_FILE_UNITS = 'meters'
+ GRID_FILE       = 'tst_grd.dat'
+ SIGMA_LEVELS_FILE       = 'sigma.dat'
+ DEPTH_FILE      = 'tst_dep.dat'
+ /

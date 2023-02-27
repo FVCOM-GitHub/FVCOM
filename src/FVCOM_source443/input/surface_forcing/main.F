@@ -1,0 +1,139 @@
+PROGRAM surfaceforce
+  USE MOD_SURFACEFORCE
+  USE MOD_MM5
+  USE MOD_BINARY
+  USE MOD_WRF
+  USE MOD_PRO_HURR_MODEL
+  USE MOD_OUTPUT
+  USE MOD_FORCE
+  USE MOD_NCDIO
+  ! SEE PARAMETER SETTINGS IN MOD_SST2GRD.F90
+  IMPLICIT NONE
+ 
+  character(len=*),parameter::CVS_Id="$Id$" ! [sng] CVS Identification
+  character(len=*),parameter::CVS_Date="$Date$" ! [sng] Date string
+  character(len=*),parameter::CVS_Name="$Name$" ! [sng] File name string
+  character(len=*),parameter::CVS_Revision="$Revision$" ! [sng] File revision string
+
+
+
+  INTEGER :: STATUS
+  CHARACTER(len=80) :: FNAME
+  TYPE(TIME) :: NOW
+  TYPE(NCFTIME), POINTER ::FTM
+
+  ! INTIALIZE MEMORY FROM libfvcom.a
+  CALL INITIALIZE_CONTROL("Surface Forcing")
+
+# if defined (MULTIPROCESSOR)
+  CALL INIT_MPI_ENV(MYID,NPROCS,SERIAL,PAR,MSR,MSRID)
+  MPI_FVCOM_GROUP = MPI_COMM_WORLD ! FOR NOW MAKE THEM EQUAL
+# endif
+
+  CALL GET_COMMANDLINE(CVS_ID,CVS_Date,CVS_Name,CVS_Revision)
+
+  IF (DBG_SET(DBG_LOG)) THEN
+     WRITE(IPT,*) "! ========================="
+     WRITE(IPT,*) "!   BEGIN Surface Forcing"
+     WRITE(IPT,*) "! ========================="
+  END IF
+  
+  CALL NAME_LIST_INITIALIZE
+
+  CALL GET_RUN_FILE
+
+  CALL CNTRL_PRMTRS
+
+  CALL CHECK_IO_DIRS
+
+  CALL GET_FVCOM_GRID
+
+  CALL SET_PARAMETERS
+
+  CALL SET_TIME
+
+
+  IF (DBG_SET(DBG_LOG))WRITE(IPT,*) "! SETUP FVCOM GRID STUFF"
+
+
+  ! SELECT INPUT TYPE
+  SELECT CASE(INPUT_TYPE)
+  CASE(wrf)
+     CALL LOAD_WRF(WRF_FILE_NAME)
+  CASE(mm5)
+     CALL LOAD_MM5(MM5WND_FILE_NAME,MM5HFX_FILE_NAME,MM5EVP_FILE_NAME)
+  CASE(binary)
+     CALL LOAD_BINARY(BWND_FILE_NAME,BHFX_FILE_NAME,BEVP_FILE_NAME,  &
+                      BAIP_FILE_NAME,BSAT_FILE_NAME,BSPQ_FILE_NAME,  &
+		              BCLD_FILE_NAME,BDPT_FILE_NAME)
+  CASE(prototypical_hurricane_model)
+     CALL LOAD_PRO_HURR_MODEL(BWND_FILE_NAME)
+  END SELECT
+
+  IF (DBG_SET(DBG_LOG))WRITE(IPT,*) "! SETUP INPUT FILES"
+
+
+  ! SET UP OUTPUT
+  SELECT CASE(OUTPUT_TYPE)
+  CASE(unstruct)
+     CALL MAKE_UNSTRUCTURED_OUTFILE(UNSTRUCT_FILE_NAME)
+     FTM => NC_OUT%FTIME
+  CASE(struct)     
+     CALL MAKE_STRUCTURED_OUTFILE(STRUCT_FILE_NAME)
+     FTM => NC_OUT%FTIME
+  CASE(binary)
+     CALL MAKE_BINARY_OUTFILE(BWND_FILE_NAME,BHFX_FILE_NAME,BEVP_FILE_NAME,  &
+                              BAIP_FILE_NAME,BSAT_FILE_NAME,BSPQ_FILE_NAME,  &
+		                      BCLD_FILE_NAME,BDPT_FILE_NAME)
+  END SELECT
+  
+  
+  IF (DBG_SET(DBG_LOG))WRITE(IPT,*) "SETUP OUTPUT FILES"
+  IF (DBG_SET(DBG_LOG))WRITE(IPT,*) "STARTING MAIN LOOP"
+
+  now = StartTime
+  IINT = 1
+  DO WHILE(now <= ENDTIME)
+     
+     IF (DBG_SET(DBG_LOG)) CALL PRINT_REAL_TIME(NOW,IPT,"TIME IS:",timezone)
+
+     SELECT CASE(INPUT_TYPE)
+     CASE(wrf)
+       CALL UPDATE_WRF(NOW)
+     CASE(mm5)
+       CALL UPDATE_MM5(NOW)
+     CASE(binary)
+       CALL UPDATE_BINARY(NOW)
+     CASE(prototypical_hurricane_model)
+       CALL UPDATE_PRO_HURR_MODEL(NOW)
+
+     END SELECT
+
+
+     SELECT CASE(OUTPUT_TYPE)
+     CASE(unstruct)
+        FTM%NEXT_STKCNT = FTM%NEXT_STKCNT + 1
+        CALL UPDATE_IODATA(NC_OUT,NOW)
+        CALL NC_WRITE_FILE(NC_OUT)
+        
+     CASE(struct)     
+        FTM%NEXT_STKCNT = FTM%NEXT_STKCNT + 1
+        CALL UPDATE_IODATA(NC_OUT,NOW)
+        CALL NC_WRITE_FILE(NC_OUT)
+        
+     CASE(binary)
+        CALL DUMP_BINARY(NOW)
+        
+     END SELECT
+     
+     
+     NOW = NOW + INTERVAL
+     IINT = IINT + 1
+     
+  END DO
+
+  IF (DBG_SET(DBG_LOG)) WRITE(IPT,*) "! TADA!!!"
+  CALL PSHUTDOWN
+  
+END PROGRAM surfaceforce
+

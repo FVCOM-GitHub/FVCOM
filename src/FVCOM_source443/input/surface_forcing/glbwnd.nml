@@ -1,0 +1,19 @@
+&NML_SURFACE_FORCE
+ INPUT_DIR              = '../../../glb_run_newcode/glb_inp'
+ OUTPUT_DIR             = '../../../glb_run_newcode/glb_inp'
+ INPUT_FILE             = 'glb'
+ INPUT_FILE_TYPE        = 'binary speed'
+ OUTPUT_FILE            = 'glb_forcing.nc'
+ OUTPUT_FILE_TYPE          = 'unstructured'
+ GRID_FILE              = 'glb_grd.dat'
+ GRID_FILE_UNITS        = 'degrees'
+ PROJECTION_REFERENCE   = 'none'
+ DATE_FORMAT            = 'YMD'
+ START_DATE             = 'days=0.0'
+ TIMEZONE               = 'none'
+ END_DATE               = 'days=365.0'
+ OUT_INTERVAL           = 'days=1.0'
+ ZERO_TIME              = 'days=0.0'
+ DATE_REFERENCE         = 'default'
+/
+ 

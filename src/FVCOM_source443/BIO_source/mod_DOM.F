@@ -1,0 +1,23 @@
+MODULE MOD_DOM
+!******************************************************************
+!***            DEFINE PARAMETERS RELATED TO DOM                ***
+!***   PARAMETERS ARE LISTED ALPHABETICALLY FOR EACH CATEGORY   ***
+!******************************************************************
+     USE MOD_1D
+     IMPLICIT NONE
+     SAVE
+     INTEGER               :: NNM                   ! TOTAL NUMBER OF DOM
+     INTEGER               :: INM                   ! DOM INDEX USED IN VERTICAL MIXING
+
+     REAL(SPP), ALLOCATABLE :: AGE_DOM(:)            ! DOM AGEING
+     REAL(SPP), ALLOCATABLE :: ALPHA_DOM(:)          ! DOM AGEING COEFFICIENT
+     REAL(SPP), ALLOCATABLE :: ALPHA_PDOM(:,:)       ! PHYTO EXUDATION TO DOM
+     REAL(SPP), ALLOCATABLE :: ALPHA_DDOM(:,:)       ! DETRITUS DISSOLUTION TO DOM
+     REAL(SPP), ALLOCATABLE :: ALPHA_ZPDOM(:,:,:)    ! FEEDING LOSS FROM PHYTO TO DOM
+     REAL(SPP), ALLOCATABLE :: ALPHA_ZDDOM(:,:,:)    ! FEEDING LOSS FROM DETRITUS TO DOM
+     REAL(SPP), ALLOCATABLE :: ALPHA_ZZDOM(:,:,:)    ! FEEDING LOSS FROM ZOO TO DOM
+     REAL(SPP), ALLOCATABLE :: ALPHA_ZBDOM(:,:,:)    ! FEEDING LOSS FROM BACTERIA TO DOM
+     REAL(SPP), ALLOCATABLE :: BIO_DOM(:,:)          ! DOM CONCENTRATION
+     REAL(SPP), ALLOCATABLE :: DOM_0(:)              ! DOM THRESHOLD
+     REAL(SPP), ALLOCATABLE :: FVDOM(:,:)            ! DOM SUBSTRACTED BY THRESHOLD
+END MODULE MOD_DOM

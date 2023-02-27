@@ -1,0 +1,258 @@
+!==============================================================================!
+! (1) INPUT FILE TO DETERMINE MODEL STRUCTURE, FUNCTIONS AND PARAMETERS FOR    !
+!     THE GENERALIZED BIOLOGIAL MODEL. PARAMETER VALUES ARE GIVEN FOLLOWING    !
+!     THEIR DEFINITION INCLUDING DIMENSION AND UNITS                           !
+!                                                                              !
+! (2) 'STRUCTURE' INDICATES MODEL STRUCUTRE FOR WHICH USERS CAN SELECT 'NPZ',  !
+!      'NPZD', 'FASHAM', '2NPZD', '2NPZDSB' AND 'NEW'.                         !
+!                                                                              !
+! (3) IF 'NEW' IS SELECTED, USERS NEED TO PROVIDE THE TOTAL NUMBER OF STATE    !
+!     VARIBALES FOR EACH FUNCTIONAL GROUP, FOLLOWED BY THEIR NAME AND UNITS,   !
+!     WHICH ARE USED FOR NETCDF OUTPUT. FUNCTIONAL GROUPS ARE:                 !
+!                                                                              !
+!     'NUTRIENT'      'PHYTOPLANKTON      'ZOOPLANKTON'         'DETRITUS'     !
+!     'DOM'           'BACTERIA'          'AUXILIARY'                          !
+!                                                                              !
+!     FOR EXAMPLE:                                                             !
+!     'PHYTOPLANKTON'                                                          !
+!      3                                                                       !
+!     'Diatom'                  'mmole C m-3'                                  !
+!     'Dinoflagellate'          'mmole C m-3'                                  !
+!     'Picophytoplankton'       'mmole C m-3'                                  !
+!                                                                              !
+! (4) 'L_FUNCTION' INDICATES LIGHT FUNCTION FOR PHYTOPLANKTON GROWTH. 10 LIGHT !
+!      FUNCTIONS HAVE BEEN IMPLEMENTED FOR SELECTION. THEY ARE:                !
+!                                                                              !
+!     'EXP_LIGHT'             EXPONENTIAL (FRANKS ET AL., 1986)                !
+!     'SL62_LIGHT'            EXPONEJTIAL (STEELE, 1962)                       !
+!     'MM_LIGHT'              MICHAELIS-MENTEN (CAPERON, 1967)                 !
+!     'LB_LIGHT'              MICHAELIS-MENTEN (BANNISTER, 1979)               !
+!     'V65_LIGHT'             MICHAELIS-MENTEN (VOLLENWEIDER, 1965)            !
+!     'PE78_LIGHT'            MICHAELIS-MENTEN (PEETERS & EILERS, 1978)        !
+!     'WNS74_LIGHT'           EXPONENTIAL (WEBB ET AL., 1974)                  !
+!     'PGH80_LIGHT'           EXPONENTIAL (PLATT ET AL., 1980)                 !
+!     'JP76_LIGHT'            HYPERBOLIC TANGENT (JASSBY & PLATT, 1976)        !
+!     'BWDC99_LIGHT'          HYPERBOLIC TANGENT (BISSETT ET AL., 1999)        !
+!                                                                              !
+! (5) 'G_FUNCTION' INDICATES ZOOPLANKTON GRAZING FUNCTION. 11 GRAZING          !
+!      FUNCTIONS HAVE BEEN IMPLEMENTED FOR SELECTION. THEY ARE:                !
+!                                                                              !
+!     'IVLE1_G'               IVLEV (IVLEV, 1955)                              !
+!     'RECTI_G'               RECTILINEAR (ARMSTRONG, 1994)                    !
+!     'CLI_G'                 IVLEV (LEONARD ET AL., 1999)                     !
+!     'IVLEV2_G'              IVLEV+RECTILINEAR (HOFMANN & AMBER, 1991)        !
+!     'MM1_G'                 MICHAEKIS-MENTEN (MOLONEY & FILED, 1991)         !
+!     'MM2_G'                 MICHAELIS+RECTILINEAR (EVANS, 1988)              !
+!     'MM3_G'                 MICAHELIES-MENTEN (VERITY, 1991)                 !
+!     'SMM_G'                 SWITCHING MICAHELIS-MEMTEN (FASHAM ET AL., 1990) !
+!     'GSF1_G'                GENERALIZED RECTILINEAR (TANSKY, 1978)           !
+!     'GSF2_G'                GENERALIZED RECTILINEAR (VANCE, 1978)            !
+!     'GSMM_G'                GENERALIZED MICHAELIS-MENTEN (GISMERVIK, 1997)   !
+!                                                                              !
+! (6) THE SUM OF CERTAIN PARAMETERS SUCH AS THAT OF GROWTH EFFICIENCY, ACTIVE  !
+!     RESPIRATION AND FEEDING LOSSES SHOULD EQUAL TO 1. THE MODEL CHECKS THESE !
+!     PARAMETERS AND STOPS THE EXECUTION AND PROVIDES A MESSAGE IF THE SUM OF  !
+!     THOSE PARAMETERS DOES NOT EQUAL TO 1                                     !
+!                                                                              !
+! (7) DIMENSION: NNN: THE TOTAL NUMBER OF NUTRIENT.                            !
+!                NNP: THE TOTAL NUMBER OF PHYTOPLANKTON.                       !
+!                NNZ: THE TOTAL NUMBER OF ZOOPLANKTON.                         !
+!                NNB: THE TOTAL NUMBER OF BACTERIA.                            !
+!                NND: THE TOTAL NUMBER OF DETRITUS.                            !
+!                NNM: THE TOTAL NUMBER OF DOM.                                 !
+!                NNA: THE TOTAL NUMBER OF AUXILIARY VARIABLES.                 !
+!                                                                              ! 
+! (8) FOR THE INITIALIZATION, EACH BIOLOGICAL STATE VARIABLE HAS AN INDEPENDENT!
+!     INITIAL CONDITION FILE PLACED IN INPDIR. THEY SHOULD BE NAME AS          !
+!     "NUTRIENT_INI_1", "NUTRIENT_INI_2","PHYTOPLANKTON_INI_1", "ZOOPLANKTON_  !
+!     INI_1", "BACTERIA_INI_1", 'DETRITUS_INI_1", "DOM_INI_1" AND SO FORTH.    !
+!     THREE TYPES OF INITIAL CONDITIONS WERE IMPLEMENTED: (1) 'CONSTANT': A    !
+!     SINGLE VALUE; (2) 'LINEAR':WITH AT LEAST TWO PAIRS OF VALUES WITH DEPTH. !
+!     VARIABLE VALUES WILL BE LINEARLY INTERPOLATED BETWEEN THE VALUES GIVEN), !
+!     (3) "DATA": OBSERVATION DATA SHOULD BE INTERPOLATED ONTO THE GRID POINTS !
+!     AT STANDARD LEVELS. VARIABLE VALUES WILL BE INTERPOLATED AT EACH GRID    !
+!     POINT FROM THE DATA. THE TYPE OF INITIAL CONDITION SHOULD BE PUT ON THE  !
+!     FIRST LINE OF EACH INITIAL FILE                                          !
+!=============================================================================!
+! (9) FOLLOWING IS A COMPREHENSIVE LIST OF PARAMETERS. ONLY A SUBSET OF THESE  !
+!     PARAMETERS IS NEEDED FOR A SPECIFIC MODEL STRUCTURE AND FUNCTION SELEC-  !
+!     TION. THE MODEL WILL PRINT OUT YOUR SELECTION AND PARAMETER ASSIGNMENT.  !
+!     PARAMETER ASSIGNMENT FORMAT IS:                                          !
+!                                                                              !
+!     SYMBOL        DIMENSION      UNIT              DEFINITION                !
+!==============================================================================!
+!******************      MODEL STRUCUTRE AND FUNCTIONS       ******************!
+      'STRUCTURE'
+      'NPZD'
+      'L_FUNCTION'
+      'SL62_LIGHT' 'MM_LIGHT'  !'PGH80_LIGHT'
+      'G_FUNCTION'
+      'GSMM_G'
+!********************************  PHYTOPLANKTON     PARAMETERS  ****************************!
+      'ALPHAP'      (NNP)          mgC/mgCHl/s/W     LIGHT FUNCTION COEFFICIENT
+      0.32e-6
+      'ALPHA_U'     (NNP)          dimensionless     COEFFICIENT BETWEEN MULTIPLICATION & MINIMUM
+      0.5
+      'A_TP'        (NNP)          (C)-1             EXPONENTIAL FOR T FORCING
+      0.07
+      'ATANU_C'     SCALAR         (mg Chl)-1 m2     ATTENUATION COEFFICIENT OF CHLOROPHYLL
+      0.03
+      'ATANU_D'     SCALAR         (mmole C)-1 m2    ATTENUATION COEFFICIENT OF DETRITUS
+      0.01
+      'ATANU_W'     SCALAR         m-1               ATTENUATION COEFFICIENT OF WATER
+      0.04
+      'BETAP'       (NNP)          mgC (mgCHl s W)-1 PHOTOINHIBITION COEFFICIENT
+      1.6e-8
+      'CHL2C'       (NNP)          mg CHL/mmol C     CHLOROPHYLL TO CARBON RATIO IN PHYTO
+      2.0
+      'D_DOM'       (NNP)          dimensionless     ACTIVE EXUDATION COEFFICIENT
+      0.0 !0.1
+      'DPDOM'       (NNP)          s-1               PASSIVE PHYTO EXUDATION COEFFICIENT
+      0.0 !1.74e-7
+      'I_OPT'       (NNP)          W                 OPTIMAL LIGHT FOR PHYTO
+      100.0
+      'K_LIGHT'     (NNP)          W                 HALF_SATURATION OF LIGHT FUNCTIONS
+      50
+      'MPD'         (NNP)          s-1               PHYTO MORTALITY EOFFICIENT
+      1.16e-7
+      'M_P'         (NNP)          dimensionless     PHYTO MORTALITY ORDER
+      1
+      'N_P'         (NNP)          dimensionless     POWER OF LIGHT FUNCTIONS
+      2
+      'PARFRAC'     SCALLAR        dimensionless     PAR FRACTION OF TOTAL SHORT WAVE RADIATION
+      0.43
+      'P_O'         (NNP)          mmol c m-3        PHYTOPANKTON THRESHOLDS
+      0.01
+      'RP_T'        SCALAR         dimensionless     EXPONENTIAL FOR T FORCING ON RESPIRATION
+      0.0 !0.07
+      'R_P'         (NNP)          s-1               PHYTO RESPIRATION COEFFICIENT
+      1.16e-7
+      'T_OPTP'      (NNP)          C                 OPTIMAL TEMPERATURE FOR PHYTO
+      20
+      'UMAX'        (NNP)          mmol (mgCHL s)-1  PHYTO MAXIMUM GROWTH RATE
+      0.01 1.6e-5
+      'W_P'         (NNP)          m s-1             SINKING VELOCITY OF PHYTO
+      0.0 !1.16e-5
+!********************************  ZOOPLANKTON       PARAMETERS  **************************!
+      'ACTIVE_R'    (NNZ)          dimensionless     ACTIVE RESPIRATION COEFFICIENT
+      0.3
+      'A_TZ'        (NNZ)          (C)-1             EXPONENTIAL FOR T FORCING
+      0.07
+      'EFFIB'       (NNB,NNZ)      dimensionless     GROWTH EFFICIENCY ON BACTERIA
+      0.3
+      'EFFID'       (NND,NNZ)      dimensionless     GROWTH EFFICIENCY ON DETRITUS
+      0.3
+      'EFFIP'       (NNP,NNZ)      dimensionless     GROWTH EFFICIENCY ON PHYTO
+      0.3
+      'EFFIZ'       (NNZ,NNZ)      dimensionless     GROWTH EFFICIENCY ON ZOOPLANKTON
+      0.3
+      'G_MAX'       (NNZ)          s-1               MAXIMUM GRAZING RATE
+      1.16e-5
+      'K_ZG'        (NNZ)          mmol C m-3        HALF-SATURATION FOR ZOO GRAZING
+      2
+      'M_G'         (NNZ)          dimensionless     ZOOPLANKTON GRAZING POWER
+      1
+      'MZD'         (NNZ)          s-1               ZOOPLANKTON MORTALITY COEFFICIENT
+      2.31e-7
+      'M_Z'         (NNZ)          dimensionless     ZOOPLANKTON MORTALITY POWER
+      1.0
+      'P_C'         (NNZ)          mmol C m-3        GRAZING THRESHOLD
+      0.1
+      'R_RECRUIT'   (NNZ)          dimensionless     RECRUIT COEFFICIENT
+      0.0 !0.1
+      'R_Z'         (NNZ)          s-1               ZOO PASSIVE RESPIRATION COEFFICIENT
+      5.79e-7
+      'SIGMA_B'     (NNB,NNZ)      (mmol C m-3)-1    PREFERENCE ON BACTERIA
+      1
+      'SIGMA_D'     (NND,NNZ)      (mmol C m-3)-1    PREFERENCE ON DETRITUS
+      0.1
+      'SIGMA_P'     (NNP,NNZ)      (mmol C m-3)-1    PREFERENCE ON PHYTO
+      0.5
+      'SIGMA_Z'     (NNZ,NNZ)      (mmol C m-3)-1    PREFERENCE ON ZOOPLANKTON
+      0.5
+      'T_OPTZ'      (NNZ)          C                 OPTIMAL TEMPERATURE FOR ZOOPLANKTON
+      20
+      'Z_0'         (NNZ)          mmol C m-3        ZOOPLANKTON THRESHOLLD
+      0.01
+!********************************  BACTERIA          PARAMETERS  ***************************!
+      'A_TB'        (NNB)          (C)-1             EXPONENTAIL FOR T FORCING
+      0.07
+      'B_0'         (NNB)          mmol C m-3        BACTERIA THRESHOLLD
+      0.01
+      'DELTA_B'     (NNB)          dimensionless     RATIO BETWEEN NH4 AND DON UPTAKE
+      0.4
+      'EFFIDOM'     (NNM,NNB)      dimensionless     GROWTH EFFICIENCY ON DOM
+      0.2
+      'EFFIN'       (NNN,NNB)      dimensionless     GROWTH EFFICIENCY ON NH4
+      1.0
+      'R_B'         (NNB)          s-1               BACTERIA RESPIRATION COEFFICIENT
+      4.63e-7
+      'SIGMA_DOM'   (NNM,NNB)      (mmol C m-3)-1    PREFERENCE ON DOM
+      0.1
+      'SIGMA_N'     (NNN,NNB)      (mmol n m-3)-1    PREFERENCE ON DON
+      1.0
+      'T_OPTB'      (NNB)          C                 OPTIMAL T FOR BACTERIA
+      20.0
+      'UBMAX'       (NNB)          s-1               MAXIMUM GROWTH RATE OF BACTERIA
+!********************************  DETRITUS          PARAMETERS  ***************************!
+      'ALPHA_BD'    (NND,NNB,NNZ)  dimensionless     FEEDING LOSS FROM BACTERIA TO DETRITUS
+      1.0
+      'ALPHA_DAG'   (NND)          s-1               AGGREGATION COEFFICIENT
+      0.0
+      'ALPHA_DD'    (NND,NND,NNZ)  dimensionless     FEEDING LOSS FROM DETRITUS TO DETRITUS
+      0.4
+      'ALPHA_DDG'    (NND)         s-1               DISAGGREGATION
+      0.0
+      'ALPHA_PD'    (NND,NNP,NNZ)  dimensionless     FEEDING LOSS FROM PHYTO TO DETRITUS
+      0.4
+      'ALPHA_ZD'    (NND,NNZ,NNZ)  dimensionless     FEEDING LOSS FROM ZOO TO DETRITUS
+      0.4
+      'D_D'         (NND)          s-1               DISSOLUTION COEFFICIENT
+      0.0
+      'D_0'         (NND)          s-1               DETRITUS THRESHOLD
+      0.0
+      'D_RN'        (NND)          s-1               REMINERALIZATION COEFFICIENT
+      2.31e-7
+      'D_0'         (NND)          mmol C m-3        DETRITUS THRESHOLLD
+      0.01
+      'EPSILON_PD'  (NND,NNP)      dimensionless     PHYTO MORTALITY TO DETRITUS
+      1.0
+      'EPSILON_ZD'  (NND,NNZ)      dimensionless     ZOO MORTALTIY TO DETRITU
+      1.0 
+      'W_D'         (NND)          m s-1             DETRITUS SINKING VELOCITY
+      0.0 !2.31E-4
+!********************************  DOM               PARAMETERS  ****************************!
+      'ALPHA_DOM'   (NNM)          s-1               DOM AGEING COEFFICIENT
+      1.16e-7
+      'ALPHA_PDOM'  (NNM,NNP)      dimensionless     PHYTO EXUDATION TO DOM
+      0.0
+      'ALPHA_DDOM'  (NNM,NND)      dimensionless     DETRITUS DISSOLUTION TO DOM
+      0.0
+      'ALPHA_ZPDOM' (NNM,NNP,NNZ)  dimensionless     FEEDING LOSS FROM PHYTO TO DOM
+      0.0
+      'ALPHA_ZDDOM' (NNM,NND,NNZ)  dimensionless     FEEDING LOSS FROM DETRITUS TO DOM
+      0.0
+      'ALPHA_ZZDOM' (NNM,NNZ,NNZ)  dimensionless     FEEDING LOSS FROM ZOO TO DOM
+      0.0
+      'ALPHA_ZBDOM' (NNM,NNB,NNZ)  dimensionless     FEEDING LOSS FROM BACTERIA TO DOM
+      0.0
+      'DOM_0'       (NNM)          mmol C m-3        DOM THRESHOLLD
+      0.01
+!*******************************   NUTRIENT          PARAMETERS  ****************************!
+      'KSN'         (NNN,NNP)      mmol N m-3        HALF-SATURATION OF NUTRIENT
+      1.0
+      'N2CB'        (NNN,NNB)      dimensionless     ELEMENT RATIO IN BACTERIA
+      0.25
+      'N2CD'        (NNN,NND)      dimensionless     ELEMENT RATIO IN DETRITUS
+      1.0 !0.15
+      'N2CP'        (NNN,NNP)      dimensionless     ELEMENT RATIO IN PHYTO
+      1.0 !0.15
+      'N2CZ'        (NNN,NNZ)      dimensionless     ELEMENT RATIO IN ZOOPLANKTON
+      1.0 !0.2
+      'N2CDOM'      (NNN,NNM)      dimensionless     ELEMENT RATIO IN DOM
+      0.15
+      'N_0'         (NNN)          mmol N m-3        NUTRIENT THRESHOLD
+      0.1
+      'R_AN'        SCALAR         s-1               NITRIFICATION COEFFICIENT
+      4.63e-7
+'END' OF BIOLOGICAL PARAMETERS

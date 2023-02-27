@@ -1,0 +1,136 @@
+PROGRAM Restart_create
+  use mod_input
+  use mod_restart
+  use mod_setup
+  USE MOD_SET_TIME
+  USE MOD_REPORT
+  IMPLICIT NONE
+  INTEGER :: STATUS, I
+  CHARACTER(LEN=4) :: BFLAG
+  character(len=*),parameter::CVS_Id="$Id$" ! [sng] CVS Identification
+  character(len=*),parameter::CVS_Date="$Date$" ! [sng] Date string
+  character(len=*),parameter::CVS_Name="$Name$" ! [sng] File name string
+  character(len=*),parameter::CVS_Revision="$Revision$" ! [sng] File revision string
+
+
+
+  ! INTIALIZE MEMORY FROM libfvcom.a
+  CALL INITIALIZE_CONTROL("Restart Create")
+
+# if defined (MULTIPROCESSOR)
+  CALL INIT_MPI_ENV(MYID,NPROCS,SERIAL,PAR,MSR,MSRID)
+  MPI_FVCOM_GROUP = MPI_COMM_WORLD ! FOR NOW MAKE THEM EQUAL
+# endif
+
+  IF (PAR) CALL FATAL_ERROR &
+       & ("THIS PROGRAM IS WAY TO SHORT TO BOTHER WITH WRITING AS A PARALLE CODE.",&
+       & "STOP AND RERUN WITH JUST ONE PROCESSOR!")
+
+
+  CALL GET_COMMANDLINE(CVS_ID,CVS_Date,CVS_Name,CVS_Revision)
+
+  IF (DBG_SET(DBG_LOG)) THEN
+     WRITE(IPT,*) "! ========================="
+     WRITE(IPT,*) "!   BEGIN RESTART CREATE"
+     WRITE(IPT,*) "! ========================="
+  END IF
+
+  CALL NAME_LIST_INITIALIZE
+
+  CALL READ_NAMELIST
+
+  CALL CNTRL_PRMTRS
+
+  IF(USE_REAL_WORLD_TIME)THEN
+
+     write(ipt,*) 'DATE_FORMAT' , DATE_FORMAT
+
+     NOW = READ_DATETIME(START_DATE,DATE_FORMAT,TIMEZONE,status)
+     IF(STATUS /= 1) CALL FATAL_ERROR&
+          & ('Bad Start Date format!', &
+          & TRIM(START_DATE))
+  ELSE
+     CALL IDEAL_TIME_STRING2TIME(START_DATE,BFLAG,NOW,IINT)
+     IF(BFLAG == 'step') CALL FATAL_ERROR&
+          &("You must specify a time, not a step, for this restart file", &
+          & "The Step will be set by the old restart file...")
+
+  END IF
+
+
+  CALL PRINT_REAL_TIME(NOW,IPT,"Restart Time Is:")
+
+  CALL CHECK_IO_DIRS
+
+  CALL OPEN_FILES
+
+  CALL READ_COLDSTART_SIGMA
+  CLOSE(SIGMAUNIT)
+
+  CALL READ_COLDSTART_GRID(GRIDUNIT,MGL,NGL,NV)
+  m = MGL
+  mt = MGL
+  n = ngl
+  nt = ngl
+
+  IF(OBC_ON) THEN
+     CALL READ_COLDSTART_OBC_GRID(OBCUNIT,MGL,IOBCN,I_OBC_N, TYPE_OBC)
+     CLOSE(OBCUNIT)
+
+     IOBCN_GL = IOBCN
+
+     CALL SET_OBC_TYPES
+     
+     IF(OBC_LONGSHORE_FLOW_ON) THEN
+        CALL  READ_COLDSTART_LSF(LSFUNIT,NOBCLSF,IBCLSF_output,RBC_GEO,RBC_WDF)
+        NOBCLSF_GL = NOBCLSF
+        CLOSE(LSFUNIT)
+     END IF
+  END IF
+
+  CALL ALLOCATE_SPACE
+
+  ALLOCATE(X_LCL(0:MGL),Y_LCL(0:MGL))
+  CALL READ_COLDSTART_COORDS(GRIDUNIT,MGL,X_LCL,Y_LCL)
+  CLOSE(GRIDUNIT)
+
+  CALL COORDINATE_UNITS(X_LCL,Y_LCL)
+  CALL SETUP_CENTER_COORDS
+
+  CALL READ_COLDSTART_DEPTH(DEPTHUNIT,MGL,X_LCL,Y_LCL,H)
+  CLOSE(DEPTHUNIT)
+
+  KBM1 = KB - 1
+  KBM2 = KB - 2
+  CALL Setup_Sigma
+  CALL SETUP_SIGMA_DERIVATIVES
+
+  ALLOCATE(C_LCL(0:MGL))
+  IF(CORIOLIS_FILE_ON) THEN
+     CALL READ_COLDSTART_CORIOLIS(CORIOLISUNIT,MGL,VX,VY,C_LCL)
+     Close(CORIOLISUNIT)
+  ELSE
+     ! USING VY AS LATITUDE?
+     C_LCL = VY
+  END IF
+  
+  CALL SETUP_CORIOLIS
+
+  CALL LOAD_COLDSTART_SPONGE(XM,YM,NSPONGE,N_SPG,R_SPG,C_SPG,X_SPG,Y_SPG)
+  
+  CALL SETUP_SPONGE
+
+  DEALLOCATE(X_LCL,Y_LCL)
+
+  
+  CALL READ_OLD_HOTSTART
+
+  CALL REPORT('RESTART FILE STATS')
+
+  CALL DUMP_RESTART
+
+  IF (DBG_SET(DBG_LOG)) WRITE(IPT,*) "! TADA!!!"
+  CALL PSHUTDOWN
+
+
+END PROGRAM Restart_create
