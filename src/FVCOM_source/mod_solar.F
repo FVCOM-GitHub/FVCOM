@@ -1,0 +1,626 @@
+
+MODULE MOD_SOLAR
+# if defined (HEATING_SOLAR)
+  USE ALL_VARS
+  USE MOD_UTILS
+  USE MOD_PREC
+
+  IMPLICIT NONE
+  SAVE
+
+  LOGICAL HEATING_SOLAR_ON
+  CHARACTER(LEN=80) HEATING_SOLAR_TYPE
+  CHARACTER(LEN=80) HEATING_SOLAR_FILE
+  CHARACTER(LEN=80) HEATING_SOLAR_KIND
+  REAL(SP) :: ZM                            !!ZM - ANEMOMETER HEIGHT (M)
+  REAL(SP) :: LATITUDE_REFERENCE
+  REAL(SP) :: LONGITUDE_REFERENCE
+  INTEGER  :: JULIANDAY_REFERENCE   
+  NAMELIST /NML_HEATING_SOLAR/        &
+       & HEATING_SOLAR_ON,            &
+       & HEATING_SOLAR_TYPE,          &
+       & HEATING_SOLAR_FILE,          &
+       & HEATING_SOLAR_KIND,          &
+       & ZM,                          &
+       & LATITUDE_REFERENCE,          &
+       & LONGITUDE_REFERENCE,         &
+       & JULIANDAY_REFERENCE   
+   
+   REAL(SP), ALLOCATABLE :: CORRG(:),CORR(:)           !!LATITUDE OF NODES
+    
+  CONTAINS
+
+!==============================================================================|
+!   Input Parameters Which Control the Calculation of Heat Flux                |
+!==============================================================================|
+
+   SUBROUTINE HEATING_SOLAR_NAMELIST_INITIALIZE
+   USE control, only : casename
+   IMPLICIT NONE
+   
+   HEATING_SOLAR_ON    = .FALSE.                
+   HEATING_SOLAR_TYPE  = "'flux' or 'body'"              
+   HEATING_SOLAR_FILE  = trim(casename)//"_hfx.nc"              
+   HEATING_SOLAR_KIND  = "Options:"//TRIM(CNSTNT)//","//TRIM(STTC)//","//TRIM(TMDPNDNT)//","//TRIM(PRDC)//","//TRIM(VRBL)              
+   ZM                  = 10.  ! Unit = m                                 
+   LATITUDE_REFERENCE  = 0.0_SP
+   LONGITUDE_REFERENCE = 0.0_SP
+   JULIANDAY_REFERENCE = 0   
+   
+   RETURN
+   END SUBROUTINE HEATING_SOLAR_NAMELIST_INITIALIZE
+   
+!------------------------------------------------------------------------------|
+   SUBROUTINE HEATING_SOLAR_NAMELIST_PRINT
+   USE CONTROL, ONLY : IPT
+   
+   IMPLICIT NONE
+   
+   WRITE(UNIT=IPT,NML=NML_HEATING_SOLAR)
+   
+   RETURN
+   END SUBROUTINE HEATING_SOLAR_NAMELIST_PRINT  
+   
+!------------------------------------------------------------------------------|
+   SUBROUTINE HEATING_SOLAR_NAMELIST_READ    
+   USE CONTROL, ONLY : casename,NMLUNIT
+   
+   IMPLICIT NONE
+   
+   INTEGER :: IOS, I
+   CHARACTER(LEN=120) :: FNAME
+   CHARACTER(LEN=160) :: PATHNFILE
+   
+   IF(DBG_SET(DBG_SBR)) &
+         & WRITE(IPT,*) "Subroutine Begins: Read_Heating_Solar_Namelist;"
+
+   IOS = 0
+
+   FNAME = "./"//trim(casename)//"_run.nml"
+
+   CALL FOPEN(NMLUNIT,trim(FNAME),'cfr')
+
+   !READ NAME LIST FILE
+    REWIND(NMLUNIT)
+
+   ! Read IO Information
+   READ(UNIT=NMLUNIT, NML=NML_HEATING_SOLAR,IOSTAT=ios)
+   if(ios .NE. 0 ) Then
+     if(DBG_SET(dbg_log)) write(UNIT=IPT,NML=NML_HEATING_SOLAR)
+     Call Fatal_error("Can Not Read NameList NML_HEATING_SOLAR from file: "//trim(FNAME))
+   end if
+   CLOSE(NMLUNIT)
+   
+   IF(HEATING_SOLAR_ON .AND. .NOT. HEATING_ON)THEN
+     HEATING_ON = .TRUE.
+   ELSE IF(HEATING_SOLAR_ON .AND. HEATING_ON)THEN
+     CALL FATAL_ERROR("IN NAMELIST CONTROL FILE, IF HEATING_SOLARCALCULATE_ON = TRUE, ", &
+                      "THEN SET HEATING_ON = FALSE") 
+   END IF 
+   IF(HEATING_SOLAR_TYPE == 'flux') HEATING_TYPE = 'flux'
+   IF(HEATING_SOLAR_TYPE == 'body') HEATING_TYPE = 'body'
+
+   RETURN
+   END SUBROUTINE HEATING_SOLAR_NAMELIST_READ
+
+!==============================================================================|
+
+!---------------------------------------------------------------------------
+      SUBROUTINE SOLAR(TA,DP,WS,CC,TWAT,CH,CD,RLATD,RLONG,IJD0,MONTH,HR,SURFLX,Q0,HS,HL,RLN)
+            
+
+!
+!++++++++++++++++++++++
+!
+!     SUBROUTINE SOLAR
+!
+!++++++++++++++++++++++
+!
+!
+!. PURPOSE:    TO CALCULATE THE INSOLATION AND SURFACE HEAT FLUX
+!              GIVEN THE AIR TEMPERATURE, WIND SPEED, DEW POINT OR
+!              VAPOR PRESSURE, WATER TEMPERATURE, DRAG COEFFICIENTS, 
+!              JULIAN DATE, AND CLOUD COVERAGE
+!
+!. ALGORITHMS: SENSIBLE AND LATENT HEAT FLUXES ARE CALCULATED FROM
+!              BULK TRANSFER EQUATIONS.  LONGWAVE RADIATION LOSS
+!              IS FROM WYRTKI (1965).
+!              GLOBAL RADIATION IS FROM GUTTMAN AND MATTHEWS
+!              (1979), IVANOFF (1977) AND COTTON (1979). 
+!              GLOBAL RAD IS FROM 290 - 4000  
+!              MMICRONS.  SOLAR ALBEDO IS FROM AUBERT AND RICHARDS (1981)
+!              (P. 173).
+!       
+!. HISTORY:    ORIGINAL WRITTEN BY M.J.McCORMICK OF GLERL
+!              ; MODIFIED FOR USE WITH GLFS BY D.WELSH OF OHIO STATE,1990
+!              ; MODIFIED BY D.WELSH 4/93 FOR USE WITH NEW VERSION OF
+!                  CIRCULATION MODEL. JD & IHR NOW IN CALL (CALLED BY
+!                  TAU) ; MONTH NOW CALCULATED IN SOLAR ; LONGITUDE &
+!                  LATITUDE NOW SET = PRINCETON MODEL'S ALON & ALAT ARRAYS.
+!                 - THESE CHANGES / ADDITIONS ARE INDICATED THUS :
+!
+!                   C++++++++++++++++++++++++++++++++
+!
+!                        CHANGES/ADDITIONS HERE
+!
+!         4/97 DJS:   ADDED Q0,RLN,HS,AND HL AS RETURNED PARAMETERS
+!         10/15/2007 DJS: NEW VERSION FOR USE IN FVCOM
+!                   C++++++++++++++++++++++++++++++++
+!  
+!. PARAMETERS:(ALL UNITS ARE MKS)
+!
+!   CALLING VARIABLES (*=INPUT):
+!    *TA - AIR TEMPERATURE
+!    *DP - DEW POINT
+!    *WS - WIND SPEED
+!    *CC - CLOUD COVER (0-1)
+!    *TWAT - WATER TEMPERATURE
+!    *CH - BULK AERODYNAMIC COEFFICIENT FOR HEAT
+!    *CD - BULK AERODYNAMIC COEFFICIENT FOR MOMENTUM
+!    *RLATD - LATITUDE
+!    *RLONG - LONGITUDE (WEST OF GREENWICH)
+!    *IJD0 - DAY OF YEAR
+!    *HR - HOUR OF DAY (LOCAL STANDARD TIME)
+!    SURFLXC - TOTAL HEAT FLOUX (W/M**2)
+!    Q0 - SHORT WAVE RADIATION (W/M**2)
+!
+!..INTERNAL VARIABLES:
+!.. CP - SPECIFIC HEAT OF DRY AIR AT CONSTANT PRESSURE (J/(KG C))
+!... CW - SPECIFIC HEAT OF WATER (J/(KG C))
+!..  CP AND CW FROM BRUTSAERT (1982)
+!... SIGMA - STEFAN-BOLZMANN CONSTANT (W/M**2)
+!... SOLC - SOLAR CONSTANT (W/M**2) (FROHLICH, 1977)
+!... TRANS - AVERAGE ANNUAL SOLAR TRANSMISSION (DECIMAL), (REMNANT
+!...        THINKING, NO LONGER USED)
+!... EXT1 - EXTINCTION COEFFICIENT FOR VISIBLE LIGHT IN WATER (1/M)
+!... EXT2 - EXTINCTION COEFFICIENT FOR IR RADIATION IN WATER (1/M)
+!..  SURFLX - SURFACE HEAT FLUX
+!..  WS - WIND SPEED (M/S)
+!..  TIME - HOURS SINCE BEGINNING OF FIRST YEAR
+!..  DP - DEW POINT (DEG C)
+!..  SC - CLOUD AMOUNT COVERING SKY (DECIMAL)
+!..  RHOA - AIR DENSITY (KG/M**3)
+!..  RHOW(T,Z) - WATER DENSITY AS A FUNCTION OF T, AND Z (KG/M**3)
+!..  CH - BULK AERODYNAMIC COEFFICIENT FOR HEAT
+!..  CD - "       "          "          "  MOMENTUM
+!..  RAD - MEASURED GLOBAL RADIATION (W/M**2)
+!..  MISS - NUMBER OF TIME STEPS RAD DATA ARE MISSING
+!..  DEW - LOGICAL VARIABLE. IF .TRUE. THEN HUMIDITY UNITS ARE
+!..        MBAR, OTHERWISE, DEW POINT TEMPERATURE.
+!..  ES - ELLIPTICITY OF EARTH'S ORBIT
+!..  ED - 1-(SQUARE OF ES)
+!..  RM - TRUE SOLAR NOON
+!..  SRCS - CLEAR SKY SOLAR RADIATION (COTTON, 1979)
+!..  CLD - PERCENT TRANSMISSION OF SRCS DUE TO CLOUDS
+!..  C'S ANS A'S - COEFFICIENTS DERIVED BY COTTON (1979)
+!..                FOR USE IN HIS REGRESSION RELATION.
+!.. N.B.  THESE JUST MENTIONED COEFFICIENTS ARE FOR MADISON,
+!.. WISC. AND ARE USEFUL FOR HOURLY RADIATION (GLOBAL) ESTIMATES.
+!..................................................................
+
+  IMPLICIT NONE
+      REAL(SP), INTENT(IN) :: TA,DP,WS,CC,TWAT,CH,CD,RLATD,RLONG,HR
+      INTEGER, INTENT(IN) :: IJD0,MONTH
+      REAL(SP), INTENT(OUT) :: SURFLX,Q0,HL,HS,RLN
+      LOGICAL DEW
+      REAL(SP) :: CP, CW, SIGMA
+      REAL(SP) :: SOLC,PHASE,TWOPI
+      REAL(SP) :: DEG
+      REAL(SP) :: ES, ED
+      INTEGER,DIMENSION(12) :: IMON
+      REAL(SP),DIMENSION(12,2) :: A0
+      REAL(SP),DIMENSION(2) :: A1,A2,A3
+      REAL(SP) :: C0,C1,C2,C3
+      REAL(SP) :: SC,SST,TAK,DPK,TWK,RHLAT,RHOA,ETW,EDP,QW,QA,GMT,DAY
+      REAL(SP) :: ANGD,SIG,STHETA,ARCS,CTHETA,RM,HRANG,SINLAT,COSLAT,CST,SOL
+      REAL(SP) :: SRCS,CLD,ALB,ALBEDO
+      INTEGER :: JD,MONTHR,M,N
+!
+      DATA CP, CW, SIGMA/1005., 4186., 5.6697E-08/
+      DATA SOLC,PHASE,TWOPI/1375., .4583, 6.28319/
+      DATA DEG/273.15/
+      DATA ES, ED/0.0167238, .99986/
+      DATA IMON/32,60,91,121,152,182,213,244,274,305,335,366/
+      DATA A0/10.,37.,62.,-6.,-84.,-157.,-180.,-164.,-103.,-61.,-12.,6.,-18.,10.,12.,-56.,-148.,-217.,-222.,-216.,-178.,-106.,-59.,-50./
+      DATA A1/2460., 2550./
+      DATA A2/3010., 2800./
+      DATA A3/-1750., -1580./
+      DATA C0,C1,C2,C3/.999, -.425, .922, -1.14/
+      SC=CC
+!
+      DEW=.FALSE.
+      TWOPI=6.28318531
+      SST=TWAT
+      TAK=TA + DEG
+      DPK=DP + DEG
+      TWK=SST + DEG
+!      JDR=IJD0
+!      SHR=HR
+!      WRITE(6,*)'IJD0 : ',IJD0
+!      WRITE(6,*)'HR : ',HR
+!.
+!.. CALCULATE LATENT HEAT OF VAPORIZATION
+!.
+      RHLAT=(2.501-.00236*SST)*1.E+06
+      RHOA=354.65/TAK
+      ETW=VAP(TWK)
+      IF(DEW) THEN
+      EDP=DP
+      ELSE
+      EDP=VAP(DPK)
+      END IF 
+!.
+!.. CALCULATE SPECIFIC HUMIDITY AT WATER SURFACE AND AT INSTRUMENT
+!.. HEIGHT
+!.
+      QW=.622*ETW/(1018.-.378*ETW)
+      QA=.622*EDP/(1018.-.378*EDP)
+!.
+!.. CALCULATE LATENT HEAT LOSS
+!.
+      HL=-CD*RHOA*RHLAT*WS*(QW-QA)
+!.
+!.. CALCULATE SENSIBLE HEAT LOSS
+!.
+      HS=-CH*CP*RHOA*WS*(SST-TA)
+!.
+!.. CALCULATE LONGWAVE RADIATION LOSS
+!.
+      RLN=-SIGMA*TWK*TWK*TWK*TWK*(0.39-.05*SQRT(VAP(TAK)))*(1.-.67*SC*SC) - 4.*SIGMA*TWK*TWK*TWK*(SST-TA)
+!.
+!.. SHORT WAVE GLOBAL RADIATION
+!.. CALCULATE COSINE OF ZENITH ANGLE, CST
+!.. THETA = SUN'S DECLINATION, HR = LOCAL HOUR ANGLE
+!.
+      JD=IJD0
+!      JDRR=JD
+!      DHOUR=HR
+      GMT=HR
+!      DHRR=GMT
+!.
+      DAY=FLOAT(JD)
+!      DAYR=DAY
+!JQI <
+!      IF(JD.LE.31)MONTH=1
+!      IF((JD.GT.31).AND.(JD.LE.59))MONTH=2
+!      IF((JD.GT.59).AND.(JD.LE.90))MONTH=3
+!      IF((JD.GT.90).AND.(JD.LE.120))MONTH=4
+!      IF((JD.GT.120).AND.(JD.LE.151))MONTH=5
+!      IF((JD.GT.151).AND.(JD.LE.181))MONTH=6
+!      IF((JD.GT.181).AND.(JD.LE.212))MONTH=7
+!      IF((JD.GT.212).AND.(JD.LE.243))MONTH=8
+!      IF((JD.GT.243).AND.(JD.LE.273))MONTH=9
+!      IF((JD.GT.273).AND.(JD.LE.304))MONTH=10
+!      IF((JD.GT.304).AND.(JD.LE.334))MONTH=11
+!      IF(JD.GT.334)MONTH=12
+!JQI >
+      MONTHR=MONTH
+!
+!..CHANGED FROM VAX VERSION SO THAT ANGLES ARE NOW IN RADIANS
+!
+      ANGD=TWOPI*(DAY-1.)/365.242
+!      ANGDR=ANGD
+      SIG=279.9348+1.914827*SIN(ANGD) - 0.079525*COS(ANGD)+0.01993*SIN(2.*ANGD)-0.00162*COS(2.*ANGD) + ANGD*360./TWOPI
+!      SIGR=SIG
+      SIG=SIG*TWOPI/360.
+      STHETA=SIN(0.4091722)*SIN(SIG)
+!      STHETAR=STHETA
+      ARCS=ASIN(STHETA)
+!      ARCSR=ARCS
+      CTHETA=COS(ARCS)
+!      CTHETAR=CTHETA
+      RM=12.+(0.12357*SIN(ANGD)-0.004289*COS(ANGD)+0.153809*SIN(2.*ANGD)+.060783*COS(2.*ANGD))
+!      RMR=RM
+      HRANG=15.*(GMT-RM) - RLONG
+!      HRANGR=HRANG
+      HRANG=HRANG*TWOPI/360.
+      SINLAT=SIN(RLATD*TWOPI/360.0)
+!      SINLATR=SINLAT
+      COSLAT=COS(RLATD*TWOPI/360.0)
+!      COSLATR=COSLAT
+      CST=SINLAT*STHETA+COSLAT*CTHETA*COS(HRANG)
+!      CSTR=CST
+      SOL=SOLC*((1.+ES*COS(ANGD))/ED)**2
+!      SOLR=SOL
+!
+      Q0=0.
+      SRCS=0.0
+      CLD=0.0
+!.
+!.. IF SUN IS BELOW HORIZON OR ALBEDO IS GREATER THAN 1, Q = 0.
+!.
+!.. CHECK IF MEASURED OR MODELED RADIATION DATA ARE AVAILABLE.
+!.. IF DATA ARE AVAILABLE USE IN PLACE OF PRESENT ALGORITHM.
+!.
+      IF(CST .LE. 0.) GOTO 30
+      ALB=.045/CST
+      ALBEDO=ALB
+      !EJA - fixed assumed bug in ALBEDO - 05/03/2016
+      !ALBEDO=0.
+      IF(ALB .GT. 1.) ALBEDO=1.
+!.  
+      CLD=C0 +C1*SC +C2*SC*SC +C3*SC*SC*SC
+      M=MONTH
+      N=1
+      IF(RM .GT. 12.) N=2
+      SRCS=A0(M,N) +A1(N)*CST +A2(N)*CST*CST +A3(N)*CST*CST*CST
+!
+      IF(SRCS.LT.0.0)SRCS=0.0
+!.
+!..CONVERT FROM KJ/HR TO W/M**2 AND INCLUDE ALBEDO
+!.
+      Q0=SRCS*CLD*(1.-ALBEDO)/3.6
+!      MR=MONTH
+!      NR=N
+!      CLDR=CLD
+!      ALBEDOR=ALBEDO
+!      SRCSR=SRCS
+!.
+ 30   CONTINUE
+!     IF(RAD .NE. -999.) Q0=RAD
+!.
+!.
+      SURFLX=HS+HL+RLN+Q0
+
+      RETURN
+      END SUBROUTINE SOLAR
+
+      REAL FUNCTION VAP(T)
+!.
+!.. FUNCTION CALCULATES SATURATION VAPOR PRESSURE IN MB.
+!.. ALGORITHM FROM FLEAGLE AND BUSINGER (1980) P. 72.
+!.  'T' IS IN DEGREES KELVIN
+!.
+     IMPLICIT NONE
+     REAL(SP) :: T
+
+     VAP=.01*EXP(26.25 - 5418./T)
+!.
+     RETURN
+     END FUNCTION VAP
+
+!--------------------------------------------------------------------
+     SUBROUTINE UZL10(WS, TD, CD, CH)
+!
+! PURPOSE:
+!               TO CALCULATE THE BULK AERODYNAMIC COEFFICIENTS FOR
+!               MOMENTUM AND HEAT OVER A LAKE SURFACE AS FUNCTIONS
+!               OF 10M WIND SPEED AND AIR-SEA TEMPERATURE DIFFERENCE.
+!
+! ALGORITHM:
+!               TABLES OF CD AND CH FOR WS FROM 0
+!               TO 50 M/S AND TD FROM -50 TO 50 C ARE CALCULATED
+!               THE FIRST TIME UZL10 IS CALLED.  IN SUBSEQUENT
+!               CALLS, CD AND CH ARE CALCULATED FROM THE TABLE
+!               USING BILINEAR INTERPOLATION.
+!
+! ARGUMENTS:
+!  ON INPUT:
+!               WS - WIND SPEED (M / S)
+!               TD - AIR-SEA TEMPERATURE DIFFERENCE (DEG K)
+!  ON OUTPUT:
+!               CD - BULK AERODYNAMIC COEFFICIENT FOR MOMENTUM
+!               CH - BULK AERODYNAMIC COEFFICIENT FOR HEAT
+!
+! HISTORY:
+!               WRITTEN BY D.J.SCHWAB, 1993, GLERL, ANN, ARBOR, MI
+      IMPLICIT NONE
+      SAVE
+
+      REAL(SP),INTENT(IN) :: WS, TD
+      REAL(SP),INTENT(OUT) :: CD, CH
+
+      REAL(SP) CD10(51,101),CH10(51,101)
+      INTEGER :: INIT,I,J
+      REAL(SP) :: Z,WSX,TDX,Z0,FL,WI,WJ
+
+      DATA INIT /0/
+      IF(INIT.EQ.0) THEN
+       INIT=1
+       Z=10
+       DO 20 I=1,51
+        WSX=FLOAT(I-1)
+        DO 10 J=1,101
+         TDX=FLOAT(J-51)
+         CALL UZL(WSX, Z, TDX, CD, CH, Z0, FL)
+         CD10(I,J)=CD
+         CH10(I,J)=CH
+10      CONTINUE
+20     CONTINUE
+      ENDIF
+      IF(WS.LT.0.) THEN
+       PRINT *,'***WS LT 0 IN SUBROUTINE UZL10***'
+       CD=0
+       CH=0
+       RETURN
+      ENDIF
+!cwpo      IF(ABS(TD.GT.50.)) THEN
+      IF(ABS(TD).GT.50.) THEN
+       PRINT *,'***ABS(TD) GT 50 IN SUBROUTINE UZL10***'
+       CD=0
+       CH=0
+       RETURN
+      ENDIF
+      I=INT(WS)+1
+      WI=WS-I+1
+      J=INT(TD+50)+1
+      WJ=(TD+50)-J+1
+      CD=(1.-WI)*(1.-WJ)*CD10(I,J)+WI*(1.-WJ)*CD10(I+1,J)+(1.-WI)*WJ*CD10(I,J+1)+WI*WJ*CD10(I+1,J+1)
+      CH=(1.-WI)*(1.-WJ)*CH10(I,J)+WI*(1.-WJ)*CH10(I+1,J)+(1.-WI)*WJ*CH10(I,J+1)+WI*WJ*CH10(I+1,J+1)
+      IF(CD.GT.1.) PRINT *,'XXX',I,J,WI,WJ,CD,CD10(I,J),CD10(I+1,J),CD10(I,J+1),CD10(I+1,J+1),WS,TD
+      RETURN
+      END SUBROUTINE UZL10
+
+      SUBROUTINE UZL(U, ZM, TD, CD, CH, Z0, FL)
+!
+! PURPOSE:
+!               TO CALCULATE THE BULK AERODYNAMIC COEFFICIENTS FOR
+!               MOMENTUM AND HEAT OVER A LAKE SURFACE AS FUNCTIONS
+!               OF WIND SPEED AND AIR-SEA TEMPERATURE DIFFERENCE.
+!
+! ALGORITHM:
+!               THERE IS AN OUTER ITERATION IN WHICH THE ROUGHNESS
+!               LENGTH IS VARIED ACCORDING TO CHARNOCK'S FORMULA AND
+!               AN INNER ITERATION IN WHICH THE STABILITY LENGTH
+!               (MONIN-OBUKHOV LENGTH) IS VARIED ACCORDING TO THE
+!               BUSINGER-DYER FORMULATION.  THE CONSTANT IN CHARMOCK'S
+!               FORMULA IS CHOSEN SO THAT UNDER NEUTRAL CONDITIONS THE
+!               10 M DRAG COEFFICIENT IS 0.0016.
+!
+! ARGUMENTS:
+!  ON INPUT:
+!               U - WIND SPEED (M / S)
+!               ZM - ANEMOMETER HEIGHT (M)
+!               TD - AIR-SEA TEMPERATURE DIFFERENCE (DEG K)
+!  ON OUTPUT:
+!               CD - BULK AERODYNAMIC COEFFICIENT FOR MOMENTUM
+!               CH - BULK AERODYNAMIC COEFFICIENT FOR HEAT
+!               Z0 - ROUGHNESS LENGTH (M)
+!               FL - STABILITY LENGTH (M)
+!
+! HISTORY:
+!               WRITTEN BY J. R. BENNETT AND J. D. BOYD, 1979, GLERL,
+!               ANN, ARBOR, MI;  BASED ON A CONSTANT ROUGHNESS VERSION
+!               WRITTEN BY PAUL LONG AND WILL SHAFFER OF THE TECHNIQUES
+!               DEVELOPMENT LABORATORY, NOAA, SILVER SPRINGS, MD.
+!
+!               MODIFIED WHEN TRANSFERRED TO VAX FROM CDC IN 1984 TO WORK
+!                CORRECTLY WITH 32 BIT REALS
+!
+!               MODIFIED 1/86 TO PREVENT MODIFICATION OF FIRST ARGUMENT IN
+!                CALLING PARAMETERS (U) WHEN U < 0.001
+
+      IMPLICIT NONE
+      REAL(SP),INTENT(IN) :: U, ZM, TD
+      REAL(SP),INTENT(OUT) :: CD, CH, Z0, FL
+      REAL(SP) :: C1, C2, C3
+      REAL(SP) :: B1, B2, B3
+      REAL(SP) :: EPS,UM,FK,TBAR,ALPHA,BETA,GAMM,GAMT,UST1,H,DTHETA
+      REAL(SP) :: S,X,FLI,X1,ARG1,ARG2,A,B,AA,BB,CC,ROOT,X2,TSTAR,USTAR,Z0NEW
+      INTEGER :: ITER,I
+
+      DATA C1, C2, C3 /.684E-4, 4.28E-3, -4.43E-4/
+      DATA B1, B2, B3 /1.7989E-3, 4.865E-4, 3.9028E-5/
+      EPS = .01
+      UM = U
+      IF (UM .LT. .001) UM = .001
+      FK = .35
+      TBAR = 278.
+      ALPHA = 4.7
+      BETA = .74
+      GAMM = 15.
+      GAMT = 9.
+      UST1 = 0.04 * UM
+      H = ZM
+      DTHETA = TD
+      IF (ABS(DTHETA) .LT. 1.E-7) DTHETA = SIGN(1.E-7,DTHETA)
+!
+! INITIAL GUESS FOR Z0
+!
+      Z0 = .00459 * UST1 * UST1
+      S = UM * UM * TBAR / (9.8*DTHETA)
+      IF (ABS(S) .GT. 1.E6) S = SIGN(1.E6,S)
+# if defined (DOUBLE_PRECISION)
+      X = DLOG(H/Z0)
+# else
+      X = ALOG(H/Z0)
+# endif      
+!
+!       INITIAL GUESS FOR L
+!
+      FL = S / X
+      DO 60 ITER = 1, 20
+# if defined (DOUBLE_PRECISION)
+        X = DLOG(H/Z0)
+# else
+        X = ALOG(H/Z0)
+# endif      
+        IF (ABS(FL) .GT. 500.) FL = SIGN(500.,FL)
+        IF (FL .GT. 0.) GO TO 20
+!
+! UNSTABLE SECTION (L LT 0 OR DT LT 0)
+!
+        FLI = 1. / FL
+!
+! ASSUME 5 ITERATIONS SUFFICIENT
+!
+        DO 10 I = 1, 5
+          X1 = GAMT * FLI
+          ARG1 = SQRT(1. - X1*H)
+          ARG2 = SQRT(1. - X1*Z0)
+          A = BETA * LOG((ARG1 - 1.)*(ARG2 + 1.)/((ARG1 + 1.)*(ARG2 -0.999999)))
+          X1 = GAMM * FLI
+          ARG1 = (1. - X1*H) ** (.25)
+          ARG2 = (1. - X1*Z0) ** (.25)
+          B = LOG((ARG1 - 1.)*(ARG2 + 1.)/((ARG1 + 1.)*(ARG2 - 0.999999))) +2. * (ATAN(ARG1) - ATAN(ARG2))
+          FL = S * A / (B*B)
+          IF (ABS(FL) .GT. 500.) FL = SIGN(500.,FL)
+          FLI = 1. / FL
+   10   CONTINUE
+        GO TO 50
+!
+! STABLE SECTION
+!
+! TRY MILDLY STABLE-
+!
+   20   CONTINUE
+        AA = X * X
+        X1 = H - Z0
+        BB = 9.4 * X1 * X - .74 * S * X
+        CC = 4.7 * X1
+        CC = CC * CC - CC * S
+        ROOT = BB * BB - 4. * AA * CC
+        IF (ROOT .LT. 0.) GO TO 30
+        FL = (-BB + SQRT(ROOT)) / (2.*AA)
+        IF (FL .LE. H) GO TO 30
+        B = X + 4.7 * X1 / FL
+        A = BETA * X + 4.7 * X1 / FL
+        GO TO 50
+!
+! STRONGLY STABLE-
+!
+   30   CONTINUE
+        IF (FL .LE. Z0) FL = Z0 + 1.E-5
+        DO 40 I = 1, 5
+          ARG1 = FL / Z0
+          X1 = LOG(ARG1)
+# if defined (DOUBLE_PRECISION)
+          X2 = DLOG(H/FL)
+# else
+          X2 = ALOG(H/FL)
+# endif      
+         ARG1 = 1. - 1. / ARG1
+          A = .74 * X1 + 4.7 * ARG1 + 5.44 * X2
+          B = X1 + 4.7 * ARG1 + 5.7 * X2
+          FL = A * S / (B*B)
+          IF (FL .LE. Z0) FL = Z0 + 1.E-5
+          IF (FL .GT. H) FL = H
+   40   CONTINUE
+!
+! CALCULATE USTAR AND Z0NEW
+!
+   50   CONTINUE
+        TSTAR = FK * DTHETA / A
+        USTAR = FK * UM / B
+        Z0NEW = .00459 * USTAR * USTAR
+        IF (ITER .GT. 5 .AND. ABS((USTAR - UST1)/UST1) .LT. EPS) GO TO 80
+        UST1 = USTAR
+        Z0 = Z0NEW
+   60 CONTINUE
+!
+! IF COME HERE, TOO MANY ITERATIONS (UGH - UGH)
+!
+      WRITE (6,70)
+   70 FORMAT ('0TOO MANY ITERATIONS ON Z0 IN SUBROUTINE UZL - CHECK ','METEOROLOGICAL DATA - PROGRAM TERMINATED')
+   WRITE(6,*)'U, ZM, TD, CD, CH, Z0, FL'
+   WRITE(6,*)U, ZM, TD, CD, CH, Z0, FL
+      STOP
+   80 CONTINUE
+      Z0 = Z0NEW
+      CD = (USTAR/UM) ** 2
+      CH = FK * FK / (A*B)
+   90 RETURN
+      END SUBROUTINE UZL
+# endif
+END MODULE MOD_SOLAR
+
