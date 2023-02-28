@@ -518,7 +518,7 @@ dashL= $(empty) -L
 #    with command 'make libfvcom'.
 #--------------------------------------------------------------------------
 
-             FLAG_81 = -DNUOPC
+#             FLAG_81 = -DNUOPC
 
 #--------------------------------------------------------------------------
 #        SELECT COMPILER/PLATFORM SPECIFIC DEFINITIONS
