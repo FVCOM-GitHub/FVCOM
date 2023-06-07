@@ -761,7 +761,7 @@
 # endif
 
 # if defined (MULTIPROCESSOR)
-         IF(PAR) CALL AEXCHANGE(EC, MYID, NPROCS, Cd)
+         IF(PAR) CALL AEXCHANGE(EC, MYID, NPROCS, U_start)   ! Siqi Li, 20230607
          IF(PAR) CALL AEXCHANGE(EC, MYID, NPROCS, Cd)
 # endif
 
