@@ -5,7 +5,7 @@
 
 ### Compile METIS 5.1.0 (DEFAULT VERSION metis.tgz -> metis-5.1.0.tgz)
 1) untar the archive:
-      tar zxf metis-5.1.0.tgz
+      tar zxf metis.tgz
    the above command will create a "metis" directory
 2) configure/install metis:
       cd metis
