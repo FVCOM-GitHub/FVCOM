@@ -3,6 +3,15 @@
 ### Date: 06/07/2023
 ####################################################
 
+########################################
+### VERSIONS
+PROJ                  :  4.9.3
+METIS                 :  5.1.0
+JULIAN                :  1.3.3
+FPROJ (proj4-fortran) :  1.0
+########################################
+
+
 ### Compile METIS 5.1.0 (DEFAULT VERSION metis.tgz -> metis-5.1.0.tgz)
 1) untar the archive:
       tar zxf metis.tgz
