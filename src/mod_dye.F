@@ -27,8 +27,8 @@
 !/===========================================================================/
 
 !! NEED TO ADD NORTH POLE ROUTINE FOR DYE!!!
-#  if defined (DYE_RELEASE)
 MODULE MOD_DYE
+#  if defined (DYE_RELEASE)
 
    USE MOD_PREC
 !   USE MOD_INP
@@ -1907,12 +1907,13 @@ MODULE MOD_DYE
      
    RETURN
    END SUBROUTINE NAME_LIST_PRINT_DYE
-!==============================================================================!   
-END MODULE MOD_DYE
 # else
+   CONTAINS
+
    SUBROUTINE SETUP_DYE
      implicit none
      return
    END SUBROUTINE SETUP_DYE
 # endif
-
+!==============================================================================!
+END MODULE MOD_DYE
