@@ -6,9 +6,20 @@
 ########################################
 ### VERSIONS
 PROJ                  :  4.9.3
+   URL:  https://proj.org/download.html
+   NOTE: Use the latest 4.* version
+      
 METIS                 :  5.1.0
+   URL:  https://github.com/KarypisLab/METIS
+   NOTE: See comments below
+
 JULIAN                :  1.3.3
+   URL:  https://pds-rings.seti.org/toolkits/
+   NOTE: Select the one in C language, not the python one
+
 FPROJ (proj4-fortran) :  1.0
+   URL:  https://github.com/mhagdorn/proj4-fortran
+   NOTE: Version 1.1.0 does not work with FVCOM; minor modifications to RFVCOM/src are needed
 ########################################
 
 
