@@ -851,7 +851,7 @@
 #      endif
 #      endif
 
-#  if defined (WAVE_CURRENT_INTERACTION) || (NUOPC)
+#  if defined (WAVE_CURRENT_INTERACTION) || (FVCOM_COUPLED)
        XFLUX(I,K) = XFLUX(I,K) + WAVESTRX_3D(I,K)
        YFLUX(I,K) = YFLUX(I,K) + WAVESTRY_3D(I,K)
 #  endif   
