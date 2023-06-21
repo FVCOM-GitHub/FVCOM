@@ -30,7 +30,7 @@
 !  VERSION 5.0.1
 !==============================================================================!
 
-# if !defined (NUOPC)
+# if !defined (FVCOM_COUPLED)
 
 PROGRAM FVCOM
 

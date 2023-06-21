@@ -30,8 +30,8 @@
 !   CONTROL VARIABLES                                                          |
 !==============================================================================|
 
-# if defined (HEATING_CALCULATED)
 MODULE MOD_HEATFLUX
+# if defined (HEATING_CALCULATED)
 
    USE ALL_VARS
    USE MOD_UTILS
@@ -180,7 +180,5 @@ MODULE MOD_HEATFLUX
 
 !==============================================================================|
 
-END MODULE MOD_HEATFLUX
 # endif
-
-
+END MODULE MOD_HEATFLUX

@@ -522,7 +522,7 @@ endif
 #    with command 'make libfvcom'.
 #--------------------------------------------------------------------------
 
-#             FLAG_81 = -DNUOPC
+#             FLAG_81 = -DFVCOM_COUPLED
 
 #--------------------------------------------------------------------------
 #        SELECT COMPILER/PLATFORM SPECIFIC DEFINITIONS
