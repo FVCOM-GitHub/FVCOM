@@ -3849,8 +3849,7 @@ in:  DO WHILE(.TRUE.)
    REAL(SP) T_WEIGHT
 
    REAL(SP) t1, t2, t3, t4, t5, t6
-!-------->1
-!IF (MSR) call cpu_time(t1)
+
 !==============================================================================|
 
    IF (DBG_SET(DBG_SBR)) WRITE(IPT,*) "START: OI_TA" 
@@ -3873,9 +3872,6 @@ in:  DO WHILE(.TRUE.)
      TG(1:MGL,1:KBM1) = VAR(1:MGL,1:KBM1)
    END IF
 
-!-------->2
-!IF (MSR) call cpu_time(t2)
-
 !------------------------------------------------------------------------------!
 !  Allocate variables
 !------------------------------------------------------------------------------!
@@ -3894,10 +3890,6 @@ IF(MSR)THEN
 
 !   SIMTIME          = TIME*86400
    SIMTIME = DTI*FLOAT(IINT)
-
-!-------->3
-
-!call cpu_time(t3)
 
    DO I=1,N_ASSIM_TS_w
 !------------------------------------------------------------------------------!
@@ -4036,8 +4028,7 @@ IF(MSR)THEN
    DEALLOCATE(VAROBS)
 
    END DO !I
-!-------->4
-!call cpu_time(t4) 
+
    END IF  !!MASTER 
 !------------------------------------------------------------------------------!
 !  'OI' Simulation Data Using Local Corrections                                ! 
@@ -4088,9 +4079,6 @@ IF(MSR)THEN
      DEALLOCATE(TWGHT_T,TCORR,TINT,TCORR1)
      DEALLOCATE(T_FLAG1)
      DEALLOCATE(T_FLAG2)
-
-!-------->5
-!if (MSR) call cpu_time(t5)
 
    IF (DBG_SET(DBG_SBR)) WRITE(IPT,*) "END: OI_TA" 
 
