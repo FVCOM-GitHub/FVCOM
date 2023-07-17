@@ -1025,6 +1025,15 @@
             END DO
          END IF
       END DO
+#  if defined (SEMI_IMPLICIT) /* Siqi Li, LSF@20230420 */ 
+     DO J=1, NELE_LSF
+       I=JBCLSF(J)
+       DO K=1, KBM1
+         XFLUX(I,K) = XFLUX(I,K)-COR(I)*V(I,K)*DT1(I)*DZ1(I,K)*ART(I)
+         YFLUX(I,K) = YFLUX(I,K)+COR(I)*U(I,K)*DT1(I)*DZ1(I,K)*ART(I) 
+       ENDDO
+     ENDDO
+#  endif /* Siqi Li, LSF@20230420 */ 
 #  else
    IF(nmfcell_i > 0) THEN
      DO II=1,nmfcell_i

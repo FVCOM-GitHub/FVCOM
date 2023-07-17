@@ -35,8 +35,9 @@
 
 MODULE MOD_PETSc
 # if defined (SEMI_IMPLICIT) || defined (NH) || (defined (WAVE_CURRENT_INTERACTION) && !defined (EXPLICIT))
-  IMPLICIT NONE
 
+# if defined (PETSC_A) || (PETSC_B)  /* Siqi Li, PETSC@20230227 */
+  IMPLICIT NONE
 #include "include/finclude/petsc.h"
 #include "include/finclude/petscvec.h"
 #include "include/finclude/petscda.h"
@@ -48,6 +49,15 @@ MODULE MOD_PETSc
 #include "include/finclude/petscao.h"
 #include "include/finclude/petscvec.h90"
 #include "include/finclude/petscviewer.h"
+# else
+#include "petsc/finclude/petsc.h"
+use petscmat
+use petscvec
+use petscpc
+use petscksp
+use petscis
+  IMPLICIT NONE
+# endif /* Siqi Li, PETSC@20230227 */
 
 # if defined (SEMI_IMPLICIT) || (NH)
   REAL*8, POINTER          :: XVALS_EL(:)
@@ -77,6 +87,9 @@ MODULE MOD_PETSc
   VecScatter  :: G2L_EL
   PetscInt    :: ITS_EL
   ISLocalToGlobalMapping :: ISL2G_EL
+# if defined (PETSC_C)  /* Siqi Li, PETSC@20230227 */
+  ISLocalToGlobalMapping :: ISL2G_EL_row, ISL2G_EL_col 
+# endif
 # endif
 
 # if defined (NH)
@@ -127,7 +140,10 @@ MODULE MOD_PETSc
   PetscScalar :: ZERO    =  0.0D0
 
   PetscViewer :: viewer
-  
+# if defined (PETSC_C)  /* Siqi Li, PETSC@20230227 */
+  PetscInt,parameter      :: BS = 1  
+# endif
+
 !integer mappings
   INTEGER,ALLOCATABLE  :: PLO_2_ALO_NODE(:)  !maps PLO to ALO on a node (surface vertex) basis
   INTEGER,ALLOCATABLE  :: ALO_2_PLO_NODE(:)  !maps ALO to PLO on a node (surface vertex) basis
@@ -565,7 +581,14 @@ MODULE MOD_PETSc
   DO I= 1, N_VERTS + N_HALO
     PTMP(I) = PLO_2_PGO_NODE(I)-1
   ENDDO
+
+# if defined (PETSC_A) || (PETSC_B)  /* Siqi Li, PETSC@20230227 */
   CALL ISLocalToGlobalMappingCreate(PETSC_COMM_SELF,PSIZE_EL_HALO,PTMP,ISL2G_EL,IERR);CHKERRQ(IERR)
+# else
+  CALL ISLocalToGlobalMappingCreate(PETSC_COMM_SELF,BS,PSIZE_EL_HALO,PTMP,PETSC_COPY_VALUES,ISL2G_EL_col,IERR);CHKERRQ(IERR)
+  CALL ISLocalToGlobalMappingCreate(PETSC_COMM_SELF,BS,PSIZE_EL_HALO,PTMP,PETSC_COPY_VALUES,ISL2G_EL_row,IERR);CHKERRQ(IERR)
+# endif
+
   DEALLOCATE(PTMP)
 # endif
 
@@ -601,7 +624,11 @@ MODULE MOD_PETSc
 # endif
 
 # if defined (SEMI_IMPLICIT) || (NH)
+# if defined (PETSC_A) || (PETSC_B)  /* Siqi Li, PETSC@20230227 */
   CALL MatSetLocalToGlobalMapping(A_EL,ISL2G_EL,IERR);CHKERRQ(IERR)
+# else
+  CALL MatSetLocalToGlobalMapping(A_EL,ISL2G_EL_row,ISL2G_EL_col,IERR);CHKERRQ(IERR)
+# endif
 # endif
 
 # if defined (WAVE_CURRENT_INTERACTION) && !defined (EXPLICIT)
@@ -743,14 +770,23 @@ MODULE MOD_PETSc
 
 # if defined (SEMI_IMPLICIT) || (NH)
   CALL KSPCreate(MPI_FVCOM_GROUP,Ksp_EL,IERR);CHKERRQ(IERR)
+# if defined (PETSC_A) || (PETSC_B)  /* Siqi Li, PETSC@20230227 */
   CALL KSPSetOperators(Ksp_EL,A_EL,A_EL,SAME_NONZERO_PATTERN,IERR);CHKERRQ(IERR)
+# else
+  CALL KSPSetOperators(Ksp_EL,A_EL,A_EL,IERR);CHKERRQ(IERR)
+# endif
   CALL KSPSetType(Ksp_EL,KSPGMRES,IERR);CHKERRQ(IERR)
   CALL KSPGetPC(Ksp_EL,Pc_EL,IERR);CHKERRQ(IERR)
   CALL PCSetType(Pc_EL,PCHYPRE,IERR);CHKERRQ(IERR)
   CALL PCHYPRESetType(Pc_EL,"boomeramg",IERR);CHKERRQ(IERR)
   IF(USE_LAST) CALL KSPSetInitialGuessNonzero(Ksp_EL,PETSC_TRUE,IERR);CHKERRQ(IERR)
+# if defined (PETSC_A) || (PETSC_B)  /* Siqi Li, PETSC@20230227 */
   CALL KSPSetTolerances(Ksp_EL,RTOL,PETSC_DEFAULT_DOUBLE_PRECISION,  &
          PETSC_DEFAULT_DOUBLE_PRECISION,PETSC_DEFAULT_INTEGER,IERR);CHKERRQ(IERR)
+# else
+  CALL KSPSetTolerances(Ksp_EL,RTOL,PETSC_DEFAULT_REAL,  &
+         PETSC_DEFAULT_REAL,PETSC_DEFAULT_INTEGER,IERR);CHKERRQ(IERR)
+# endif
   CALL KSPSetFromOptions(Ksp_EL,IERR);CHKERRQ(IERR)
 # endif
 
@@ -1000,7 +1036,12 @@ MODULE MOD_PETSc
 # endif
 
 # if defined (SEMI_IMPLICIT) || (NH)
+# if defined (PETSC_A) || (PETSC_B)  /* Siqi Li, PETSC@20230227 */
   CALL MatCreateMPIAIJ(MPI_FVCOM_GROUP,N_VERTS,N_VERTS,MGL,MGL,0,DNNZ2,0,ONNZ2,A_EL,IERR);CHKERRQ(IERR)
+# else
+  CALL MatCreateAIJ(MPI_FVCOM_GROUP,N_VERTS,N_VERTS,MGL,MGL,0,DNNZ2,0,ONNZ2,A_EL,IERR);CHKERRQ(IERR)
+  CALL MatSetOption(A_EL, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE, IERR);CHKERRQ(IERR)
+# endif
 # endif
 
 # if defined (WAVE_CURRENT_INTERACTION) && !defined (EXPLICIT)

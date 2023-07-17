@@ -404,12 +404,15 @@ CHARACTER(LEN=80), ALLOCATABLE :: NEST_FNAMES(:),NEST_FNAMES_CELL(:)
 
        REWIND NESTUNIT
 
+       NHEADER = 0      !lwang intel23@20230710       
        DO WHILE(.TRUE.)
           READ(NESTUNIT,*,IOSTAT=IOS,END=199)N1,N2,N3
           if (IOS == 0) then
-             BackSpace NESTUNIT
+!             BackSpace NESTUNIT     ! lwang intel23@20230710
              exit
           end if
+
+          NHEADER = NHEADER + 1   ! lwang intel23@20230710
 
           CYCLE
 
@@ -418,7 +421,14 @@ CHARACTER(LEN=80), ALLOCATABLE :: NEST_FNAMES(:),NEST_FNAMES_CELL(:)
                &'FORMAT: NEST# SUBDOMAIN# LARGEDOMAIN# (ALL INTEGERS)')
 
        END DO
-       
+
+!---> lwang intel23@20230710
+       REWIND NESTUNIT
+       DO I = 1, NHEADER
+          READ(NESTUNIT,*)
+       END DO
+!<--- lwang intel23@20230710       
+
        ALLOCATE(NESTID(nnode))
 
        I = 0
@@ -506,12 +516,16 @@ CHARACTER(LEN=80), ALLOCATABLE :: NEST_FNAMES(:),NEST_FNAMES_CELL(:)
 
        REWIND NESTUNIT1
 
+       NHEADER = 0      !lwang intel23@20230710
+
        DO WHILE(.TRUE.)
           READ(NESTUNIT1,*,IOSTAT=IOS,END=199)C1,C2,C3
           if (IOS == 0) then
-             BackSpace NESTUNIT1
+!             BackSpace NESTUNIT1    ! lwang intel23@20230710
              exit
           end if
+
+          NHEADER = NHEADER + 1   ! lwang intel23@20230710
 
           CYCLE
 
@@ -520,7 +534,14 @@ CHARACTER(LEN=80), ALLOCATABLE :: NEST_FNAMES(:),NEST_FNAMES_CELL(:)
                &'FORMAT: NEST# SUBDOMAIN# LARGEDOMAIN# (ALL INTEGERS)')
 
        END DO
-       
+
+!---> lwang intel23@20230710
+       REWIND NESTUNIT1
+       DO I = 1, NHEADER
+          READ(NESTUNIT1,*)
+       END DO
+!<--- lwang intel23@20230710
+
        ALLOCATE(NESTCID(ncell,2))
 
        I = 0

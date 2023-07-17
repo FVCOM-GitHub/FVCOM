@@ -46,6 +46,7 @@ Module Mod_Nesting
      REAL(SP), POINTER :: U_BLK(:,:,:),V_BLK(:,:,:)
      REAL(SP), POINTER :: S1_BLK(:,:,:),T1_BLK(:,:,:)
      REAL(SP), POINTER :: HYW_BLK(:,:,:)
+     INTEGER(SP), POINTER :: IDC_BLK(:,:)  ! Siqi Li, NCNEST@20230623
      TYPE(TIME), POINTER :: TIME_BLK(:)
 
      REAL(SP), POINTER :: WCELL_BLK(:,:),WNODE_BLK(:,:)
@@ -500,6 +501,8 @@ CONTAINS
     INTEGER :: STATUS,I
     INTEGER, POINTER :: NID(:)
     
+    INTEGER :: FLAG_LSF(N), J, K ! Siqi Li, LSF@20230420
+
     if(DBG_SET(dbg_sbr))  write(IPT,*) "START Setup_nest_domain"
     
     if(DBG_SET(dbg_log))  write(IPT,*) "! "
@@ -543,6 +546,39 @@ CONTAINS
        
        ! DECOMPOSE THE GLOBAL NESTING GRID TO THE LOCAL MAP
        CALL GENMAP_NESTING(GLOBAL_NG, NESTING_GRID )
+
+       !---> Siqi Li, LSF@20230420
+       ! Check if one cell consists of LSF nodes.
+       IF (OBC_LONGSHORE_FLOW_ON) THEN
+         FLAG_LSF(1:N) = 0
+         DO I = 1, N
+           DO J = 1, 3
+             DO K = 1, NOBCLSF
+               IF (NV(I,J) == IBCLSF(K) .OR. NV(I,J) == IBCLSF2(K)) THEN
+                 FLAG_LSF(I) = FLAG_LSF(I) + 1
+                 EXIT
+               END IF
+             END DO
+           END DO
+         END DO
+         ! Calculate the number of LSF cells
+         NELE_LSF = 0
+         DO I = 1, N
+           IF (FLAG_LSF(I) == 3) NELE_LSF = NELE_LSF + 1
+         END DO
+         ! Find out the LSF cell ID.
+         IF (NOBCLSF>0) THEN
+           ALLOCATE(JBCLSF(NELE_LSF))
+           J = 0
+           DO I = 1, N
+             IF (FLAG_LSF(I) == 3) THEN
+               J = J + 1
+               JBCLSF(J) = I
+             END IF
+           END DO
+         END IF
+       END IF
+       !<--- Siqi Li    
        
        ! DUMP THE GLOBAL DATA
        CALL KILL_GRID(GLOBAL_NG)
@@ -717,12 +753,15 @@ CONTAINS
 
        REWIND NESTUNIT
 
+       NHEADER = 0      !lwang intel23@20230710
        DO WHILE(.TRUE.)
           READ(NESTUNIT,*,IOSTAT=IOS,END=199)N1,N2,N3
           if (IOS == 0) then
-             BackSpace NESTUNIT
-             exit
+!             BackSpace NESTUNIT   ! lwang intel23@20230710
+            exit
           end if
+          
+          NHEADER = NHEADER + 1   ! lwang intel23@20230710
 
           CYCLE
 
@@ -732,6 +771,13 @@ CONTAINS
 
        END DO
        
+!---> lwang intel23@20230710
+       REWIND NESTUNIT
+       DO I = 1, NHEADER
+          READ(NESTUNIT,*)
+       END DO
+!<--- lwang intel23@20230710
+
        ALLOCATE(nodes(nnode))
 
        I = 0
@@ -762,7 +808,6 @@ CONTAINS
                & ' IS NOT IN THE GLOBAL DOMAIN',&
                & 'CHECK INPUT FILE NESTING NODES ARE 1 <= '//trim(temp2))
        END IF
-
        IF(  MAXVAL(NODES) > MGL) THEN
           write(temp,'(I8)') MAXLOC(NODES)
           write(temp2,'(I8)') MGL
@@ -1624,6 +1669,11 @@ END SUBROUTINE GENMAP_NESTING
          ALLOCATE(D%T1_BLK(0:G%M,KB,NCNEST_BLOCKSIZE),stat=status)
          if(status /= 0) call fatal_error("ALLOC_BLK: can not allocate:T1_BLK")
                   
+!---> Siqi Li, NCNEST@20230623
+         ALLOCATE(D%IDC_BLK(0:G%N,NCNEST_BLOCKSIZE),stat=status)
+         if(status /= 0) call fatal_error("ALLOC_BLK: can not allocate:IDC_BLK")
+!<--- Siqi Li
+
          ALLOCATE(D%HYW_BLK(0:G%M,KB,NCNEST_BLOCKSIZE),stat=status)
          if(status /= 0) call fatal_error("ALLOC_BLK: can not allocate:HYW_BLK")
          
@@ -1875,6 +1925,13 @@ END SUBROUTINE GENMAP_NESTING
             & CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:T1_BLK")
        D%T1_BLK = 0.0_SP
 
+!---> Siqi Li, NCNEST@20230623
+       ALLOCATE(D%IDC_BLK(Dim_nele%dim,NCNEST_BLOCKSIZE),STAT=STATUS) 
+       IF (STATUS /=0 )  &
+            & CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:IDC_BLK")
+       D%IDC_BLK = 0
+!<--- Siqi Li
+
        ALLOCATE(D%HYW_BLK(Dim_node%dim,KB,NCNEST_BLOCKSIZE),STAT=STATUS) 
        IF (STATUS /=0 )  &
             & CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:HYW_BLK")
@@ -2040,6 +2097,20 @@ END SUBROUTINE GENMAP_NESTING
     VAR  => ADD(VAR,ATT)
 
     NCF  => ADD(NCF,VAR)
+
+!---> Siqi Li, NCNEST@20230623
+    ! idc_BLK
+    VAR  => NC_MAKE_PVAR(name='idc',&
+         & values=D%idc_BLK, DIM1= Dim_nele, DIM2 = Dim_time)
+
+    ATT  => NC_MAKE_ATT(name='long_name',values='GLOABL CELL ID IN MOTHER DOMAIN') 
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='units',values='') 
+    VAR  => ADD(VAR,ATT)  
+
+    NCF  => ADD(NCF,VAR)
+!<--- Siqi Li
 
 # if defined (NH)
     ! HYW_BLK
@@ -2626,6 +2697,7 @@ END SUBROUTINE GENMAP_NESTING
     D%V_BLK(:,:,D%IDX) = V(G%ELID(:),:)
     D%S1_BLK(:,:,D%IDX) = S1(G%NLID(:),:)
     D%T1_BLK(:,:,D%IDX) = T1(G%NLID(:),:)
+    D%IDC_BLK(:,D%IDX) = G%ELID(:)  ! Siqi Li, NCNEST@20230623
 # if defined (NH)
 !---> Modified by Dr. Lai 2021-01-15
 !%    D%HYW_BLK(:,:,D%IDX) = CALC_HYW(G)
@@ -2745,6 +2817,7 @@ END SUBROUTINE GENMAP_NESTING
     REAL(DP)     :: prev_w, next_w
     INTEGER      :: STEP,PREV,NEXT,I
     INTEGER      :: I_TMP
+    INTEGER      :: J, IS_LSF   ! Siqi Li, LSF@20230420
 
     TYPE(TIME) :: TDIFF
 
@@ -2804,6 +2877,20 @@ END SUBROUTINE GENMAP_NESTING
 
        DO I = 1, NESTING_GRID%NT
          I_TMP = NESTING_GRID%ELID_X(I)
+         !---> Siqi Li, LSF@20230420
+         IF (OBC_LONGSHORE_FLOW_ON) THEN
+           IS_LSF = 0
+           IF (NOBCLSF>0) THEN
+             DO J = 1, NELE_LSF
+               IF (I_TMP==JBCLSF(J)) THEN
+                 IS_LSF = 1
+                 EXIT
+               END IF
+             END DO
+           END IF
+           IF (IS_LSF==1) CYCLE
+         END IF
+         !<--- Siqi Li
          UA(I_TMP) =  UA_NEST(I) * WCELL_NEST(I) + UA(I_TMP) * (1_SP -  WCELL_NEST(I))  
          UA(I_TMP) = UA(I_TMP) * RAMP
        END DO
@@ -2819,6 +2906,20 @@ END SUBROUTINE GENMAP_NESTING
 
        DO I = 1, NESTING_GRID%NT
          I_TMP = NESTING_GRID%ELID_X(I)
+         !---> Siqi Li, LSF@20230420
+         IF (OBC_LONGSHORE_FLOW_ON) THEN
+           IS_LSF = 0
+           IF (NOBCLSF>0) THEN
+             DO J = 1, NELE_LSF
+               IF (I_TMP==JBCLSF(J)) THEN
+                 IS_LSF = 1
+                 EXIT
+               END IF
+             END DO
+           END IF
+           IF (IS_LSF==1) CYCLE
+         END IF
+         !<--- Siqi Li
          VA(I_TMP) =  VA_NEST(I) * WCELL_NEST(I) + VA(I_TMP) * (1_SP -  WCELL_NEST(I)) 
          VA(I_TMP) = VA(I_TMP) * RAMP
        END DO
@@ -2847,6 +2948,20 @@ END SUBROUTINE GENMAP_NESTING
 
        DO I = 1, NESTING_GRID%NT
          I_TMP = NESTING_GRID%ELID_X(I)
+         !---> Siqi Li, LSF@20230420
+         IF (OBC_LONGSHORE_FLOW_ON) THEN
+           IS_LSF = 0
+           IF (NOBCLSF>0) THEN
+             DO J = 1, NELE_LSF
+               IF (I_TMP==JBCLSF(J)) THEN
+                 IS_LSF = 1
+                 EXIT
+               END IF
+             END DO
+           END IF
+           IF (IS_LSF==1) CYCLE
+         END IF
+         !<--- Siqi Li
 !---> Modified by Dr. Lai 2021-01-15
          ZM(1:KBM1_L) = ZZ1_L(I,1:KBM1_L)
          PHY_Z(1:KBM1) = ZZ1(I_TMP,1:KBM1)
@@ -2870,6 +2985,20 @@ END SUBROUTINE GENMAP_NESTING
 
        DO I = 1, NESTING_GRID%NT
          I_TMP = NESTING_GRID%ELID_X(I)
+         !---> Siqi Li, LSF@20230420
+         IF (OBC_LONGSHORE_FLOW_ON) THEN
+           IS_LSF = 0
+           IF (NOBCLSF>0) THEN
+             DO J = 1, NELE_LSF
+               IF (I_TMP==JBCLSF(J)) THEN
+                 IS_LSF = 1
+                 EXIT
+               END IF
+             END DO
+           END IF
+           IF (IS_LSF==1) CYCLE
+         END IF
+         !<--- Siqi Li
 !---> Modified by Dr. Lai 2021-01-15	 
          ZM(1:KBM1_L) = ZZ1_L(I,1:KBM1_L)
          PHY_Z(1:KBM1) = ZZ1(I_TMP,1:KBM1)

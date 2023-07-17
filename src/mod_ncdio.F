@@ -5233,6 +5233,11 @@ CONTAINS
           IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:IBCLSF_OUTPUT")
           IBCLSF_OUTPUT = 0
           
+          ! Siqi Li, LSF@20230420
+          allocate(IBCLSF2_OUTPUT(NOBCLSF_GL),stat=status)
+          IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:IBCLSF2_OUTPUT")
+          IBCLSF2_OUTPUT = 0
+
           allocate(RBC_GEO(NOBCLSF_GL),stat=status)
           IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:RBC_GEO")
           RBC_GEO = 0.0_SP
@@ -5420,6 +5425,18 @@ CONTAINS
        
        NCF  => ADD(NCF,VAR)
        
+       ! Siqi Li, LSF@20230420
+       VAR  => NC_MAKE_AVAR(name='lsf_nodes_2nd',&
+            & values=IBCLSF2_OUTPUT, DIM1= DIM_nlsf)
+
+       ATT  => NC_MAKE_ATT(name='long_name',values='Longshore Flow Node Number (2nd)')
+       VAR  => ADD(VAR,ATT)
+
+       ATT  => NC_MAKE_ATT(name='grid',values='lsf_grid')
+       VAR  => ADD(VAR,ATT)
+
+       NCF  => ADD(NCF,VAR)
+
        ! 
        VAR  => NC_MAKE_AVAR(name='wdf',&
             & values=RBC_WDF, DIM1= DIM_nlsf)
@@ -9273,7 +9290,7 @@ END SUBROUTINE LOAD_SUBDOMAIN_FILE
            IF(STATUS /=0) CALL FATAL_ERROR("FVCOM2GRID: COULD NOT ALLOCATE G%NV")
            G%NV=0
            DO I = 1,G%NT
-              G%NV(I,:) = G%NGID_X( reshape(NV(I,1:3),(/3/)) ) ! Siqi Li, 20230221
+              G%NV(I,:) = G%NGID_X( reshape(NV(I,1:3),(/3/)) ) ! Siqi Li, CHECKALL@20230221
               ! G%NV(I,:) = G%NGID_X(NV(I,1:3))
            END DO
         
@@ -9282,7 +9299,7 @@ END SUBROUTINE LOAD_SUBDOMAIN_FILE
            IF(STATUS /=0) CALL FATAL_ERROR("FVCOM2GRID: COULD NOT ALLOCATE G%NBE")
            G%NBE = 0
            DO I = 1,N
-              G%NBE(I,:) = G%EGID_X( reshape(NBE(I,:),(/3/)) ) ! Siqi Li, 20230221
+              G%NBE(I,:) = G%EGID_X( reshape(NBE(I,:),(/3/)) ) ! Siqi Li, checkALL@20230221
               ! G%NBE(I,:) = G%EGID_X(NBE(I,:))
            END DO
 
@@ -9296,10 +9313,10 @@ END SUBROUTINE LOAD_SUBDOMAIN_FILE
            G%NBVE = 0
 
            DO I = 1,M
-              G%NBVE(I,:) = G%EGID_X( reshape(NBVE(I,:),(/MX_NBR_ELEM+1/)) ) ! Siqi Li, 20230221
+              G%NBVE(I,:) = G%EGID_X( reshape(NBVE(I,:),(/MX_NBR_ELEM+1/)) ) ! Siqi Li, CHECKALL@20230221
               ! G%NBVE(I,:) = G%EGID_X(NBVE(I,:))
 
-              G%NBSN(I,:) = G%NGID_X( reshape(NBSN(I,:),(/MX_NBR_ELEM+3/)) ) ! Siqi Li, 20230221
+              G%NBSN(I,:) = G%NGID_X( reshape(NBSN(I,:),(/MX_NBR_ELEM+3/)) ) ! Siqi Li, CHECKALL@20230221
               ! G%NBSN(I,:) = G%NGID_X(NBSN(I,:))
            END DO
 

@@ -118,7 +118,9 @@ COBJS = func_pointer.c
 
 BIOGEN	= mod_bio_3D.F	mod_onedtide.F
 
-SRCS = $(MODS) $(MODS_W) $(MAIN) $(BIOGEN) $(MAIN_W)
+postFVCOM = postFVCOM_ncnest_reorder.F
+
+SRCS = $(MODS) $(MODS_W) $(MAIN) $(BIOGEN) $(MAIN_W) 
 
 # object list is composed of free (*.F) and fixed (*.F90) source
 FVCOM_OBJS = $(COBJS:.c=.o) $(SRCS:.F=.o) $(FIXED:.F90=.o) 
@@ -140,6 +142,8 @@ libfvcom: $(FVCOM_OBJS)
 #	$(FC) -shared -o $@.so $(FVCOM_OBJS)
 #       PROBLEMS WITH SHARED OPTION, REQUIRES -fPIC in All sub libraries as well when building on x86_64
 
+postFVCOM:	$(postFVCOM:.F=.o)
+		$(FC) $< $(FFLAGS) $(LDFLAGS) $(LIBS) -o postFVCOM_ncnest_reorder
 
 #--------------------------------------------------------------------------
 #  Target to create dependecies.

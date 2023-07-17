@@ -104,7 +104,26 @@ dashL= $(empty) -L
 ##             IOLIBS       = -L/usr/local/install/netcdf-4.4.1.1-with-fortran/lib -lnetcdff -lnetcdf
 ##             IOINCS       = -I/usr/local/install/netcdf-4.4.1.1-with-fortran/include
 #--------------------------------------------------------------------------
-
+#     PETSC 
+#       PETSC IS REQUIRED IF ANY OF THE FOLLOWING FLAGS IS TURNED ON:
+#            FLAG_7  = -DDATA_ASSIM
+#            FLAG_9  = -DSEMI_IMPLICIT
+#            FLAG_23 = -DRRKF
+#            FLAG_23 = -DENKF
+#            FLAG_30 = -DNH
+#            FLAG_37 = -DWAVE_OFFLINE
+#       UNCOMMENT THE RIGHT PETSC FLAG BELOW ON VERSION:
+#       FOR VERSION 2.0   TO 2.3.2
+#            FLAG_41 = -DPETSC_A
+#            include ${PETSC_DIR}/bmake/common/variables
+#
+#       FOR VERSION 2.3.3
+            FLAG_41 = -DPETSC_B
+            include ${PETSC_DIR}/bmake/common/variables
+#
+#       FOR VERSION 3.18.5
+#            FLAG_41 = -DPETSC_C
+#            include ${PETSC_DIR}/lib/petsc/conf/variables
 
 #==========================================================================
 #  BEGIN USER DEFINITION SECTION
@@ -143,7 +162,7 @@ dashL= $(empty) -L
 #                           UNCOMMENT TO INCLUDE FLOODYING/DRYING
 #--------------------------------------------------------------------------
 
-#             FLAG_3 = -DWET_DRY
+             FLAG_3 = -DWET_DRY
 
 #--------------------------------------------------------------------------
 #        MULTI_PROCESSOR    INCLUDES PARALLELIZATION WITH MPI
@@ -182,10 +201,13 @@ dashL= $(empty) -L
 #
 #--------------------------------------------------------------------------
 
-#             FLAG_6 = -DPROJ
+             FLAG_6 = -DPROJ
 
-#             PROJLIBS       = -lfproj4 -lproj -lm
-#             PROJINCS       =
+	     #             PROJLIBS       = -lfproj4 -lproj -lm
+	     #             PROJINCS       =
+             PROJLIBS       = -L/hosts/hydra.smast.umassd.edu/data2/siqili/new_hydra/install/fproj/lib -lfproj4 -L/hosts/hydra.smast.umassd.edu/data2/siqili/new_hydra/install/proj/lib -lproj -lm
+             PROJINCS       = -I/hosts/hydra.smast.umassd.edu/data2/siqili/new_hydra/install/fproj/include -I/hosts/hydra.smast.umassd.edu/data2/siqili/new_hydra/install/proj/include
+
 
 #--------------------------------------------------------------------------
 #        DATA_ASSIMILATION  INCLUDE NUDGING BASED DATA ASSIMILATION FOR
@@ -196,8 +218,8 @@ dashL= $(empty) -L
 #                           UNCOMMENT TO INCLUDE DATA ASSIMILATION 
 #--------------------------------------------------------------------------
 
-#             FLAG_7 = -DDATA_ASSIM
-#             include ${PETSC_DIR}/bmake/common/variables
+             FLAG_7 = -DDATA_ASSIM
+             include ${PETSC_DIR}/bmake/common/variables
 #             OILIB  = -lmkl_lapack -lmkl_em64t -lguide -lpthread
 
 #             OILIB  = -L/usr/local/share/Intel-Compilers/mkl/lib/em64t -lmkl_lapack -lmkl_em64t -lguide -lpthread
@@ -225,8 +247,7 @@ dashL= $(empty) -L
 #  Semi-Implicit time stepping method
 #--------------------------------------------------------------------------
 
-#             FLAG_9 = -DSEMI_IMPLICIT
-#             include ${PETSC_DIR}/bmake/common/variables
+             FLAG_9 = -DSEMI_IMPLICIT
 
 
 #---------------------------------------------------------------------------
@@ -274,7 +295,7 @@ dashL= $(empty) -L
 #       RIVER INPUT FILES!
 #--------------------------------------------------------------------------
 
-#            FLAG_14 = -DRIVER_FLOAT
+            FLAG_14 = -DRIVER_FLOAT
 
 #--------------------------------------------------------------------------
 #        The TVD (total variational diminishing) option for FVCOM was developed by 
@@ -354,7 +375,6 @@ dashL= $(empty) -L
 
 #              FLAG_23 = -DRRKF
 #              FLAG_23 = -DENKF
-#             include ${PETSC_DIR}/bmake/common/variables
 #              KFLIB  = -lmkl_lapack -lmkl_em64t -lguide -llapack -lblas 
 
 # For Build on em64t computer (Guppy) 
@@ -405,7 +425,7 @@ dashL= $(empty) -L
 #         AIR_PRESSURE FROM SURFACE FORCING                           
 #--------------------------------------------------------------------------
 
-#            FLAG_28 = -DAIR_PRESSURE  
+            FLAG_28 = -DAIR_PRESSURE  
 
 #--------------------------------------------------------------------------
 # Visit online simulation mode
@@ -428,7 +448,6 @@ dashL= $(empty) -L
 #--------------------------------------------------------------------------
 
 #             FLAG_30 =  -DNH
-#             include ${PETSC_DIR}/bmake/common/variables
 
 #--------------------------------------------------------------------------
 #        PARTICLE TRACKING
@@ -439,16 +458,15 @@ dashL= $(empty) -L
 #--------------------------------------------------------------------------
 #        WAVE-CURRENT INTERACTION
 #--------------------------------------------------------------------------
-             FLAG_32 =  -DWAVE_CURRENT_INTERACTION
+#             FLAG_32 =  -DWAVE_CURRENT_INTERACTION
 #             FLAG_33 =  -DPLBC
 #           NOTE! THis option is for wave code          
-             FLAG_34 =  -DEXPLICIT
+#             FLAG_34 =  -DEXPLICIT
 #           WAVE ONLY
 #             FLAG_35 = -DWAVE_ONLY
 # Svendsen Roller contribution
 #             FLAG_36 = -DWAVE_ROLLER
 #             FLAG_37 = -DWAVE_OFFLINE
-#             include ${PETSC_DIR}/bmake/common/variables
 #--------------------------------------------------------------------------
 #        THIN-DAM MODEL
 #--------------------------------------------------------------------------
@@ -466,13 +484,6 @@ dashL= $(empty) -L
 #--------------------------------------------------------------------------
 
 #           FLAG_40 =  -DLIMITER_VER_ADV
-
-#--------------------------------------------------------------------------
-#        PETSC Version
-#        If your PETSc is 2.3.2 or older, uncomment this flag
-#--------------------------------------------------------------------------
-#             FLAG_41 = -DOLD_PETSC
-
 #--------------------------------------------------------------------------
 #        SPECIAL PARTITION
 #        This flag can make sure the identical repeat run for same amount of CPUs 

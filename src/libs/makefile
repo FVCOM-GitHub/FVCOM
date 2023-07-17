@@ -6,7 +6,7 @@
 
 MYINSTALLDIR = $(INSTALLDIR)
 
-PACKAGES =	proj	fproj	julian	metis	netcdf	
+PACKAGES =	proj#	fproj	julian	metis	netcdf	
 
 
 all:

@@ -27,7 +27,7 @@
 !/===========================================================================/
 
 !==============================================================================!
-!  VERSION 4.4.3
+!  VERSION 4.4.4
 !==============================================================================!
 
 PROGRAM FVCOM
@@ -945,7 +945,8 @@ PROGRAM FVCOM
      ! INITIALIZE THE COUNT VARIABLES FOR THE SST LOOP
      INT_START = ISTART
      INT_COUNT = ISTART
-     IF(SST_ASSIM.OR.SSTGRD_ASSIM.OR.SSHGRD_ASSIM.OR.TSGRD_ASSIM)THEN
+!JQI2023     IF(SST_ASSIM.OR.SSTGRD_ASSIM.OR.SSHGRD_ASSIM.OR.TSGRD_ASSIM)THEN
+     IF(SST_ASSIM.OR.SSTGRD_ASSIM.OR.SSSGRD_ASSIM.OR.SSHGRD_ASSIM.OR.TSGRD_ASSIM)THEN
        INT_END = ISTART + 2*(IEND-ISTART)
      ELSEIF(TS_NGASSIM .OR. CUR_NGASSIM .OR.      &
             TS_OIASSIM .OR. CUR_OIASSIM)THEN
@@ -977,7 +978,8 @@ PROGRAM FVCOM
      ENDIF
 
      DO WHILE(IntTime < EndTime)
-       IF(SST_ASSIM.OR.SSTGRD_ASSIM.OR.SSHGRD_ASSIM.OR.TSGRD_ASSIM)THEN
+!JQI2023       IF(SST_ASSIM.OR.SSTGRD_ASSIM.OR.SSHGRD_ASSIM.OR.TSGRD_ASSIM)THEN
+       IF(SST_ASSIM.OR.SSTGRD_ASSIM.OR.SSSGRD_ASSIM.OR.SSHGRD_ASSIM.OR.TSGRD_ASSIM)THEN
          ASSIM_RESTART_TIME = ASSIM_RESTART_TIME + days2time(1.0_DP)  ! ADD ONE MORE DAY
        ELSEIF(TS_NGASSIM.OR.CUR_NGASSIM .OR.       &
               TS_OIASSIM.OR.CUR_OIASSIM)THEN
@@ -987,6 +989,11 @@ PROGRAM FVCOM
         IF(SST_ASSIM.OR.SSTGRD_ASSIM) THEN
           SST_SAVE_INDEX = 0
           SST_SAVE_TIME  = IntTime + sst_save_interval
+        ENDIF
+
+        IF(SSSGRD_ASSIM) THEN
+          SSS_SAVE_INDEX = 0
+          SSS_SAVE_TIME  = IntTime + sss_save_interval
         ENDIF
 
         IF(TSGRD_ASSIM) THEN
@@ -1024,9 +1031,8 @@ PROGRAM FVCOM
 
            IINT = IINT + 1
            IntTime=IntTime + IMDTI
-
+!lwang
            CALL INTERNAL_STEP
-
            !==============================================================================!
            !    OUTPUT SCREEN REPORT/TIME SERIES DATA/OUTPUT FILES                        |
            !==============================================================================!
@@ -1035,7 +1041,8 @@ PROGRAM FVCOM
 
            IF(REPORT_NOW(IINT,IREPORT)) CALL REPORT('FLOW FIELD STATS')
 
-           IF(SST_ASSIM.OR.SSTGRD_ASSIM.OR.SSHGRD_ASSIM.OR.TSGRD_ASSIM)THEN
+!JQI2023           IF(SST_ASSIM.OR.SSTGRD_ASSIM.OR.SSHGRD_ASSIM.OR.TSGRD_ASSIM)THEN
+           IF(SST_ASSIM.OR.SSTGRD_ASSIM.OR.SSSGRD_ASSIM.OR.SSHGRD_ASSIM.OR.TSGRD_ASSIM)THEN
              ! do nothing
            ELSE
 !for Eulerian velocity output
@@ -1047,7 +1054,6 @@ PROGRAM FVCOM
 # endif
 
              CALL ARCHIVE
-
 #  if defined (WAVE_CURRENT_INTERACTION)
 !Convert Eulerian velocity back to Lagrangian velocity to maintain consistent with Mellor's equation
 !         U = U+U_STOKES_3D
@@ -1083,11 +1089,13 @@ PROGRAM FVCOM
         !==============================================================================!
         !    CALL RESTORE TO RUN ASSIMILATION CODE                                     |
         !==============================================================================!
-        IF(SST_ASSIM.OR.SSTGRD_ASSIM.OR.SSHGRD_ASSIM.OR.TSGRD_ASSIM)THEN
+!JQI2023        IF(SST_ASSIM.OR.SSTGRD_ASSIM.OR.SSHGRD_ASSIM.OR.TSGRD_ASSIM)THEN
+        IF(SST_ASSIM.OR.SSTGRD_ASSIM.OR.SSSGRD_ASSIM.OR.SSHGRD_ASSIM.OR.TSGRD_ASSIM)THEN
          if(DBG_SET(dbg_log)) write(IPT,*) "=====Start restore the state for assimilation===="
          CALL RESTORE_STATE
 !SLI         CALL RHO_PMEAN
 
+         IF(SSSGRD_ASSIM) CALL SSSGRD_OBSERVATION_UPDATE
          IF(SST_ASSIM.OR.SSTGRD_ASSIM) CALL SSTGRD_OBSERVATION_UPDATE
          IF(TSGRD_ASSIM) CALL TSGRD_OBSERVATION_UPDATE(IntTime+(days2time(1.0_DP))/2)
          IF(SSHGRD_ASSIM) CALL SSHGRD_OBSERVATION_UPDATE
@@ -1533,9 +1541,10 @@ PROGRAM FVCOM
   CASE(FVCOM_RRKF_WITH_SSA)
 # if defined (RRKF)
 # if defined (DATA_ASSIM) 
-   IF (SSTGRD_ASSIM .or. SSHGRD_ASSIM) THEN
+!JQI2023   IF (SSTGRD_ASSIM .or. SSHGRD_ASSIM) THEN
+   IF (SSTGRD_ASSIM .or. SSSGRD_ASSIM .or. SSHGRD_ASSIM) THEN
    ELSE
-   PRINT *, 'STOP, RRKF ONLY WITH SSTGRD_ASSIM OR SSHGRD_ASSIM'
+   PRINT *, 'STOP, RRKF ONLY WITH SSTGRD_ASSIM OR SSSGRD_ASSIM OR SSHGRD_ASSIM'
    CALL PSTOP
    END IF
   IF(MSR) WRITE(IPT,*) 'Starting RRKF input data processing......'
@@ -1629,6 +1638,10 @@ PROGRAM FVCOM
           SST_SAVE_TIME  = IntTime + sst_save_interval
         ENDIF
 
+        IF(SSSGRD_ASSIM) THEN
+          SSS_SAVE_INDEX = 0
+          SSS_SAVE_TIME  = IntTime + sss_save_interval
+        ENDIF
 
         IF(SSHGRD_ASSIM) THEN
           SSH_SAVE_INDEX = 0
@@ -1650,6 +1663,9 @@ PROGRAM FVCOM
         
         IF(SSHGRD_ASSIM) THEN
            CALL SET_SSH_SAVE_TIME_INDEX(ASSIM_FLAG)
+        ENDIF
+        IF(SSSGRD_ASSIM) THEN
+           CALL SET_SSS_SAVE_TIME_INDEX(ASSIM_FLAG)
         ENDIF
         IF(SSTGRD_ASSIM) THEN
            CALL SET_SST_SAVE_TIME_INDEX(ASSIM_FLAG)
@@ -1685,6 +1701,7 @@ PROGRAM FVCOM
         CALL RESTORE_STATE
         CALL RHO_PMEAN
 
+        IF(SSSGRD_ASSIM) CALL SSSGRD_OBSERVATION_UPDATE
         IF(SSTGRD_ASSIM) CALL SSTGRD_OBSERVATION_UPDATE
 
         IF(SSHGRD_ASSIM) CALL SSHGRD_OBSERVATION_UPDATE
@@ -1704,6 +1721,9 @@ PROGRAM FVCOM
         ASSIM_FLAG = 1
         IF(SSHGRD_ASSIM) THEN
            CALL SET_SSH_SAVE_TIME_INDEX(ASSIM_FLAG)
+        ENDIF
+        IF(SSSGRD_ASSIM) THEN
+           CALL SET_SSS_SAVE_TIME_INDEX(ASSIM_FLAG)
         ENDIF
         IF(SSTGRD_ASSIM) THEN
            CALL SET_SST_SAVE_TIME_INDEX(ASSIM_FLAG)
@@ -1833,6 +1853,11 @@ PROGRAM FVCOM
 
         ASSIM_RESTART_TIME = ASSIM_RESTART_TIME + days2time(1.0_DP)  ! ADD ONE MORE DAY
 
+        IF(SSSGRD_ASSIM) THEN
+          SSS_SAVE_INDEX = 0
+          SSS_SAVE_TIME  = IntTime + sss_save_interval
+        ENDIF
+
         IF(SSTGRD_ASSIM) THEN
           SST_SAVE_INDEX = 0
           SST_SAVE_TIME  = IntTime + sst_save_interval
@@ -1873,6 +1898,9 @@ PROGRAM FVCOM
         IF(SSHGRD_ASSIM) THEN
            CALL SET_SSH_SAVE_TIME_INDEX(ASSIM_FLAG)
         ENDIF
+        IF(SSSGRD_ASSIM) THEN
+           CALL SET_SSS_SAVE_TIME_INDEX(ASSIM_FLAG)
+        ENDIF
         IF(SSTGRD_ASSIM) THEN
            CALL SET_SST_SAVE_TIME_INDEX(ASSIM_FLAG)
         ENDIF
@@ -1907,6 +1935,7 @@ PROGRAM FVCOM
         CALL RESTORE_STATE
         CALL RHO_PMEAN
 
+        IF(SSSGRD_ASSIM) CALL SSSGRD_OBSERVATION_UPDATE
         IF(SSTGRD_ASSIM) CALL SSTGRD_OBSERVATION_UPDATE
         IF(TSGRD_ASSIM) CALL TSGRD_OBSERVATION_UPDATE(IntTime+(days2time(1.0_DP))/2)
         IF(SSHGRD_ASSIM) CALL SSHGRD_OBSERVATION_UPDATE
@@ -1924,6 +1953,9 @@ PROGRAM FVCOM
         ASSIM_FLAG = 1
         IF(SSHGRD_ASSIM) THEN
            CALL SET_SSH_SAVE_TIME_INDEX(ASSIM_FLAG)
+        ENDIF
+        IF(SSSGRD_ASSIM) THEN
+           CALL SET_SSS_SAVE_TIME_INDEX(ASSIM_FLAG)
         ENDIF
         IF(SSTGRD_ASSIM) THEN
            CALL SET_SST_SAVE_TIME_INDEX(ASSIM_FLAG)
@@ -2198,9 +2230,10 @@ IF (ENKF_memberCONTR ==1 ) THEN
   CASE(FVCOM_ENKF_WITH_SSA)
 # if defined (ENKF)
 # if defined (DATA_ASSIM) 
-   IF (SSTGRD_ASSIM .or. SSHGRD_ASSIM) THEN
+!JQI2023   IF (SSTGRD_ASSIM .or. SSHGRD_ASSIM) THEN
+   IF (SSTGRD_ASSIM .or. SSSGRD_ASSIM .or. SSHGRD_ASSIM) THEN
    ELSE
-   PRINT *, 'STOP, ENKF ONLY WITH SSTGRD_ASSIM OR SSHGRD_ASSIM'
+   PRINT *, 'STOP, ENKF ONLY WITH SSTGRD_ASSIM OR SSSGRD_ASSIM OR SSHGRD_ASSIM'
    CALL PSTOP
    END IF
   IF(MSR) WRITE(IPT,*) 'Starting Kalman filter input data processing......'
@@ -2233,7 +2266,7 @@ IF (ENKF_memberCONTR ==1 ) THEN
         write(IPT,*) "===================================================="
         write(IPT,*) "===================================================="
      end if
-!============================SSH AND SST ASSIMILATION CODE BELOW=============== 
+!============================SSH, SST AND SSS ASSIMILATION CODE BELOW=============== 
      IF (starttime%MuSOD ==0 )  THEN
      IF (MSR) PRINT *, 'NEED SIMULATION STAGE BECAUSE STARTTIME IS',STARTTIME
      CALL ALLOC_BUFFER
@@ -2274,11 +2307,15 @@ IF (ENKF_memberCONTR ==1 ) THEN
 	  
         ASSIM_RESTART_TIME = ASSIM_RESTART_TIME + days2time(1.0_DP)  ! ADD ONE MORE DAY
 
+        IF(SSSGRD_ASSIM) THEN
+          SSS_SAVE_INDEX = 0
+          SSS_SAVE_TIME  = IntTime + sss_save_interval
+        ENDIF
+
         IF(SSTGRD_ASSIM) THEN
           SST_SAVE_INDEX = 0
           SST_SAVE_TIME  = IntTime + sst_save_interval
         ENDIF
-
 
         IF(SSHGRD_ASSIM) THEN
           SSH_SAVE_INDEX = 0
@@ -2300,6 +2337,9 @@ IF (ENKF_memberCONTR ==1 ) THEN
         
         IF(SSHGRD_ASSIM) THEN
            CALL SET_SSH_SAVE_TIME_INDEX(ASSIM_FLAG)
+        ENDIF
+        IF(SSSGRD_ASSIM) THEN
+           CALL SET_SSS_SAVE_TIME_INDEX(ASSIM_FLAG)
         ENDIF
         IF(SSTGRD_ASSIM) THEN
            CALL SET_SST_SAVE_TIME_INDEX(ASSIM_FLAG)
@@ -2335,6 +2375,7 @@ IF (ENKF_memberCONTR ==1 ) THEN
         CALL RESTORE_STATE
         CALL RHO_PMEAN
 
+        IF(SSSGRD_ASSIM) CALL SSSGRD_OBSERVATION_UPDATE
         IF(SSTGRD_ASSIM) CALL SSTGRD_OBSERVATION_UPDATE
 
         IF(SSHGRD_ASSIM) CALL SSHGRD_OBSERVATION_UPDATE
@@ -2354,6 +2395,9 @@ IF (ENKF_memberCONTR ==1 ) THEN
         ASSIM_FLAG = 1
         IF(SSHGRD_ASSIM) THEN
            CALL SET_SSH_SAVE_TIME_INDEX(ASSIM_FLAG)
+        ENDIF
+        IF(SSSGRD_ASSIM) THEN
+           CALL SET_SSS_SAVE_TIME_INDEX(ASSIM_FLAG)
         ENDIF
         IF(SSTGRD_ASSIM) THEN
            CALL SET_SST_SAVE_TIME_INDEX(ASSIM_FLAG)

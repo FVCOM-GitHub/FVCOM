@@ -118,6 +118,8 @@ SUBROUTINE INTERNAL_STEP
   REAL(SP), ALLOCATABLE :: DYEB(:,:)
   REAL(SP) :: RCOFT
   INTEGER :: ITER
+
+  INTEGER :: IERR   ! lwang intel23@20230711
 !------------------------------------------------------------------------------|
 
   if(dbg_set(dbg_sbr)) write(ipt,*)&
@@ -367,7 +369,7 @@ SUBROUTINE INTERNAL_STEP
   END IF
 
 # endif
-
+!lwang
   IF(.NOT. BAROTROPIC)THEN                    !Barotropic Flow ?            !
      SELECT CASE(BAROCLINIC_PRESSURE_GRADIENT)
      CASE ("sigma levels")
@@ -394,7 +396,6 @@ SUBROUTINE INTERNAL_STEP
         DRY2D(I)=DRY2D(I)+DRHOY(I,K)  !*DZ1(I,K)
      END DO
   END DO
-
 # if defined (GCN)
   CALL ADVAVE_EDGE_GCN(ADVUA,ADVVA)           !Compute Ext Mode Adv/Diff
 # else
@@ -458,11 +459,14 @@ SUBROUTINE INTERNAL_STEP
 # if defined (MEAN_FLOW)
   CALL ZERO_OBC3
 # endif   
-
 # if defined (WAVE_CURRENT_INTERACTION)
 # if defined (DATA_ASSIM)
-  IF((ASSIM_FLAG == 0 .AND. (.NOT. SST_ASSIM .AND. .NOT. SSTGRD_ASSIM) .AND. .NOT. SSHGRD_ASSIM .AND. .NOT. TSGRD_ASSIM) .OR. &
-     (ASSIM_FLAG == 1 .AND. (SST_ASSIM .OR. SSTGRD_ASSIM .OR. SSHGRD_ASSIM .OR. TSGRD_ASSIM)))THEN
+!JQI2023  IF((ASSIM_FLAG == 0 .AND. (.NOT. SST_ASSIM .AND. .NOT. SSTGRD_ASSIM) .AND. .NOT. SSHGRD_ASSIM .AND. .NOT. TSGRD_ASSIM) .OR. &
+!     (ASSIM_FLAG == 1 .AND. (SST_ASSIM .OR. SSTGRD_ASSIM .OR. SSHGRD_ASSIM .OR. TSGRD_ASSIM)))THEN
+  IF((ASSIM_FLAG == 0 .AND. (.NOT. SST_ASSIM .AND. .NOT. SSTGRD_ASSIM) .AND. &
+      .NOT. SSSGRD_ASSIM .AND. .NOT. SSHGRD_ASSIM .AND. .NOT. TSGRD_ASSIM) .OR. &
+     (ASSIM_FLAG == 1 .AND. (SST_ASSIM .OR. SSTGRD_ASSIM .OR. SSSGRD_ASSIM .OR. &
+      SSHGRD_ASSIM .OR. TSGRD_ASSIM)))THEN
 # endif     
 # if defined (WAVE_OFFLINE)
   HSC1      = WHS
@@ -497,7 +501,6 @@ SUBROUTINE INTERNAL_STEP
 !JQIGOTO# if defined (WAVE_ONLY)
 !JQIGOTO  goto 5501
 !JQIGOTO# endif
-
 !JQIGOTO
 # if !defined (WAVE_ONLY)      
 !JQIGOTO
@@ -557,16 +560,17 @@ SUBROUTINE INTERNAL_STEP
    CALL BCOND_PA_AIR   
 #  endif
 
+!---> Siqi Li, LSF@20230420
+   IF(NESTING_ON )THEN
+      CALL SET_VAR(IntTime,EL=ELF)
+   END IF
+
 #  if defined (GCN)
    CALL BCOND_GCN(1,0)
 #  else
    CALL BCOND_GCY(1,0)
 #  endif
-
-   IF(NESTING_ON )THEN
-      CALL SET_VAR(IntTime,EL=ELF)
-   END IF
-
+!<---
 # endif
 ! end defined semi-implicit
 
@@ -596,7 +600,6 @@ SUBROUTINE INTERNAL_STEP
   CALL BCOND_BKI_3D(2)      
   CALL FLUX_OBC3D
 # endif
-  
   !==============================================================================!
   !     CALCULATE INTERNAL VELOCITY FLUXES                                       |
   !==============================================================================!
@@ -804,7 +807,6 @@ SUBROUTINE INTERNAL_STEP
 #   endif
 
 #  else
-
     UC = U
     VC = V
     CALL UV3D_SBD
@@ -1017,7 +1019,6 @@ SUBROUTINE INTERNAL_STEP
 # if !defined (NH)
   CALL WREAL           ! Calculate True Vertical Velocity (W)               !
 # endif
-
 !  CALL REPORT("before VISCOF_H")
 
   !==============================================================================!
@@ -1152,7 +1153,6 @@ SUBROUTINE INTERNAL_STEP
 # endif
 
 
-
 !==============================================================================!
 !    SEDIMENT MODEL SECTION  
 !      Advance Sed Model (Erode/Deposit/Advect/Diffuse)      
@@ -1163,7 +1163,8 @@ SUBROUTINE INTERNAL_STEP
 !==============================================================================!
 # if defined (SEDIMENT)
 # if defined (DATA_ASSIM)
-  IF(ASSIM_FLAG.AND.(SST_ASSIM.OR.SSTGRD_ASSIM.OR.SSHGRD_ASSIM.OR.TSGRD_ASSIM))THEN
+!JQI2023  IF(ASSIM_FLAG.AND.(SST_ASSIM.OR.SSTGRD_ASSIM.OR.SSHGRD_ASSIM.OR.TSGRD_ASSIM))THEN
+  IF(ASSIM_FLAG.AND.(SST_ASSIM.OR.SSTGRD_ASSIM.OR.SSSGRD_ASSIM.OR.SSHGRD_ASSIM.OR.TSGRD_ASSIM))THEN
 # endif
 
    DPDAYS = days(inttime)
@@ -1197,7 +1198,6 @@ SUBROUTINE INTERNAL_STEP
   IF(BIOLOGICAL_MODEL)CALL BIO_3D1D
                            
 #   endif
-
   !==============================================================================!
   !    UPDATE TEMPERATURE IN NON-BAROTROPIC CASE                                 !
   !==============================================================================!
@@ -1307,20 +1307,24 @@ SUBROUTINE INTERNAL_STEP
 !      IF(ASSIM_FLAG==1 .AND. SST_OIASSIM)CALL TEMP_OI
 !     END IF
 #    endif
-
 #    if defined (DATA_ASSIM)
 !---> Siqi, SST_improved
      IF(SST_ASSIM .OR. SSTGRD_ASSIM)THEN
 !    IF(ASSIM_FLAG==0) CALL SST_SAVE
-    IF(ASSIM_FLAG==1) CALL SSTGRD_NUDGE
-  END IF
+      IF(ASSIM_FLAG==1) CALL SSTGRD_NUDGE
+     END IF
 !<--- Siqi
 
      IF(TS_NGASSIM .OR. (TS_OIASSIM .AND. MOD(IINT,TS_NSTEP_OI) == 0))THEN
+!JQI2023      IF(ASSIM_FLAG==0 .AND. (.NOT.SST_ASSIM .AND. .NOT.SSTGRD_ASSIM .AND. &
+!         .NOT.SSHGRD_ASSIM .AND. .NOT.TSGRD_ASSIM))CALL TEMP_ASSIMILATION
+!      IF(ASSIM_FLAG==1 .AND. (SST_ASSIM .OR. SSTGRD_ASSIM .OR. SSHGRD_ASSIM &
+!JQI2023         .OR. TSGRD_ASSIM))CALL TEMP_ASSIMILATION
       IF(ASSIM_FLAG==0 .AND. (.NOT.SST_ASSIM .AND. .NOT.SSTGRD_ASSIM .AND. &
-         .NOT.SSHGRD_ASSIM .AND. .NOT.TSGRD_ASSIM))CALL TEMP_ASSIMILATION
-      IF(ASSIM_FLAG==1 .AND. (SST_ASSIM .OR. SSTGRD_ASSIM .OR. SSHGRD_ASSIM &
-         .OR. TSGRD_ASSIM))CALL TEMP_ASSIMILATION
+         .NOT.SSSGRD_ASSIM .AND. .NOT.SSHGRD_ASSIM .AND. .NOT.TSGRD_ASSIM)) &
+	 CALL TEMP_ASSIMILATION
+      IF(ASSIM_FLAG==1 .AND. (SST_ASSIM .OR. SSTGRD_ASSIM .OR. SSSGRD_ASSIM &
+         .OR. SSHGRD_ASSIM .OR. TSGRD_ASSIM))CALL TEMP_ASSIMILATION
      END IF
 #    endif
 
@@ -1349,7 +1353,6 @@ SUBROUTINE INTERNAL_STEP
 #    endif
 
   END IF                                         !                          !
-
   !==============================================================================!
   !    UPDATE SALINITY IN NON-BAROTROPIC CASE                                    !
   !==============================================================================!
@@ -1363,7 +1366,6 @@ SUBROUTINE INTERNAL_STEP
      TSC  = S1
      DO STAGE = 1, KSTAGE_TS
 #    endif
-
 #   if !defined (ONE_D_MODEL)
      CALL ADV_S                                     !Advection                 !
 
@@ -1380,7 +1382,6 @@ SUBROUTINE INTERNAL_STEP
      !#                                                   endif
 #   endif
      !end !defined (ONE_D_MODEL)                                    !                          !
-
      IF(CASENAME(1:3) == 'gom')THEN
         CALL VDIF_TS_GOM(2,SF1)
      ELSE  
@@ -1432,7 +1433,6 @@ SUBROUTINE INTERNAL_STEP
     DEALLOCATE(SB1)
   END IF
 # endif
-
      IF(NESTING_ON )THEN
        CALL SET_VAR(intTime,S1=SF1)
      END IF
@@ -1453,14 +1453,24 @@ SUBROUTINE INTERNAL_STEP
 #   endif
 
 #   if defined (DATA_ASSIM)
+!---> Siqi, SSS_improved
+     IF(SSSGRD_ASSIM)THEN
+      IF(ASSIM_FLAG==1) CALL SSSGRD_NUDGE
+     END IF
+!<--- Siqi
+
      IF(TS_NGASSIM .OR. (TS_OIASSIM .AND. MOD(IINT,TS_NSTEP_OI) == 0))THEN
-       IF(ASSIM_FLAG==0 .AND. (.NOT.SST_ASSIM .AND. .NOT.SSTGRD_ASSIM .AND. &
-          .NOT.SSHGRD_ASSIM .AND. .NOT.TSGRD_ASSIM))CALL SALT_ASSIMILATION
-       IF(ASSIM_FLAG==1 .AND. (SST_ASSIM .OR. SSTGRD_ASSIM .OR. SSHGRD_ASSIM &
-          .OR. TSGRD_ASSIM))CALL SALT_ASSIMILATION
+!JQI2023       IF(ASSIM_FLAG==0 .AND. (.NOT.SST_ASSIM .AND. .NOT.SSTGRD_ASSIM .AND. &
+!          .NOT.SSHGRD_ASSIM .AND. .NOT.TSGRD_ASSIM))CALL SALT_ASSIMILATION
+!       IF(ASSIM_FLAG==1 .AND. (SST_ASSIM .OR. SSTGRD_ASSIM .OR. SSHGRD_ASSIM &
+!JQI2023          .OR. TSGRD_ASSIM))CALL SALT_ASSIMILATION
+       IF(ASSIM_FLAG==0 .AND. (.NOT.SST_ASSIM .AND. .NOT.SSTGRD_ASSIM .AND.  &
+          .NOT.SSSGRD_ASSIM .AND. .NOT.SSHGRD_ASSIM .AND. .NOT.TSGRD_ASSIM)) &
+	  CALL SALT_ASSIMILATION
+       IF(ASSIM_FLAG==1 .AND. (SST_ASSIM .OR. SSTGRD_ASSIM .OR. SSSGRD_ASSIM &
+          .OR. SSHGRD_ASSIM .OR. TSGRD_ASSIM))CALL SALT_ASSIMILATION
      END IF
 #   endif
-
 !     IF(NESTING_ON )THEN
 !       CALL SET_VAR(intTime,S1=SF1)
 !     END IF
@@ -1480,13 +1490,11 @@ SUBROUTINE INTERNAL_STEP
 #   endif
 
      CALL N2E3D(S1,S)                               !Shift to Elements         !
-
 #    if defined (SEMI_IMPLICIT)
      ENDDO
 #    endif
 
   END IF                      
-
   !==============================================================================!
 #   if defined (DYE_RELEASE)
   
@@ -1597,6 +1605,10 @@ SUBROUTINE INTERNAL_STEP
     IF(ASSIM_FLAG==1) CALL TSGRD_NUDGE
   END IF
 
+  IF(SSSGRD_ASSIM)THEN
+    IF(ASSIM_FLAG==0) CALL SSS_SAVE
+  END IF
+  
   IF(SST_ASSIM .OR. SSTGRD_ASSIM)THEN
     IF(ASSIM_FLAG==0) CALL SST_SAVE
 ! lwang added for SST mld assimilation
@@ -1647,8 +1659,7 @@ SUBROUTINE INTERNAL_STEP
   
 !==============================================================================!
 # endif
-  
-  
+!  IF(PAR)CALL MPI_BARRIER(MPI_FVCOM_GROUP,IERR) !lwang intel23@20230711
   !==============================================================================!
   !     UPDATE THE DENSITY IN NON-BAROTROPIC CASE                                |
   !==============================================================================!
@@ -1668,7 +1679,6 @@ SUBROUTINE INTERNAL_STEP
   !==============================================================================!
   !     MIMIC CONVECTIVE OVERTURNING TO STABILIZE VERTICAL DENSITY PROFILE       |
   !==============================================================================!
-  
   IF(CONVECTIVE_OVERTURNING)THEN
      CALL CONV_OVER
      IF(.NOT.BAROTROPIC)THEN
@@ -1683,24 +1693,35 @@ SUBROUTINE INTERNAL_STEP
            CALL FATAL_ERROR("INVALID DENSITY FUNCTION SELECTED:",&
                 & "   "//TRIM(SEA_WATER_DENSITY_FUNCTION) )
         END SELECT
-        
      END IF
   END IF
 !==============================================================================!
 !==============================================================================!
-# endif     
+# endif    
+!  IF(PAR)CALL MPI_BARRIER(MPI_FVCOM_GROUP,IERR)   !lwang intel23@20230711
   ! end if !defined (TWO_D_MODEL)
 !==============================================================================!
 !==============================================================================!
-  
 # if defined (DATA_ASSIM)
+! write(ipt,*) ">>>>>>>>>150", myid,cur_ngassim, cur_oiassim, iint, cur_nstep_oi
 !==============================================================================!
 !     DATA ASSIMILATION FOR CURRENT FIELD                                      |
 !==============================================================================!
-
-  IF(CUR_NGASSIM .OR. (CUR_OIASSIM .AND. MOD(IINT,CUR_NSTEP_OI) == 0))THEN
-    IF(ASSIM_FLAG==0 .AND. (.NOT. SST_ASSIM .AND. .NOT. SSTGRD_ASSIM .AND. .NOT. SSHGRD_ASSIM .AND. .NOT. TSGRD_ASSIM) )CALL CURRENT_ASSIMILATION
-    IF(ASSIM_FLAG==1 .AND. (SST_ASSIM .OR. SSTGRD_ASSIM .OR. SSHGRD_ASSIM .OR. TSGRD_ASSIM)) CALL CURRENT_ASSIMILATION
+!--->lwang intel23@20230711
+!    IF(CUR_NGASSIM .OR. (CUR_OIASSIM .AND. MOD(IINT,CUR_NSTEP_OI) == 0))THEN
+  IF (CUR_NGASSIM .AND. .NOT. CUR_OIASSIM) THEN
+    IF(ASSIM_FLAG==0 .AND. (.NOT. SST_ASSIM .AND. .NOT. SSTGRD_ASSIM .AND. .NOT. SSSGRD_ASSIM &
+      .AND. .NOT. SSHGRD_ASSIM .AND. .NOT. TSGRD_ASSIM) )CALL CURRENT_ASSIMILATION
+    IF(ASSIM_FLAG==1 .AND. (SST_ASSIM .OR. SSTGRD_ASSIM .OR. SSSGRD_ASSIM .OR. SSHGRD_ASSIM &
+      .OR. TSGRD_ASSIM)) CALL CURRENT_ASSIMILATION
+  ELSEIF (.NOT. CUR_NGASSIM .AND. CUR_OIASSIM .AND. MOD(IINT,CUR_NSTEP_OI) == 0) THEN
+!<---lwang            
+!JQI2023    IF(ASSIM_FLAG==0 .AND. (.NOT. SST_ASSIM .AND. .NOT. SSTGRD_ASSIM .AND. .NOT. SSHGRD_ASSIM .AND. .NOT. TSGRD_ASSIM) )CALL CURRENT_ASSIMILATION
+!JQI2023    IF(ASSIM_FLAG==1 .AND. (SST_ASSIM .OR. SSTGRD_ASSIM .OR. SSHGRD_ASSIM .OR. TSGRD_ASSIM)) CALL CURRENT_ASSIMILATION
+    IF(ASSIM_FLAG==0 .AND. (.NOT. SST_ASSIM .AND. .NOT. SSTGRD_ASSIM .AND. .NOT. SSSGRD_ASSIM &
+       .AND. .NOT. SSHGRD_ASSIM .AND. .NOT. TSGRD_ASSIM) )CALL CURRENT_ASSIMILATION
+    IF(ASSIM_FLAG==1 .AND. (SST_ASSIM .OR. SSTGRD_ASSIM .OR. SSSGRD_ASSIM .OR. SSHGRD_ASSIM &
+       .OR. TSGRD_ASSIM)) CALL CURRENT_ASSIMILATION
 #   if defined (GCN)
     CALL BCOND_GCN(5,0)
 #   else
@@ -1709,7 +1730,6 @@ SUBROUTINE INTERNAL_STEP
   END IF
 !==============================================================================!
 # endif
-  
 # if defined (DATA_ASSIM_OI)
 !==============================================================================!
 !     DATA ASSIMILATION FOR CURRENT FIELD (OI or NUDGING)                      |
@@ -1749,7 +1769,6 @@ SUBROUTINE INTERNAL_STEP
   ! Siqi Li, 20221005
   CALL UV_PROJECTION
 # endif
-
   !==============================================================================!
   !    PERFORM DATA EXCHANGE FOR ELEMENT BASED INFORMATION AT PROC BNDRIES       |
   !==============================================================================!
@@ -1773,7 +1792,6 @@ SUBROUTINE INTERNAL_STEP
      CALL AEXCHANGE(NC,MYID,NPROCS,VISCOFH)
   END IF
 #   endif
-
 !---> Siqi Li, @20210809  
   IF (NC_MLD) THEN
     IF (abs(NC_DAT%FTIME%NEXT_IO -IntTime)<0.1_SP*IMDTI) THEN
@@ -1784,7 +1802,6 @@ SUBROUTINE INTERNAL_STEP
     END IF
   END IF
 !<--- 
-
   !==============================================================================!
   !     PERFORM DATA EXCHANGE FOR WATER QUALITY VARIABLES                        |
   !==============================================================================!

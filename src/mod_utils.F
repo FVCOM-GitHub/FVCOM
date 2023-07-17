@@ -141,7 +141,7 @@ CONTAINS
 !  FVCOM VERSION                                                               !
 !==============================================================================!
 
-   FVCOM_VERSION     = 'FVCOM_4.4.3'
+   FVCOM_VERSION     = 'FVCOM_4.4.4'
    FVCOM_WEBSITE     = 'http://fvcom.smast.umassd.edu, http://codfish.smast.umassd.edu'
    INSTITUTION       = 'School for Marine Science and Technology'
 
@@ -2140,7 +2140,7 @@ CONTAINS
 
    isintriangle = .false. 
 
-!---> Siqi Li, 20230221
+!---> Siqi Li, CHECKALL@20230221
    xt = reshape(vx(nv(i,1:3)), (/3/))
    yt = reshape(vy(nv(i,1:3)), (/3/))
 !   xt = vx(nv(i,1:3))
@@ -2326,7 +2326,7 @@ WRITE(IPT,*)'          _____    _     _  _        _     _  _  _  _             '
 WRITE(IPT,*)'         |  ___)  | |   | || |      | |   | || ||_|| |            '
 WRITE(IPT,*)'         | |       \ \ / / | |_____ | |___| || |   | |            '
 WRITE(IPT,*)'         |_|        \___/   \______) \_____/ |_|   |_|            '
-WRITE(IPT,*)' -- Version 4.4.3 Release'
+WRITE(IPT,*)' -- Version 4.4.4 Release'
 WRITE(IPT,*)'!================================================================!'
 WRITE(IPT,*)'!                                                                !'
 WRITE(IPT,*)'!========DOMAIN DECOMPOSITION USING: METIS 4.0.1 ================!'

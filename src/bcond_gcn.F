@@ -104,6 +104,8 @@
 
    INTEGER  I,J,K,I1,I2,J1,J2,II,L1,L2,IERR
    INTEGER  cdx,ndx,KDAM_TMP,K_RK
+   INTEGER K300_CD, K300_ND  ! Lu Wang, LSF@20230420
+   INTEGER NDX2              ! Siqi Li, LSF@20230420
 
 !!$!=================|DEBUG|============================
 !!$   LOGICAL, save :: INIT=.false.
@@ -215,9 +217,31 @@
          !INTEGRATE RHO IN DEPTH, CONVERT TO MKS UNITS DAMIT
          RHOINTCUR=RHOINTNXT
          RHOINTNXT=0.0_SP
+!---> Lu Wang, LSF@20230420 
+! Find the layer where water depth is lower than 300 m
+!         DO K=1,KBM1
+!            RHOINTNXT=RHOINTNXT+(1.0_SP+RHO1(CDX,K))*1.0E3_SP*DZ(CDX,K)
+!         END DO
+         K300_CD = KBM1
+         K300_ND = KBM1
          DO K=1,KBM1
+            IF (H(CDX)*(-ZZ(CDX,K)) > 300.0_SP) THEN
+                K300_CD = K - 1
+                EXIT
+            ENDIF
+         ENDDO
+         DO K=1,KBM1
+            IF (H(NDX)*(-ZZ(NDX,K)) > 300.0_SP) THEN
+                K300_ND = K - 1
+                EXIT
+            ENDIF
+         ENDDO
+
+         DO K=1,K300_CD
             RHOINTNXT=RHOINTNXT+(1.0_SP+RHO1(CDX,K))*1.0E3_SP*DZ(CDX,K)
          END DO
+         RHOINTNXT=RHOINTNXT/sum(DZ(CDX,1:K300_CD))
+!<--- Lu Wang    
 ! DEBUG         
 !         temp_lcl(I)=RHOINTNXT
 
@@ -231,12 +255,21 @@
 !
 ! ETATAN=[ -1/(Rho_bar)*(del(h*rho)/del(s) - Rho_bot*(del(h)/del(s) ] *del(s)
 !
+!---> Lu Wang, LSF@20230420 
+! Use the density in 300 m to replace the bottom one
+!         IF (I /= nobclsf) THEN
+!            ETA_LCL(I)=-(1.0_SP/(0.5_SP*(RHOINTNXT+RHOINTCUR))) &
+!                 *((H(CDX)*RHOINTNXT-H(NDX)*RHOINTCUR) &
+!                 -0.5_SP*1.0e3_SP*(2.0_SP+RHO1(CDX,KBM1)+RHO1(NDX,KBM1)) &
+!                 *(H(CDX)-H(NDX)))
+!         END IF
          IF (I /= nobclsf) THEN
             ETA_LCL(I)=-(1.0_SP/(0.5_SP*(RHOINTNXT+RHOINTCUR))) &
-                 *((H(CDX)*RHOINTNXT-H(NDX)*RHOINTCUR) &
-                 -0.5_SP*1.0e3_SP*(2.0_SP+RHO1(CDX,KBM1)+RHO1(NDX,KBM1)) &
-                 *(H(CDX)-H(NDX)))
+                 *((H(CDX)*(-ZZ(CDX,K300_CD))*RHOINTNXT-H(NDX)*(-ZZ(NDX,K300_ND))*RHOINTCUR) &
+                 -0.5_SP*1.0e3_SP*(2.0_SP+RHO1(CDX,K300_CD)+RHO1(NDX,K300_ND)) &
+                 *(H(CDX)*-(ZZ(CDX,K300_CD))-H(NDX)*(-ZZ(NDX,K300_ND))))
          END IF
+!<--- Lu Wang   
 
       END DO
 
@@ -248,6 +281,10 @@
             CUMEL=CUMEL+ETA_LCL(I)
             ELF(NDX)=ELF(NDX)+ CUMEL *RBC_GEO(I)
 !            write(ipt,*) "NDX=",NDX,"ELF(NDX)=",ELF(NDX)
+            !---> Siqi Li, LSF@20230420
+            NDX2=ibclsf2(I)
+            ELF(NDX2)=ELF(NDX)
+            !<--- Siqi Li            
          END DO
       END IF
 
@@ -305,7 +342,11 @@
 
          DO I=NOBCLSF,1,-1 ! COUNT BACKWARD FROM THE SHELF TOWARD SHORE
             NDX=ibclsf(I)
-            ELF(NDX)=ELF(NDX)+ELFGEO_LCL(I)*RBC_GEO(I)            
+            ELF(NDX)=ELF(NDX)+ELFGEO_LCL(I)*RBC_GEO(I)     
+            !---> Siqi Li, LSF@20230420
+            NDX2=ibclsf2(I)
+            ELF(NDX2)=ELF(NDX)
+            !<--- Siqi Li       
          END DO
 
          IF (MSR) THEN
@@ -761,7 +802,7 @@
 # endif
 
 # if defined (MULTIPROCESSOR)
-         IF(PAR) CALL AEXCHANGE(EC, MYID, NPROCS, U_star)   ! Siqi Li, 20230607
+         IF(PAR) CALL AEXCHANGE(EC, MYID, NPROCS, Cd)
          IF(PAR) CALL AEXCHANGE(EC, MYID, NPROCS, Cd)
 # endif
 

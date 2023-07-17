@@ -29,19 +29,9 @@
 MODULE MOD_SEMI_IMPLICIT
 # if defined (SEMI_IMPLICIT)
 
+# if defined (PETSC_A) || (PETSC_B)  /* Siqi Li, PETSC@20230227 */
   USE MOD_PREC, ONLY : SP, DP
   IMPLICIT NONE
-
-  PRIVATE
-  PUBLIC :: NAME_LIST_READ_SEMI
-  PUBLIC :: ALLOC_VARS_SEMI
-  PUBLIC :: SEMI_IMPLICIT_EL
-  PUBLIC :: UPDATES_SEMI
-  PUBLIC :: UV2D_SBD
-  PUBLIC :: UV3D_SBD
-  PUBLIC :: NAME_LIST_INITIALIZE_SEMI
-  PUBLIC :: NAME_LIST_PRINT_SEMI
-
 #include "include/finclude/petsc.h"
 #include "include/finclude/petscvec.h"
 #include "include/finclude/petscda.h"
@@ -53,6 +43,26 @@ MODULE MOD_SEMI_IMPLICIT
 #include "include/finclude/petscao.h"
 #include "include/finclude/petscvec.h90"
 #include "include/finclude/petscviewer.h"
+# else
+#include "petsc/finclude/petsc.h"
+use petscmat
+use petscvec
+use petscpc
+use petscksp
+use petscis
+  USE MOD_PREC, ONLY : SP, DP
+  IMPLICIT NONE
+# endif /* Siqi Li, PETSC@20230227 */
+
+  PRIVATE
+  PUBLIC :: NAME_LIST_READ_SEMI
+  PUBLIC :: ALLOC_VARS_SEMI
+  PUBLIC :: SEMI_IMPLICIT_EL
+  PUBLIC :: UPDATES_SEMI
+  PUBLIC :: UV2D_SBD
+  PUBLIC :: UV3D_SBD
+  PUBLIC :: NAME_LIST_INITIALIZE_SEMI
+  PUBLIC :: NAME_LIST_PRINT_SEMI
 
   INTEGER , PUBLIC  :: STAGE, KSTAGE_UV, KSTAGE_TE, KSTAGE_TS
   REAL(SP), PUBLIC  :: IFCETA, BEDF
@@ -444,7 +454,8 @@ END IF
    END DO
 !
 
-# if defined (OLD_PETSC)
+!# if defined (OLD_PETSC)
+# if defined (PETSC_A) /* Siqi Li, PETSC@20230227 */
   CALL VecScatterBegin(BL_EL,B_EL,INSERT_VALUES,SCATTER_FORWARD,L2G_EL,IERR);CHKERRQ(IERR)
   CALL VecScatterEnd(BL_EL,B_EL,INSERT_VALUES,SCATTER_FORWARD,L2G_EL,IERR);CHKERRQ(IERR)
 # else
@@ -775,7 +786,8 @@ END IF
   CALL PETSc_SETICS_EL
   CALL PETSc_SOLVER_EL
 
-# if defined (OLD_PETSC)
+!# if defined (OLD_PETSC)
+# if defined (PETSC_A) /* Siqi Li, PETSC@20230227 */
   CALL VecScatterBegin(X_EL,XL_EL,INSERT_VALUES,SCATTER_FORWARD,G2L_EL,IERR);CHKERRQ(IERR)
   CALL VecScatterEnd(X_EL,XL_EL,INSERT_VALUES,SCATTER_FORWARD,G2L_EL,IERR);CHKERRQ(IERR)
 # else
@@ -1235,7 +1247,8 @@ END IF
     CALL VecSetValues(XL_EL,1,I-1,QTERM,INSERT_VALUES,IERR);CHKERRQ(IERR)
   ENDDO
   
-# if defined (OLD_PETSC)
+!# if defined (OLD_PETSC)
+# if defined (PETSC_A) /* Siqi Li, PETSC@20230227 */
   CALL VecScatterBegin(XL_EL,X_EL,INSERT_VALUES,SCATTER_FORWARD,L2G_EL,IERR);CHKERRQ(IERR)
   CALL VecScatterEnd(XL_EL,X_EL,INSERT_VALUES,SCATTER_FORWARD,L2G_EL,IERR);CHKERRQ(IERR)
 # else

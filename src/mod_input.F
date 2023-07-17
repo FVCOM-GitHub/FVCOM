@@ -2556,7 +2556,6 @@ CONTAINS
     
     !==============================================================================|
     
-    
     ! FIND THE RESTART FILE OBJECT
     
     
@@ -2566,13 +2565,11 @@ CONTAINS
          & IN THE HOTSTART FILE OBJECT")
     
     MGL = DIM1%DIM
-    
     DIM1 => FIND_DIM(NC_START,"nele",FOUND)
     IF(.not. FOUND) CALL FATAL_ERROR("COULD NOT FIND DIMENSION NODE&
          & IN THE HOTSTART FILE OBJECT")
     
     NGL= DIM1%DIM
-    
     ! CHECK TO MAKE SURE DIMENSION THREE IS THERE
     DIM1 => FIND_DIM(NC_START,"three",FOUND)
     IF(.not. FOUND) CALL FATAL_ERROR("COULD NOT FIND DIMENSION NODE&
@@ -2583,7 +2580,6 @@ CONTAINS
          & IN THE HOTSTART FILE OBJECT")
     
     KB = DIM1%DIM
-
     DIM1 => FIND_DIM(NC_START,"siglay",FOUND)
     IF(.not. FOUND) CALL FATAL_ERROR("COULD NOT FIND DIMENSION SIGLEV&
          & IN THE HOTSTART FILE OBJECT")
@@ -2673,11 +2669,12 @@ CONTAINS
 
  END SUBROUTINE LOAD_RESTART_OBC_GRID
 
- SUBROUTINE LOAD_RESTART_LSF_GRID(N_GL,I_GL,GEO_GL,WDF_GL)
+!---> Siqi Li, LSF@20230420
+ SUBROUTINE LOAD_RESTART_LSF_GRID(N_GL,I_GL,I2_GL,GEO_GL,WDF_GL)
    USE CONTROL
    IMPLICIT NONE
    INTEGER, INTENT(OUT)  :: N_GL
-   INTEGER, INTENT(OUT), Allocatable, TARGET :: I_GL(:)
+   INTEGER, INTENT(OUT), Allocatable, TARGET :: I_GL(:), I2_GL(:)
    REAL(SP), INTENT(OUT), Allocatable, TARGET :: GEO_GL(:),WDF_GL(:)
 
    TYPE(NCVAR),  POINTER :: VAR
@@ -2700,6 +2697,7 @@ CONTAINS
    N_GL=DIM%DIM
 
    ALLOCATE(I_GL(N_GL))
+   ALLOCATE(I2_GL(N_GL))
    ALLOCATE(GEO_GL(N_GL))
    ALLOCATE(WDF_GL(N_GL))
 
@@ -2708,6 +2706,14 @@ CONTAINS
    IF(.not. FOUND) CALL FATAL_ERROR("COULD NOT FIND VARIABLE 'lsf_nodes'&
         & IN THE HOTSTART FILE OBJECT")
    CALL NC_CONNECT_AVAR(VAR, I_GL)
+   CALL NC_READ_VAR(VAR)
+    CALL NC_DISCONNECT(VAR)
+
+!---> Siqi Li, LSF@20220420
+   VAR => FIND_VAR(NC_START,'lsf_nodes_2nd',FOUND)
+   IF(.not. FOUND) CALL FATAL_ERROR("COULD NOT FIND VARIABLE 'lsf_nodes_2nd'&
+        & IN THE HOTSTART FILE OBJECT")
+   CALL NC_CONNECT_AVAR(VAR, I2_GL)
    CALL NC_READ_VAR(VAR)
     CALL NC_DISCONNECT(VAR)
 
@@ -2936,11 +2942,12 @@ CONTAINS
     
   END SUBROUTINE LOAD_COLDSTART_OBC_GRID
   
-    SUBROUTINE LOAD_COLDSTART_LSF(N_GL,I_GL, GEO_GL,WDF_GL)
+!---> Siqi Li, LSF@20230420
+    SUBROUTINE LOAD_COLDSTART_LSF(N_GL,I_GL,I2_GL,GEO_GL,WDF_GL)
     USE CONTROL
     IMPLICIT NONE
     INTEGER, INTENT(OUT)  :: N_GL
-    INTEGER, INTENT(OUT), Allocatable :: I_GL(:)
+    INTEGER, INTENT(OUT), Allocatable :: I_GL(:), I2_GL(:)
     REAL(SP), INTENT(OUT), Allocatable :: GEO_GL(:),WDF_GL(:)
     INTEGER :: IERR, SENDER
 
@@ -2953,7 +2960,7 @@ CONTAINS
     END IF
     
     IF(MSR) THEN
-       CALL READ_COLDSTART_LSF(LSFUNIT,N_GL,I_GL, GEO_GL,WDF_GL)
+       CALL READ_COLDSTART_LSF(LSFUNIT,N_GL,I_GL,I2_GL,GEO_GL,WDF_GL)
        CLOSE(OBCUNIT)
     END IF
 
@@ -2966,11 +2973,13 @@ CONTAINS
        
        IF(.NOT. MSR)THEN
           ALLOCATE(I_GL(N_GL))
+          ALLOCATE(I2_GL(N_GL))
           ALLOCATE(WDF_GL(N_GL))
           ALLOCATE(GEO_GL(N_GL))
        END IF
        
        CALL MPI_BCAST(I_GL,N_GL,MPI_INTEGER,SENDER,MPI_COMM_FVCOM,IERR)
+       CALL MPI_BCAST(I2_GL,N_GL,MPI_INTEGER,SENDER,MPI_COMM_FVCOM,IERR)
        CALL MPI_BCAST(GEO_GL,N_GL,MPI_F,SENDER,MPI_COMM_FVCOM,IERR)    
        CALL MPI_BCAST(WDF_GL,N_GL,MPI_F,SENDER,MPI_COMM_FVCOM,IERR)    
 # endif
@@ -3823,12 +3832,16 @@ CONTAINS
 
     ! FIND FIRST LINE of CONNECTIVITY ARRAY
     rewind GRIDUNIT
+
+    NHEADER = 0      !lwang intel23@20230710
     DO WHILE(.TRUE.)
        READ(GRIDUNIT,*,IOSTAT=IOS,END=99)J,N1,N2,N3
        if (IOS == 0) then
-          BackSpace GRIDUNIT
+!          BackSpace GRIDUNIT    ! lwang intel23@20230710
           exit
        end if
+
+       NHEADER = NHEADER + 1   ! lwang intel23@20230710
 
        CYCLE
        
@@ -3839,6 +3852,13 @@ CONTAINS
     END DO
 
     ! READ IN CONNECTIVITY
+
+!---> lwang intel23@20230710
+       REWIND GRIDUNIT
+       DO I = 1, NHEADER
+          READ(GRIDUNIT,*)
+       END DO
+!<--- lwang intel23@20230710
 
     ALLOCATE(NVG(0:NGL,4)); NVG=0
     J = 0
@@ -3938,12 +3958,16 @@ CONTAINS
 !
    ! FIND FIRST LINE of )BC ARRAY
     rewind OBCUNIT
+
+    NHEADER = 0      !lwang intel23@20230710
     DO WHILE(.TRUE.)
        READ(OBCUNIT,*,IOSTAT=IOS,END=99)N1,N2,N3
        if (IOS == 0) then
-          BackSpace OBCUNIT
+!          BackSpace OBCUNIT    ! lwang intel23@20230710
           exit
        end if
+
+       NHEADER = NHEADER + 1   ! lwang intel23@20230710
 
        CYCLE
        
@@ -3952,6 +3976,14 @@ CONTAINS
            &'FORMAT: OBCNODE# GLNODE# TYPE# (ALL INTEGERS)')
           
     END DO
+
+!---> lwang intel23@20230710
+       REWIND OBCUNIT
+       DO I = 1, NHEADER
+          READ(OBCUNIT,*)
+       END DO
+!<--- lwang intel23@20230710
+
     ALLOCATE(I_OBC_GL(IOBCN_GL))
     ALLOCATE(TYPE_OBC_GL(IOBCN_GL))
 
@@ -4002,11 +4034,12 @@ CONTAINS
     
  END SUBROUTINE READ_COLDSTART_OBC_GRID
 
- SUBROUTINE READ_COLDSTART_LSF(LSFUNIT,N_GL,I_GL,GEO_GL,WDF_GL)
+!---> Siqi Li, LSF@20230420
+ SUBROUTINE READ_COLDSTART_LSF(LSFUNIT,N_GL,I_GL,I2_GL,GEO_GL,WDF_GL)
     IMPLICIT NONE
     INTEGER, INTENT(IN)  :: LSFUNIT
     INTEGER, INTENT(OUT)  :: N_GL
-    INTEGER, INTENT(OUT), Allocatable :: I_GL(:)
+    INTEGER, INTENT(OUT), Allocatable :: I_GL(:), I2_GL(:)
     REAL(SP), INTENT(OUT), Allocatable :: GEO_GL(:),WDF_GL(:)
     CHARACTER(LEN=80)    :: temp,temp2
     INTEGER              :: I,J,IOS,NodeCount,ISCAN
@@ -4041,12 +4074,16 @@ CONTAINS
 !
    ! FIND FIRST LINE of )BC ARRAY
     rewind LSFUNIT
+
+    NHEADER = 0      !lwang intel23@20230710
     DO WHILE(.TRUE.)
-       READ(LSFUNIT,*,IOSTAT=IOS,END=99)N1,N2,R1,R2
+       READ(LSFUNIT,*,IOSTAT=IOS,END=99)N1,N2,N3,R1,R2
        if (IOS == 0) then
-          BackSpace LSFUNIT
+!          BackSpace LSFUNIT    ! lwang intel23@20230710
           exit
        end if
+
+       NHEADER = NHEADER + 1   ! lwang intel23@20230710
 
        CYCLE
        
@@ -4055,7 +4092,16 @@ CONTAINS
            &'FORMAT: LSFNODE# GLNODE# GEO WND (last two are real 0<=X<=1)')
           
     END DO
+
+!---> lwang intel23@20230710
+       REWIND LSFUNIT
+       DO I = 1, NHEADER
+          READ(LSFUNIT,*)
+       END DO
+!<--- lwang intel23@20230710
+
     ALLOCATE(I_GL(N_GL))
+    ALLOCATE(I2_GL(N_GL))
     ALLOCATE(GEO_GL(N_GL))
     ALLOCATE(WDF_GL(N_GL))
 
@@ -4063,7 +4109,7 @@ CONTAINS
     I = 0
     DO WHILE(.TRUE.)
 
-       READ(LSFUNIT,*,IOSTAT=IOS) N1,N2,R1,R2
+       READ(LSFUNIT,*,IOSTAT=IOS) N1,N2,N3,R1,R2
        IF(IOS < 0) exit
        
        I = I + 1
@@ -4072,6 +4118,7 @@ CONTAINS
 
 
        I_GL(I)    = N2
+       I2_GL(I)    = N3
        GEO_GL(I) = R1
        WDF_GL(I) = R2
 
@@ -4139,7 +4186,7 @@ CONTAINS
     END if
     
     IF(MSR)THEN
-!---> Siqi Li, 20230221
+!---> Siqi Li, CHECKALL@20230221
       X_CW(1:3)=reshape(XG2(NVG(1,1:3)), (/3/))
       Y_CW(1:3)=reshape(YG2(NVG(1,1:3)), (/3/))
 !      X_CW(1:3)=XG2(NVG(1,1:3))
@@ -4197,12 +4244,16 @@ CONTAINS
 
    ! FIND FIRST LINE of CONNECTIVITY ARRAY
     rewind DEPTHUNIT
+
+    NHEADER = 0      !lwang intel23@20230710
     DO WHILE(.TRUE.)
        READ(DEPTHUNIT,*,IOSTAT=IOS,END=99)X1,Y1,HDEP
        if (IOS == 0) then
-          BackSpace DEPTHUNIT
+!          BackSpace DEPTHUNIT    ! lwang intel23@20230710
           exit
        end if
+
+       NHEADER = NHEADER + 1   ! lwang intel23@20230710
 
        CYCLE
        
@@ -4211,6 +4262,13 @@ CONTAINS
            &'FORMAT: X Y H (ALL REALS)')
           
     END DO
+
+!---> lwang intel23@20230710
+       REWIND DEPTHUNIT
+       DO I = 1, NHEADER
+          READ(DEPTHUNIT,*)
+       END DO
+!<--- lwang intel23@20230710
 
     I = 0
     DO WHILE(.TRUE.)
@@ -4305,12 +4363,16 @@ CONTAINS
 
     ! FIND FIRST LINE of CORIOLIS DATA
     rewind CORIOLISUNIT
+
+    NHEADER = 0      !lwang intel23@20230710
     DO WHILE(.TRUE.)
        READ(CORIOLISUNIT,*,IOSTAT=IOS,END=99)X1,Y1,C1
        if (IOS == 0) then
-          BackSpace CORIOLISUNIT
+!          BackSpace CORIOLISUNIT    ! lwang intel23@20230710
           exit
        end if
+
+       NHEADER = NHEADER + 1   ! lwang intel23@20230710
 
        CYCLE
 99 Call FATAL_ERROR('Improper formatting of CORIOLIS FILE:',&
@@ -4319,6 +4381,13 @@ CONTAINS
     END DO
 
     ! READ IN CORIOLIS DATA
+
+!---> lwang intel23@20230710
+       REWIND CORIOLISUNIT
+       DO I = 1, NHEADER
+          READ(CORIOLISUNIT,*)
+       END DO
+!<--- lwang intel23@20230710
 
     I = 0
     DO WHILE(.TRUE.)
@@ -4417,12 +4486,16 @@ CONTAINS
 
    ! FIND FIRST LINE of )BC ARRAY
     rewind SPONGEUNIT
+
+    NHEADER = 0      !lwang intel23@20230710
     DO WHILE(.TRUE.)
        READ(SPONGEUNIT,*,IOSTAT=IOS,END=99)N1,R1,R2
        if (IOS == 0) then
-          BackSpace SPONGEUNIT
+!          BackSpace SPONGEUNIT    ! lwang intel23@20230710
           exit
        end if
+
+       NHEADER = NHEADER + 1   ! lwang intel23@20230710
 
        CYCLE
        
@@ -4431,6 +4504,14 @@ CONTAINS
            &'FORMAT: GLBNODE#  RADIUS SPGVAL (INT, REAL, REAL)')
           
     END DO
+
+!---> lwang intel23@20230710
+       REWIND SPONGEUNIT
+       DO I = 1, NHEADER
+          READ(SPONGEUNIT,*)
+       END DO
+!<--- lwang intel23@20230710
+
 
     ALLOCATE(N_SPG(NSPONGE)); N_SPG = 0
     ALLOCATE(R_SPG(NSPONGE)); R_SPG = 0.0
