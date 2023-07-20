@@ -1240,7 +1240,7 @@
 
       logical (kind=log_kind) ::   &
          all_converged  ! = true when all cells have converged
-
+      real, parameter         :: Tmat_min=-50.   ! Siqi Li, 20230310
       !-----------------------------------------------------------------
       ! Initialize
       !-----------------------------------------------------------------
@@ -1569,6 +1569,7 @@
          call tridiag_solver                &
              (isolve, indxii, indxjj,       &
               nmat,   sbdiag, diag,  spdiag, rhs, Tmat)
+         where (Tmat<Tmat_min) Tmat=Tmat_min   ! Siqi Li, 20230310
 # if defined (ICE_FRESHWATER)
 ! afm 20151114 & EJA 20160921 - isnan check
         do k = 1, nilyr+2
