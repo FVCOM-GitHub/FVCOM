@@ -113,7 +113,7 @@ MAIN_W = ocpmix.F	ocpcre.F	ocpids.F	\
 	swancom1.F	swancom2.F	swancom3.F	swancom4.F	\
 	swancom5.F	w3part.F
 
-COBJS = func_pointer.c
+COBJS = func_pointer.c	partition.c
 
 
 BIOGEN	= mod_bio_3D.F	mod_onedtide.F
@@ -181,7 +181,7 @@ clean:
 
 clobber:	
 		make clean
-		/bin/rm -f fvcom libfvcom.so libfvcom.a
+		/bin/rm -f fvcom libfvcom.so libfvcom.a postFVCOM_ncnest_reorder
 
 allclean:
 		make clean

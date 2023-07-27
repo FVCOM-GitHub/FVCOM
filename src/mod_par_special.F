@@ -428,6 +428,7 @@ MODULE MOD_PAR
    
 !::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+# if !defined (METIS_5)
 !==============================================================================|
   SUBROUTINE DOMDEC(NGL,NVG,NPROCS,EL_PID,MSR)              
 !==============================================================================|
@@ -675,6 +676,511 @@ MODULE MOD_PAR
 
    END SUBROUTINE DOMDEC
 !===================================================================================|
+# else
+!------------------------------------------------------------------------------
+!==============================================================================|
+  SUBROUTINE DOMDEC(NGL,NVG,NPROCS,EL_PID,MSR)
+!==============================================================================|
+   !Hierarchical partitioning using METIS
+   !
+   ! G. Cowles, April 2016 
+   !
+   USE CONTROL, ONLY : casename,NMLUNIT
+   IMPLICIT NONE
+   INTEGER, INTENT(IN)  :: NGL
+   INTEGER, INTENT(IN) :: NVG(0:NGL,4)
+   INTEGER, INTENT(IN)  :: NPROCS
+   INTEGER, INTENT(OUT) :: EL_PID(NGL)
+   LOGICAL, INTENT(IN)  :: MSR
+
+   !local
+   INTEGER :: I,J,NN,E,NS
+   INTEGER :: ICOUNT,NNODE,CNT,NLOC,MLOC,ICNT
+   INTEGER :: IOS,IERR
+   CHARACTER(lEN=120):: FNAME
+   INTEGER :: OPTIONS(40)
+   INTEGER :: NCOMMON
+   INTEGER :: OBJVAL
+   INTEGER, ALLOCATABLE :: NVT(:,:)
+   INTEGER, ALLOCATABLE :: ECOUNT(:)
+   LOGICAL, ALLOCATABLE :: ISP(:),ISP2(:)
+   INTEGER, ALLOCATABLE :: EL_LID(:),L2G(:),NVL(:,:),G2L(:),TMP(:)
+   INTEGER, ALLOCATABLE :: EL_PID2(:)
+!
+!--Variables Used to Control Metis in Domain Decomposition
+!
+  INTEGER, PARAMETER ::        &
+  METIS_OPTION_PTYPE     = 1,  &
+  METIS_OPTION_OBJTYPE   = 2,  &
+  METIS_OPTION_CTYPE     = 3,  &
+  METIS_OPTION_IPTYPE    = 4,  &
+  METIS_OPTION_RTYPE     = 5,  &
+  METIS_OPTION_DBGLVL    = 6,  &
+  METIS_OPTION_NITER     = 7,  &
+  METIS_OPTION_NCUTS     = 8,  &
+  METIS_OPTION_SEED      = 9,  &
+  METIS_OPTION_NO2HOP    = 10, &
+  METIS_OPTION_MINCONN   = 11, &
+  METIS_OPTION_CONTIG    = 12, &
+  METIS_OPTION_COMPRESS  = 13, &
+  METIS_OPTION_CCORDER   = 14, &
+  METIS_OPTION_PFACTOR   = 15, &
+  METIS_OPTION_NSEPS     = 16, &
+  METIS_OPTION_UFACTOR   = 17, &
+  METIS_OPTION_NUMBERING = 18, &
+  METIS_OPTION_HELP      = 19, &
+  METIS_OPTION_TPWGTS    = 20, &
+  METIS_OPTION_NCOMMON   = 21, &
+  METIS_OPTION_NOOUTPUT  = 22, &
+  METIS_OPTION_BALANCE   = 23, &
+  METIS_OPTION_GTYPE     = 24, &
+  METIS_OPTION_UBVEC     = 25
+
+!
+!--Partitioning Control Params
+!
+
+  INTEGER :: PART_NLEVS
+  INTEGER :: LEV2_NPROCS, PART_LEV1_NPROCS
+  REAL(SP) :: IMB_MAX, IMB_ALL_MAX
+  INTEGER :: ALL_PAR_MAX, ALL_PAR_MIN
+
+
+  INTEGER :: OPTION_NUMBERING,     &
+             OPTION_NCOMMON,       &
+             LEV1_OPTION_PTYPE,    &
+             LEV1_OPTION_NITER,    &
+             LEV1_OPTION_UFACTOR,  &
+             LEV1_OPTION_IPTYPE,   &
+             LEV1_OPTION_RTYPE,    &
+             LEV1_OPTION_NCUTS,    &
+             LEV2_OPTION_PTYPE,    &
+             LEV2_OPTION_NITER,    &
+             LEV2_OPTION_UFACTOR,  &
+             LEV2_OPTION_IPTYPE,   &
+             LEV2_OPTION_RTYPE,    &
+             LEV2_OPTION_NCUTS
+
+  NAMELIST /NML_PARTITION/   & ! See page 21-23 of METIS-5.1.x Manual for more
+      & PART_NLEVS,          & ! number of partitioning levels (1 or 2)
+      & LEV2_NPROCS,         & ! number of level2 processes in each level1 process
+      & LEV1_OPTION_PTYPE,   & ! level 1 partitioning method [multilevel recursive bisection, k-way]
+      & LEV1_OPTION_NITER,   & ! number of iterations at each stage of uncoarsings process
+      & LEV1_OPTION_UFACTOR, & ! maximum allowed load imbalance [1 = 0.1%] (rb=1, kway=30)
+      & LEV1_OPTION_IPTYPE,  & ! algorithm for initial partitioning [see metis manual for options] 
+      & LEV1_OPTION_RTYPE,   & ! algorithm for refinement [see metis manual for options] 
+      & LEV2_OPTION_PTYPE,   & ! level 2 partitioning method [multilevel recursive bisection, k-way]
+      & LEV2_OPTION_NITER,   & ! number of iterations at each stage of uncoarsings process
+      & LEV2_OPTION_UFACTOR, & ! maximum allowed load imbalance [1 = 0.1%] (rb=1, kway=30)
+      & LEV2_OPTION_IPTYPE,  & ! algorithm for initial partitioning [see metis manual]
+      & LEV2_OPTION_RTYPE      ! algorithm for refinement [see metis manual] 
+
+   IF(MSR)THEN
+
+   ! initialize metis control parameters 
+   options = -1
+   option_numbering = 1
+   option_ncommon = 2
+
+   !initialize the namelist values [-1 will produce Metis default]
+   part_nlevs          =  1
+   lev2_nprocs         =  1
+   lev1_option_ptype   =  1  !use k-way for default
+   lev1_option_niter   = -1  !metis default
+   lev1_option_ufactor = -1  !metis default
+   lev1_option_iptype  = -1  !metis default
+   lev1_option_rtype   = -1  !metis default
+   lev2_option_ptype   =  1  !use k-way for default 
+   lev2_option_niter   = -1  !metis default
+   lev2_option_ufactor = -1  !metis default
+   lev2_option_iptype  = -1  !metis default
+   lev2_option_rtype   = -1  !metis default
+
+   ! read the partition control namelist from the runtime file
+!   fname = "./"//trim(casename)//"_run.nml"
+!   call fopen(nmlunit,trim(fname),'cfr')
+!   read(unit=nmlunit, nml=nml_partition,iostat=IOS)
+!   if(ios .ne. 0 ) then
+!      write(ipt,*)'cannot read nml_partition from runtime file' 
+!      write(unit=ipt,nml=nml_partition)
+!      call fatal_error("cannot read nml_partition from runtime file")
+!   end if
+!   rewind(nmlunit)
+!   close(nmlunit) 
+
+   !-------------------------------------------------
+   ! sanity check on namelist values
+   !-------------------------------------------------
+
+   ! sanity on part_nlevs
+   if(part_nlevs < 1) part_nlevs = 1
+   if(part_nlevs > 2) part_nlevs = 2
+
+   !check partitioning approach 
+   if(lev1_option_ptype /= 0 .and. lev1_option_ptype /= 1)then
+      call fatal_error("level 1 partitioning method must be 'mrb' or 'kway'")
+   endif
+
+   if(part_nlevs > 1)then
+     if(lev2_option_ptype /= 0 .and. lev2_option_ptype /= 1)then
+        call fatal_error("level 2 partitioning method must be 'mrb' or 'kway'")
+     endif
+   endif
+
+   ! no hierarchical partition, set parameters
+   if(part_nlevs==1)then
+     part_lev1_nprocs = nprocs  !NO HIERARCHICAL PARTITIONING
+   endif
+
+   ! 2-level partitioning, if #lev2_nprocs > nprocs, set it to nprocs 
+   if(part_nlevs == 2) lev2_nprocs = min(lev2_nprocs,nprocs)
+
+   ! 2-level partition, make sure part_lev1_nprocs is integral number
+   if(part_nlevs == 2)then
+     if(mod(NPROCS,LEV2_NPROCS)==0)then
+       part_lev1_nprocs = nprocs/lev2_nprocs
+     else
+       write(ipt,*)'nprocs: ',nprocs
+       write(ipt,*)'lev2_nprocs',lev2_nprocs
+       Call Fatal_Error("lev2_nprocs must be a common factor of nprocs")
+     endif
+   endif
+
+   !2-level partition but lev2_nprocs is 1, this is same as 1-level
+   if(lev2_nprocs==1) part_nlevs = 1
+
+   allocate(nvt(3,ngl)); nvt = 0;
+   do i=1,ngl
+     nvt(1,i) = nvg(i,1)
+     nvt(2,i) = nvg(i,3)
+     nvt(3,i) = nvg(i,2)
+   end do
+
+
+   !-------------------------------------------------------------------------
+   ! partition at level 1 (node level) 
+   !-------------------------------------------------------------------------
+   options = -1 !set all metis options to default 
+   options(METIS_OPTION_NUMBERING) = option_numbering
+   ncommon                         = option_ncommon
+   options(METIS_OPTION_PTYPE)     = lev1_option_ptype
+   options(METIS_OPTION_NITER)     = lev1_option_niter
+   options(METIS_OPTION_UFACTOR)   = lev1_option_ufactor
+   options(METIS_OPTION_IPTYPE)    = lev1_option_iptype
+   options(METIS_OPTION_RTYPE)     = lev1_option_rtype
+
+   nnode   = maxval(nvt)
+   !partition
+   write(*,*)'calling partition with elements nodes',ngl,nnode
+   write(*,*)'calling partition with partitions ',part_lev1_nprocs
+   write(*,*)'partition info: ',ngl,nnode,ncommon,objval
+   if(lev1_option_ptype == 0)then
+     write(*,*)'Using RCB partitioner on LEV1'
+   else
+     write(*,*)'Using kway partitioner on LEV1'
+   endif
+   if(part_lev1_nprocs > 1)then
+# if defined (THIN_DAM)
+     call DOMDEC_DAM(NGL,NVG,NPROCS,EL_PID,nvt,ncommon,options,objval,MSR)
+# else
+     call partition(part_lev1_nprocs, ngl, nnode, ncommon,  loc(nvt), loc(options), loc(el_pid),objval)
+# endif
+   else !no need to partition
+     el_pid = 1
+   endif
+   write(*,*)'partition done'
+
+   !need load balance diagnostics for 1st level partition
+   allocate(isp(ngl)); isp = .false.
+   allocate(ecount(part_lev1_nprocs))
+   do i=1,part_lev1_nprocs
+     isp = (el_pid==i)
+     ecount(i) = count(isp)
+     write(*,*)i,ecount(i)
+   end do
+   write(*,*)'level1 imbalance:',100*(1-float(minval(ecount))/float(maxval(ecount)))
+   write(*,*)'level 1 edgecut: ',objval
+   deallocate(ecount)
+   deallocate(isp)
+
+   !-------------------------------------------------------------------------
+   ! partition at level 2 
+   !-------------------------------------------------------------------------
+   if(part_nlevs > 1)then
+    imb_max = -1e9 !initialize max imbalance 
+    allocate(isp(ngl)); isp = .false.
+    allocate(el_pid2(ngl)); el_pid2 = 0
+    write(*,*)'===  processing level 2==='
+    write(*,*)
+    do nn=1,part_lev1_nprocs
+      isp = .false.
+      isp = (el_pid==nn)
+      nloc = count(isp)
+      allocate(el_lid(nloc)); el_lid = 0
+      allocate(l2g(nloc));    l2g = 0
+      allocate(nvl(3,nloc)); nvl = 0
+      write(*,*)'=> partitioning level 1 partition ',nn,' of size ',nloc
+
+      !get a list of elements in the node partition 
+      cnt = 0
+      do e=1,ngl
+        if(el_pid(e)==nn)then
+          cnt = cnt + 1
+          l2g(cnt) = e
+          nvl(:,cnt) = nvt(:,e)
+        endif
+      end do
+
+      ! reorder the local connectivity
+      allocate(tmp(nnode)); tmp = 0
+      do i=1,nloc
+        tmp(nvl(1,i)) = 1
+        tmp(nvl(2,i)) = 1
+        tmp(nvl(3,i)) = 1
+      end do
+      mloc = sum(tmp)
+      allocate(g2l(nnode)); g2l = 0
+      icnt = 0
+      do i=1,nnode
+        if(tmp(i)==1)then
+          icnt = icnt + 1
+          g2l(i) = icnt
+        endif
+      end do
+      do i=1,nloc
+        nvl(1,i) = g2l(nvl(1,i))
+        nvl(2,i) = g2l(nvl(2,i))
+        nvl(3,i) = g2l(nvl(3,i))
+      end do
+      deallocate(tmp)
+      deallocate(g2l)
+
+   !partition the local domain into numlev2parts
+   options = -1 !set all metis options to default 
+   options(METIS_OPTION_NUMBERING) = option_numbering
+   ncommon                         = option_ncommon
+   options(METIS_OPTION_PTYPE)     = lev2_option_ptype
+   options(METIS_OPTION_NITER)     = lev2_option_niter
+   options(METIS_OPTION_UFACTOR)   = lev2_option_ufactor
+   options(METIS_OPTION_IPTYPE)    = lev2_option_iptype
+   options(METIS_OPTION_RTYPE)     = lev2_option_rtype
+   if(lev2_option_ptype == 0)then
+     write(*,*)'Using RCB partitioner on LEV2'
+   else
+     write(*,*)'Using kway partitioner on LEV2'
+   endif
+      call partition(lev2_nprocs, nloc, mloc, ncommon,  loc(nvl), loc(options), loc(el_lid), objval)
+
+      !check level 2 load balance
+      allocate(isp2(nloc)); isp2 = .false.
+      allocate(ecount(lev2_nprocs))
+      do ns=1,lev2_nprocs
+        isp2 = (el_lid==ns)
+        ecount(ns) = count(isp2)
+        write(*,*)'level 2 partition ',ns,' size ',ecount(ns)
+      end do
+      write(*,*)'load imbalance:',nn,100*(1-float(minval(ecount))/float(maxval(ecount)))
+      imb_max = max(imb_max,100*(1-float(minval(ecount))/float(maxval(ecount))))
+      all_par_max = 0;  all_par_min = 100
+      all_par_max = max(all_par_max,maxval(ecount))
+      all_par_min = min(all_par_min,minval(ecount))
+      deallocate(ecount)
+      deallocate(isp2)
+
+      !store the partition id in el_pid  
+      do e=1,nloc
+        el_pid2(l2g(e)) = el_lid(e)+(nn-1)*lev2_nprocs
+      enddo
+
+      deallocate(nvl)
+      deallocate(el_lid)
+      deallocate(l2g)
+
+    end do !loop over nodes (counter n)
+    imb_all_max = 100*(float(all_par_min)/float(all_par_max))
+    write(*,*)'max level 2 load imbalance: ',imb_max
+    write(*,*)'max load imbalance of all the partitions: ',imb_all_max
+    el_pid = el_pid2 !transfer to el_pid for return to caller
+
+    ! clean up
+    deallocate(isp)
+    deallocate(el_pid2)
+
+
+
+
+    endif !Hierarchical
+    deallocate(nvt)
+
+
+   endif !MSR
+
+   !Broadcast the partition (el_pid) to everybody 
+   CALL MPI_BCAST(EL_PID,NGL,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
+
+
+  END SUBROUTINE DOMDEC
+
+!------------------------------------------------------------------------------
+!==============================================================================|
+  SUBROUTINE DOMDEC_DAM(NGL,NVG,NPROCS,EL_PID,nvt,ncommon,options,objval,MSR)
+!==============================================================================|
+   USE control, only : casename,input_dir
+   USE Mod_Utils, only: pstop
+
+   IMPLICIT NONE
+   INTEGER, INTENT(IN)  :: NGL
+   INTEGER, INTENT(IN) :: NVG(0:NGL,4)
+   INTEGER, INTENT(IN)  :: NPROCS
+   INTEGER, INTENT(OUT) :: EL_PID(NGL)
+   LOGICAL, INTENT(IN)  :: MSR
+
+   INTEGER :: NCOMMON,OBJVAL,OPTIONS(40),NVT(3,NGL)
+   INTEGER :: I,NNODE
+
+   character(len=120)   :: cellfile,nodefile
+   INTEGER              :: n,corner_proc_id,corner_elem,processor
+   logical              :: fexist
+   INTEGER ,ALLOCATABLE :: NODE_DAM1(:,:),NODE_DAM2(:,:),NODE_DAM3(:,:)
+   INTEGER ,ALLOCATABLE :: CELL_DAM(:,:),CELL_PROC(:),NODE_PROC(:)
+   INTEGER ,ALLOCATABLE :: HOST(:)
+   REAL(SP),ALLOCATABLE :: D_DAM1(:,:),D_DAM2(:,:),D_DAM3(:,:)
+   INTEGER              :: NN_DAM1,NN_DAM2,NN_DAM3,NC_DAM,DAM_NPROCS
+   integer(kind=8) ,allocatable :: dxadj(:),dadjncy(:)
+!   type(idxtype),allocatable :: dxadj(:),dadjncy(:)
+   integer              :: nvertex,nedge,jj,kk,nbnd
+   integer              :: edge1(2),edge2(2),edge3(2)
+   integer              :: count1,count2,count3
+   logical              :: bexist1,bexist2,bexist3
+
+!==============================================================================|
+
+      cellfile = "./"//trim(input_dir)//"/"//trim(casename)//'_dam_cell.dat'
+      nodefile = "./"//trim(input_dir)//"/"//trim(casename)//'_dam_node.dat'
+
+      inquire(file=trim(cellfile),exist=fexist)
+      if(.not.fexist)then
+         write(*,*)'dam cell file: ',trim(cellfile),' does not exist'
+         write(*,*)'stopping'
+         call pstop
+      end if
+      inquire(file=trim(nodefile),exist=fexist)
+      if(.not.fexist)then
+         write(*,*)'dam node file: ',trim(nodefile),' does not exist'
+         write(*,*)'stopping'
+         call pstop
+      end if
+!---read in nodes list. ---------------------
+      OPEN(111,FILE=trim(nodefile),status='old')
+
+!---read in type 1 dam. ---------------------
+      READ(111,*)
+      READ(111,*) NN_DAM1
+      print*,'dam1:',nn_dam1
+      ALLOCATE(NODE_DAM1(NN_DAM1,2));    NODE_DAM1 = 0
+      ALLOCATE(D_DAM1(NN_DAM1,2));       D_DAM1    = 0
+
+      DO I=1,NN_DAM1
+        READ(111,*) NODE_DAM1(I,1),NODE_DAM1(I,2),D_DAM1(I,1),D_DAM1(I,2)
+      END DO
+
+!---read in type 2 dam. ---------------------   
+     READ(111,*)
+     READ(111,*) NN_DAM2
+     print*,'dam2:',nn_dam2
+     ALLOCATE(NODE_DAM2(NN_DAM2,3));    NODE_DAM2 = 0
+     ALLOCATE(D_DAM2(NN_DAM2,3));       D_DAM2    = 0
+
+     DO I=1,NN_DAM2
+       READ(111,*) NODE_DAM2(I,1),NODE_DAM2(I,2),NODE_DAM2(I,3),    &
+                 D_DAM2(I,1),D_DAM2(I,2),D_DAM2(I,3)
+     END DO
+
+!---read in type 3 dam. ---------------------   
+     READ(111,*)
+     READ(111,*) NN_DAM3
+     print*,'dam3:',nn_dam3
+     ALLOCATE(NODE_DAM3(NN_DAM2,4));    NODE_DAM3 = 0
+     ALLOCATE(D_DAM3(NN_DAM3,4));       D_DAM3    = 0
+
+     DO I=1,NN_DAM3
+       READ(111,*) NODE_DAM3(I,1),NODE_DAM3(I,2),NODE_DAM3(I,3),NODE_DAM3(I,4), &
+                D_DAM3(I,1),D_DAM3(I,2),D_DAM3(I,3),D_DAM3(I,4)
+     END DO
+
+     CLOSE(111)
+!---read in cells list. ---------------------     
+      OPEN(111,FILE=trim(cellfile))
+      READ(111,*) NC_DAM
+
+      ALLOCATE(CELL_DAM(NC_DAM,2));        CELL_DAM = 0
+      ALLOCATE(CELL_PROC(NGL));            CELL_PROC = 0
+      ALLOCATE(NODE_PROC(MGL));            NODE_PROC = 0
+
+      DO I=1,NC_DAM
+        READ(111,*) CELL_DAM(I,1),CELL_DAM(I,2),PROCESSOR
+        CELL_PROC(CELL_DAM(I,1))=PROCESSOR
+        CELL_PROC(CELL_DAM(I,2))=PROCESSOR
+        NODE_PROC(NVG(CELL_DAM(I,1),1))=PROCESSOR
+        NODE_PROC(NVG(CELL_DAM(I,1),2))=PROCESSOR
+        NODE_PROC(NVG(CELL_DAM(I,1),3))=PROCESSOR
+        NODE_PROC(NVG(CELL_DAM(I,2),1))=PROCESSOR
+        NODE_PROC(NVG(CELL_DAM(I,2),2))=PROCESSOR
+        NODE_PROC(NVG(CELL_DAM(I,2),3))=PROCESSOR
+      END DO
+      CLOSE(111)
+      DAM_NPROCS = MAXVAL(CELL_PROC)
+
+      NNODE = maxval(nvt)
+
+!     partition with decreased CPU number           
+      CALL PARTITION(NPROCS-DAM_NPROCS,NGL,NNODE,NCOMMON,loc(NVT),loc(options),loc(EL_PID),objval)
+!      EL_PID = EL_PID + 1
+
+!     set additional domains for dam cells
+      do n=1,ngl
+         do i=1,nn_dam1
+           if( nvg(n,2)==node_dam1(i,1).or.nvg(n,2)==node_dam1(i,2) &
+          &.or.nvg(n,3)==node_dam1(i,1).or.nvg(n,3)==node_dam1(i,2) &
+          &.or.nvg(n,4)==node_dam1(i,1).or.nvg(n,4)==node_dam1(i,2) )then
+             el_pid(n)=NPROCS-DAM_NPROCS+NODE_PROC(node_dam1(i,1))
+!$             host(el_pid(n))=host(el_pid(n))+1
+             exit
+           end if
+         end do
+         do i=1,nn_dam2
+           if( nvg(n,2)==node_dam2(i,1).or.nvg(n,2)==node_dam2(i,2) &
+         & .or.nvg(n,2)==node_dam2(i,3).or.nvg(n,3)==node_dam2(i,1) &
+         & .or.nvg(n,3)==node_dam2(i,2).or.nvg(n,3)==node_dam2(i,3) &
+         & .or.nvg(n,4)==node_dam2(i,1).or.nvg(n,4)==node_dam2(i,2) &
+         & .or.nvg(n,4)==node_dam2(i,3))then
+             el_pid(n)=NPROCS-DAM_NPROCS+NODE_PROC(node_dam2(i,1))
+!$             host(el_pid(n))=host(el_pid(n))+1
+             exit
+           end if
+         end do
+         do i=1,nn_dam3
+           if(nvg(n,2)==node_dam3(i,1).or.nvg(n,2)==node_dam3(i,2) &
+         &.or.nvg(n,2)==node_dam3(i,3).or.nvg(n,2)==node_dam3(i,4) &
+         &.or.nvg(n,3)==node_dam3(i,1).or.nvg(n,3)==node_dam3(i,2) &
+         &.or.nvg(n,3)==node_dam3(i,3).or.nvg(n,3)==node_dam3(i,4) &
+         &.or.nvg(n,4)==node_dam3(i,1).or.nvg(n,4)==node_dam3(i,2) &
+         &.or.nvg(n,4)==node_dam3(i,3).or.nvg(n,4)==node_dam3(i,4) )then
+             el_pid(n)=NPROCS-DAM_NPROCS+NODE_PROC(node_dam3(i,1))
+!$             host(el_pid(n))=host(el_pid(n))+1
+             exit
+           end if
+         end do
+      end do
+
+      deallocate(cell_dam)
+      deallocate(NODE_DAM1,NODE_DAM2,NODE_DAM3)
+      deallocate(D_DAM1,D_DAM2,D_DAM3)
+      deallocate(NODE_PROC,CELL_PROC)
+
+   END SUBROUTINE DOMDEC_DAM
+!===================================================================================|
+# endif
 
 !------------------------------------------------------------------------------
 !===================================================================================|

@@ -173,7 +173,16 @@ dashL= $(empty) -L
 #--------------------------------------------------------------------------
 
              FLAG_4 = -DMULTIPROCESSOR
-             PARLIB = -lmetis  #-L/usr/local/lib -lmetis
+#         If using METIS 5 or above, uncomment FLAG_411 and read the file readme_metis in folder METIS_readme for detail
+	     FLAG_411 = -DMETIS_5
+#        If FLAG_411 is defined, uncomment path below	     
+             PARLIB = 
+             PARTINCS = -I/usr/local/install/metis/5.1.0/intel/19/include
+             PARTLIBS = -L/usr/local/install/metis/5.1.0/intel/19/lib -lmetis
+#        If FLAG_411 is not defined, uncomment path below
+#             PARLIB = -lmetis  #-L/usr/local/lib -lmetis
+#             PARTINCS =
+#             PARTLIBS =
 
 #--------------------------------------------------------------------------
 #        WATER_QUALITY      INCLUDE EPA WATER QUALITY MOD
@@ -486,7 +495,8 @@ dashL= $(empty) -L
 #           FLAG_40 =  -DLIMITER_VER_ADV
 #--------------------------------------------------------------------------
 #        SPECIAL PARTITION
-#        This flag can make sure the identical repeat run for same amount of CPUs 
+#        This flag can make sure the identical repeat run for same amount of CPUs
+#        (there should be no opt = -O3 when compilation)
 #--------------------------------------------------------------------------
 #             FLAG_42 = -DPARTITION_SPECIAL
 
@@ -645,7 +655,7 @@ dashL= $(empty) -L
    $(FLAG_31) $(FLAG_32) $(FLAG_33) $(FLAG_34) \
    $(FLAG_35) $(FLAG_36) $(FLAG_37) $(FLAG_38) \
    $(FLAG_39) $(FLAG_40) $(FLAG_41) $(FLAG_42) \
-   $(FLAG_43) $(FLAG_44) $(FLAG_80)$(FLAG_LAM)\
+   $(FLAG_43) $(FLAG_44) $(FLAG_80) $(FLAG_LAM) $(FLAG_411)\
    $(FLAG_101) $(FLAG_102) $(FLAG_103) $(FLAG_104) $(FLAG_105)\
    $(FLAG_211) $(FLAG_212) $(FLAG_213) $(FLAG_251) $(FLAG_261) $(FLAG_262)\
    $(FLAG_USE_NETCDF4) $(FLAG_USE_COMPRESSION)
@@ -653,10 +663,10 @@ dashL= $(empty) -L
 #  Libraries           
 #--------------------------------------------------------------------------
 
-            LIBS  =	$(LIBDIR) $(CLIB)  $(PARLIB) $(IOLIBS)	$(DTLIBS)\
+            LIBS  =	$(LIBDIR) $(CLIB) $(PARLIB) $(PARTLIBS) $(IOLIBS)	$(DTLIBS)\
 			$(MPILIB) $(GOTMLIB) $(KFLIB) $(BIOLIB)	\
 			$(OILIB) $(VISITLIB) $(PROJLIBS) $(PETSC_LIB)
 
             INCS  = 	$(INCDIR) $(IOINCS) $(GOTMINCS) $(BIOINCS)\
-			 $(VISITINCPATH) $(PROJINCS) $(DTINCS) \
+			 $(VISITINCPATH) $(PROJINCS) $(DTINCS) $(PARTINCS)\
 			 $(PETSC_FC_INCLUDES)
