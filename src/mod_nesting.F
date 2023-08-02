@@ -46,7 +46,7 @@ Module Mod_Nesting
      REAL(SP), POINTER :: U_BLK(:,:,:),V_BLK(:,:,:)
      REAL(SP), POINTER :: S1_BLK(:,:,:),T1_BLK(:,:,:)
      REAL(SP), POINTER :: HYW_BLK(:,:,:)
-     INTEGER(SP), POINTER :: IDC_BLK(:,:)  ! Siqi Li, NCNEST@20230623
+     INTEGER, POINTER :: IDC_BLK(:,:)  ! Siqi Li, NCNEST@20230623
      TYPE(TIME), POINTER :: TIME_BLK(:)
 
      REAL(SP), POINTER :: WCELL_BLK(:,:),WNODE_BLK(:,:)
