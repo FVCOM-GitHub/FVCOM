@@ -277,7 +277,7 @@
       be   = 0.0_SP
     END IF  
 
-    cpw  = 4000_.SP
+    cpw  = 4000._SP
 
     IF(.NOT. HEATING_FRESHWATER)THEN
         rhow = 1022._SP
