@@ -211,12 +211,29 @@ module fvcom_cap
     ! Local Variables
     type(ESMF_VM)                :: vm
     integer                      :: esmf_comm,fvcom_comm,ierr
+    logical                      :: isPresent, isSet
+    character(len=ESMF_MAXSTR)   :: cvalue
     character(len=*),parameter   :: subname='(fvcom_cap:InitializeP1)'
 
     rc = ESMF_SUCCESS
 
     write(info,*) subname,' --- initialization phase 1 begin --- '
     call ESMF_LogWrite(info, ESMF_LOGMSG_INFO, rc=dbrc)
+
+    ! query attribute
+    call NUOPC_CompAttributeGet(model, name='fvcom_name', value=cvalue, &
+      isPresent=isPresent, isSet=isSet, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    if (isPresent .and. isSet) then
+      fvcom_name = trim(cvalue)
+    else
+      fvcom_name = 'sci'
+    end if
+    call ESMF_LogWrite(trim(subname)//': fvcom_name = '//trim(fvcom_name), ESMF_LOGMSG_INFO)
 
     ! details Get current ESMF VM.
     call ESMF_VMGetCurrent(vm, rc=rc)
