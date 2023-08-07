@@ -44,6 +44,8 @@ module fvcom_cap
 
   use mod_wd     , only : ISWETC,ISWETCT
   use mod_spherical, only : TPI,DEG2RAD,DELTUY
+  use mod_driver , only : syear, smonth, sday, shour, sminute, ssecond
+  use mod_driver , only : eyear, emonth, eday, ehour, eminute, esecond
 
   use fvcom_mod, only: FVCOM_WHS,  FVCOM_WLEN, FVCOM_WDIR
 
@@ -132,7 +134,7 @@ module fvcom_cap
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     !Assume no need to change clock settings
     ! attach specializing method(s)
 !    call NUOPC_CompSpecialize(model, specLabel=model_label_SetClock, &
@@ -210,7 +212,9 @@ module fvcom_cap
 
     ! Local Variables
     type(ESMF_VM)                :: vm
-    integer                      :: esmf_comm,fvcom_comm,ierr
+    type(ESMF_Clock)             :: dclock
+    type(ESMF_Time)              :: currTime, stopTime
+    integer                      :: esmf_comm, fvcom_comm, ierr
     logical                      :: isPresent, isSet
     character(len=ESMF_MAXSTR)   :: cvalue
     character(len=*),parameter   :: subname='(fvcom_cap:InitializeP1)'
@@ -234,6 +238,34 @@ module fvcom_cap
       fvcom_name = 'sci'
     end if
     call ESMF_LogWrite(trim(subname)//': fvcom_name = '//trim(fvcom_name), ESMF_LOGMSG_INFO)
+
+    ! query the driver for its clock
+    call NUOPC_ModelGet(model, driverClock=dclock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! query start and stop time 
+    call ESMF_ClockGet(dclock, currTime=currTime, stopTime=stoptime, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_TimeGet(currTime, yy=syear, mm=smonth, dd=sday, h=shour, &
+      m=sminute, s=ssecond, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_TimeGet(stopTime, yy=eyear, mm=emonth, dd=eday, h=ehour, &
+      m=eminute, s=esecond, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
     ! details Get current ESMF VM.
     call ESMF_VMGetCurrent(vm, rc=rc)
@@ -707,12 +739,15 @@ module fvcom_cap
     ! initialize internal clock
     ! - on entry, the component clock is a copy of the parent clock
     ! - the parent clock is on the slow timescale atm timesteps
-    ! - reset the component clock to have a timeStep that is for fvcom-wav of the parent
+    ! - reset the component clock to have a timeStep that is for fvcom-wav of
+    ! the parent
     !   -> timesteps
     
-    !call ESMF_TimeIntervalSet(ADCTimeStep, s=     adc_cpl_int, sN=adc_cpl_num, sD=adc_cpl_den, rc=rc) ! 5 minute steps
+    !call ESMF_TimeIntervalSet(ADCTimeStep, s=     adc_cpl_int, sN=adc_cpl_num,
+    !sD=adc_cpl_den, rc=rc) ! 5 minute steps
     !TODO: use nint !!?
-!    call ESMF_TimeIntervalSet(ADCTimeStep, s= adc_cpl_int , rc=rc) ! 5 minute steps
+!    call ESMF_TimeIntervalSet(ADCTimeStep, s= adc_cpl_int , rc=rc) ! 5 minute
+!    steps
 !    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
 !      line=__LINE__, &
 !      file=__FILE__)) &
