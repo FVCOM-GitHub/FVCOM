@@ -1,5 +1,5 @@
-#  if defined (WAVE_CURRENT_INTERACTION)
 MODULE MOD_WAVE_CURRENT_INTERACTION
+#  if defined (WAVE_CURRENT_INTERACTION)
    USE MOD_PREC
    USE VARS_WAVE
 #  if defined(MULTIPROCESSOR)
@@ -1977,6 +1977,6 @@ END DO
 !==============================================================================|
 !==============================================================================|
 
-END MODULE MOD_WAVE_CURRENT_INTERACTION
 #  endif   
+END MODULE MOD_WAVE_CURRENT_INTERACTION
  

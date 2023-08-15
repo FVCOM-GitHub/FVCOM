@@ -30,7 +30,7 @@
 !  VERSION 5.0.1
 !==============================================================================!
 
-# if !defined (NUOPC)
+# if !defined (FVCOM_COUPLED)
 
 PROGRAM FVCOM
 
@@ -2492,4 +2492,5 @@ IF (ENKF_memberCONTR ==1 ) THEN
   CALL PSHUTDOWN
 
 END PROGRAM FVCOM
+
 # endif

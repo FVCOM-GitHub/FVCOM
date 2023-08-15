@@ -1435,7 +1435,7 @@ NETCDF_TIMESTRING = 'seconds after 00:00:00'
 !  Added by Zheng
 
        DO I=1,MGL
-         WRITE(10,'(2I10,<MX_NBR_ELEM_GL+1>I10)') I,NTVEGL(I),(NBVEGL(I,J),J=1,NTVEGL(I))
+         WRITE(10,'(2I10,"<MX_NBR_ELEM_GL+1>"I10)') I,NTVEGL(I),(NBVEGL(I,J),J=1,NTVEGL(I))
        END DO
        CLOSE(10)
      END IF

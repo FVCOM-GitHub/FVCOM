@@ -113,8 +113,11 @@ MAIN_W = ocpmix.F	ocpcre.F	ocpids.F	\
 	swancom1.F	swancom2.F	swancom3.F	swancom4.F	\
 	swancom5.F	w3part.F
 
-COBJS = func_pointer.c	#partition.c
-
+ifdef FLAG_411
+  COBJS = func_pointer.c partition.c
+else
+  COBJS = func_pointer.c
+endif
 
 BIOGEN	= mod_bio_3D.F	mod_onedtide.F
 
@@ -139,7 +142,6 @@ libfvcom: $(FVCOM_OBJS)
 
 #	$(FC) -shared -o $@.so $(FVCOM_OBJS)
 #       PROBLEMS WITH SHARED OPTION, REQUIRES -fPIC in All sub libraries as well when building on x86_64
-
 
 #--------------------------------------------------------------------------
 #  Target to create dependecies.
@@ -173,11 +175,12 @@ tarfile:
 #--------------------------------------------------------------------------
 
 clean:
-		/bin/rm -f *.o *.mod *.f90
+	/bin/rm -f *.o *.mod *.f90
 
-clobber:	
-		make clean
-		/bin/rm -f fvcom libfvcom.so libfvcom.a
+clobber: clean
+	 /bin/rm -f fvcom libfvcom.so libfvcom.a
+
+distclean: clobber
 
 allclean:
 		make clean

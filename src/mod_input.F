@@ -4757,7 +4757,7 @@ case default
     !
 !---> Siqi Li, updated on 2021-02-16
     integer :: decimal_x, decimal_y
-    real(kind=4) :: x0, y0
+    real(sp) :: x0, y0
 
     x0 = maxval(abs(x))
     y0 = maxval(abs(y))
@@ -4796,8 +4796,8 @@ case default
 
     implicit none
 
-    real, intent(in) :: num0
-    real :: num
+    real(sp), intent(in) :: num0
+    real(sp) :: num
 
     power10 = 0
 

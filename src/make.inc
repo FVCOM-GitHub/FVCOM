@@ -37,7 +37,7 @@
 #
 #        CHOOSE YOUR MODEL OPTIONAS - The Def Flags!
 #
-#        CHOOSE A COMPILER FROM THE LIST OR CREATE YOUR OWN
+#        CHOOSE A COMPFLAG FROM THE LIST OR CREATE YOUR OWN
 #
 #    You can also use the makefile to build and install some of the libraries
 #    used by fvcom. Set the INSTALLDIR and choose the 'LOCAL INSTALL' option
@@ -70,8 +70,12 @@ empty=
 dashI= $(empty) -I
 dashL= $(empty) -L
 # ### UNCOMMENT HERE!
-             LIBDIR       =  -L$(subst $(colon),$(dashL),$(LIBPATH))
-             INCDIR       =  -I$(subst $(colon),$(dashI),$(INCLUDEPATH))
+ifeq ($(origin LIBPATH), environment)
+  LIBDIR = -L$(subst $(colon),$(dashL),$(LIBPATH))
+endif
+ifeq ($(origin INCLUDEPATH), environment)
+  INCDIR = -I$(subst $(colon),$(dashI),$(INCLUDEPATH))
+endif
 
 ###########################################################################
 
@@ -155,15 +159,15 @@ dashL= $(empty) -L
 
              FLAG_4 = -DMULTIPROCESSOR
 #         If using METIS 5 or above, uncomment FLAG_411 and read the file readme_metis in folder METIS_source for detail
-#	     FLAG_411 = -DMETIS_5
+	     FLAG_411 = -DMETIS_5
 #        If FLAG_411 is defined, uncomment path below	     
-#             PARLIB = 
+             PARLIB = 
 #             PARTINCS = -I/usr/local/install/metis-5.1.0/gcc-4.4.7/include
 #             PARTLIBS = -L/usr/local/install/metis-5.1.0/gcc-4.4.7/lib -lmetis
 #        If FLAG_411 is not defined, uncomment path below
-             PARLIB = -lmetis  #-L/usr/local/lib -lmetis
-             PARTINCS =
-             PARTLIBS =
+#             PARLIB = -lmetis  #-L/usr/local/lib -lmetis
+#             PARTINCS =
+#             PARTLIBS =
 
 #--------------------------------------------------------------------------
 #        WATER_QUALITY      INCLUDE EPA WATER QUALITY MOD
@@ -518,7 +522,7 @@ dashL= $(empty) -L
 #    with command 'make libfvcom'.
 #--------------------------------------------------------------------------
 
-#             FLAG_81 = -DNUOPC
+#             FLAG_81 = -DFVCOM_COUPLED
 
 #--------------------------------------------------------------------------
 #        SELECT COMPILER/PLATFORM SPECIFIC DEFINITIONS
@@ -533,7 +537,7 @@ dashL= $(empty) -L
 #--------------------------------------------------------------------------
 #        COMPAQ/ALPHA Definitions
 #--------------------------------------------------------------------------
-#        COMPILER   = -DCOMPAQ
+#        COMPFLAG   = -DCOMPAQ
 #        CPP        = /bin/cpp
 #        FC         = f90
 #        DEBFLGS    =  # -check bounds -check overflow -g 
@@ -541,7 +545,7 @@ dashL= $(empty) -L
 #--------------------------------------------------------------------------
 #  CRAY Definitions         
 #--------------------------------------------------------------------------
-#         COMPILER = -DCRAY 
+#         COMPFLAG = -DCRAY 
 #         CPP      = /opt/ctl/bin/cpp
 #         FC       = f90
 #         DEBFLGS  =  
@@ -550,7 +554,7 @@ dashL= $(empty) -L
 #   Linux/Portland Group Definitions 
 #--------------------------------------------------------------------------
 #         CPP      = /usr/bin/cpp
-#         COMPILER =  
+#         COMPFLAG =  
 #         FC       = pgf90
 #         DEBFLGS  = -Mbounds -g -Mprof=func
 #         OPT      = #-fast  -Mvect=assoc,cachesize:512000,sse  
@@ -558,7 +562,7 @@ dashL= $(empty) -L
 #  Intel Compiler Definitions
 #--------------------------------------------------------------------------
 #         CPP      = /usr/bin/cpp
-#         COMPILER = -DIFORT
+#         COMPFLAG = -DIFORT
 #         FC       = ifort
 #         CC       = icc
 #         CXX      = icc
@@ -577,7 +581,7 @@ dashL= $(empty) -L
 #  Intel/MPI Compiler Definitions (SMAST)      
 #--------------------------------------------------------------------------
          CPP      = /usr/bin/cpp
-         COMPILER = -DIFORT  
+         COMPFLAG = -DIFORT  
          CC       = mpicc
          CXX      = mpicxx
          CFLAGS   = -O3 
@@ -597,7 +601,7 @@ dashL= $(empty) -L
 #  gfortran defs 
 #--------------------------------------------------------------------------
 #         CPP      = /usr/bin/cpp 
-#         COMPILER = -DGFORTRAN
+#         COMPFLAG = -DGFORTRAN
 #         FC       = gfortran  -O3 
 #         DEBFLGS  = 
 #         OPT      = 
@@ -606,7 +610,7 @@ dashL= $(empty) -L
 #  absoft / mac os x defs
 #--------------------------------------------------------------------------
 #         CPP      = /usr/bin/cpp 
-#         COMPILER = -DABSOFT  
+#         COMPFLAG = -DABSOFT  
 #         FC       = f90  -O3  -lU77
 #         DEBFLGS  = 
 #         OPT      = 
@@ -614,7 +618,7 @@ dashL= $(empty) -L
 #--------------------------------------------------------------------------
 #  IBM/AIX Definitions
 #--------------------------------------------------------------------------
-#         COMPILER = -DAIX 
+#         COMPFLAG = -DAIX 
 #         CPP      = /usr/local/bin/cpp
 #         FC       = mpxlf90 -qsuffix=f=f90
 #         DEBFLGS  =  # -qcheck -C -g
@@ -622,7 +626,7 @@ dashL= $(empty) -L
 #--------------------------------------------------------------------------
 #  APPLE OS X/XLF Definitions (G5)
 #--------------------------------------------------------------------------
-#         COMPILER = -DAIX
+#         COMPFLAG = -DAIX
 #         CPP      = /usr/bin/cpp
 #         FC       =  /opt/ibmcmp/xlf/8.1/bin/xlf90 -qsuffix=f=f90
 #         DEBFLGS  =  # -qcheck -C -g
@@ -630,7 +634,7 @@ dashL= $(empty) -L
 #--------------------------------------------------------------------------
 #  OTHER                   
 #--------------------------------------------------------------------------
-#         COMPILER =
+#         COMPFLAG =
 #         CPP      = 
 #         FC       = 
 #         DEBFLGS  = 
@@ -638,7 +642,7 @@ dashL= $(empty) -L
 #==========================================================================
 #  END USER DEFINITION SECTION
 #==========================================================================
-         CPPFLAGS = $(DEF_FLAGS) $(COMPILER)
+         CPPFLAGS = $(DEF_FLAGS) $(COMPFLAG)
          FFLAGS = $(DEBFLGS) $(OPT)
          MDEPFLAGS = --cpp --fext=f90 --file=-
          RANLIB = ranlib
