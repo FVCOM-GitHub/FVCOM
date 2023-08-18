@@ -228,7 +228,6 @@ dashL= $(empty) -L
 #--------------------------------------------------------------------------
 
              FLAG_7 = -DDATA_ASSIM
-             include ${PETSC_DIR}/bmake/common/variables
 #             OILIB  = -lmkl_lapack -lmkl_em64t -lguide -lpthread
 
 #             OILIB  = -L/usr/local/share/Intel-Compilers/mkl/lib/em64t -lmkl_lapack -lmkl_em64t -lguide -lpthread
