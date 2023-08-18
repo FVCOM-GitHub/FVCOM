@@ -2426,7 +2426,13 @@ CONTAINS
        CALL NC_CONNECT_PVAR(VAR,G%LON)
        CALL NC_READ_VAR(VAR)
        CALL NC_DISCONNECT(VAR)
-       
+# if defined (SPHERICAL)
+       ! Siqi Li, XLON@20230817
+       DO I = 1, G%MT
+         IF (G%LON(I)<0.0) G%LON(I) = G%LON(I) + 360._SP
+       ENDDO
+# endif
+
        ! Latitude
        ALLOCATE(G%LAT(0:G%MT),stat=status)
        IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE G%LAT WHILE READING:"//TRIM(NCF%FNAME))
@@ -2452,7 +2458,13 @@ CONTAINS
        CALL NC_CONNECT_PVAR(VAR,G%LONC)
        CALL NC_READ_VAR(VAR)
        CALL NC_DISCONNECT(VAR)
-       
+# if defined (SPHERICAL)
+       ! Siqi Li, XLON@20230817
+       DO I = 1, G%NT
+         IF (G%LONC(I)<0.0) G%LONC(I) = G%LONC(I) + 360._SP
+       ENDDO
+# endif
+
        ! Latitude - element
        ALLOCATE(G%LATC(0:G%NT),stat=status)
        IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE G%LATC WHILE READING:"//TRIM(NCF%FNAME))
@@ -2762,7 +2774,13 @@ CONTAINS
        CALL NC_CONNECT_AVAR(VAR, X_LCL)
        CALL NC_READ_VAR(VAR)
        CALL NC_DISCONNECT(VAR)
-    
+# if defined (SPHERICAL)
+       ! Siqi Li, XLON@20230817
+       WHERE (X_LCL<0.0) X_LCL = X_LCL + 360.0
+!       DO I = 1, MT
+!         IF (X_LCL(I)<0.0) X_LCL(I) = X_LCL(I) + 360._SP
+!       ENDDO
+# endif    
        
        VAR => FIND_VAR(NC_START,'y',FOUND)
        IF(.not. FOUND) CALL FATAL_ERROR("COULD NOT FIND VARIABLE 'y'&
