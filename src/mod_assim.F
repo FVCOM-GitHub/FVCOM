@@ -2585,8 +2585,12 @@ in:  DO WHILE(.TRUE.)
        IF(MIN_LOC == 0)THEN
          EXIT in
        END IF
-       XTRI = XG(NVG(MIN_LOC,1:3))
-       YTRI = YG(NVG(MIN_LOC,1:3))
+!---> Siqi Li, CHECKALL@20230818
+       XTRI = reshape(XG(NVG(MIN_LOC,1:3)), (/3/))
+       YTRI = reshape(YG(NVG(MIN_LOC,1:3)), (/3/))
+!       XTRI = XG(NVG(MIN_LOC,1:3))
+!       YTRI = YG(NVG(MIN_LOC,1:3))
+!<--- 
        RDLAST = RDLIST(MIN_LOC,1)
        IF(ISINTRIANGLE1(XTRI,YTRI,X0,Y0))THEN
          JJ = MIN_LOC
@@ -3613,8 +3617,12 @@ in:  DO WHILE(.TRUE.)
        IF(MIN_LOC == 0)THEN
          EXIT in
        END IF
-       XTRI = XG(NVG(MIN_LOC,1:3))
-       YTRI = YG(NVG(MIN_LOC,1:3))
+!---> Siqi Li, CHECKALL@20230818
+       XTRI = reshape(XG(NVG(MIN_LOC,1:3)), (/3/))
+       YTRI = reshape(YG(NVG(MIN_LOC,1:3)), (/3/))
+!       XTRI = XG(NVG(MIN_LOC,1:3))
+!       YTRI = YG(NVG(MIN_LOC,1:3))
+!<--- 
        RDLAST = RDLIST(MIN_LOC,1)
        IF(ISINTRIANGLE1(XTRI,YTRI,X0,Y0))THEN
          JJ = MIN_LOC
