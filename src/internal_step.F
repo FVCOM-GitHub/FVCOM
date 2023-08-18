@@ -1659,7 +1659,7 @@ SUBROUTINE INTERNAL_STEP
   
 !==============================================================================!
 # endif
-!  IF(PAR)CALL MPI_BARRIER(MPI_FVCOM_GROUP,IERR) !lwang intel23@20230711
+
   !==============================================================================!
   !     UPDATE THE DENSITY IN NON-BAROTROPIC CASE                                |
   !==============================================================================!
@@ -1698,7 +1698,7 @@ SUBROUTINE INTERNAL_STEP
 !==============================================================================!
 !==============================================================================!
 # endif    
-!  IF(PAR)CALL MPI_BARRIER(MPI_FVCOM_GROUP,IERR)   !lwang intel23@20230711
+
   ! end if !defined (TWO_D_MODEL)
 !==============================================================================!
 !==============================================================================!
@@ -1714,14 +1714,16 @@ SUBROUTINE INTERNAL_STEP
       .AND. .NOT. SSHGRD_ASSIM .AND. .NOT. TSGRD_ASSIM) )CALL CURRENT_ASSIMILATION
     IF(ASSIM_FLAG==1 .AND. (SST_ASSIM .OR. SSTGRD_ASSIM .OR. SSSGRD_ASSIM .OR. SSHGRD_ASSIM &
       .OR. TSGRD_ASSIM)) CALL CURRENT_ASSIMILATION
-  ELSEIF (.NOT. CUR_NGASSIM .AND. CUR_OIASSIM .AND. MOD(IINT,CUR_NSTEP_OI) == 0) THEN
+  ELSEIF (.NOT. CUR_NGASSIM .AND. CUR_OIASSIM ) THEN
+    IF (MOD(IINT,CUR_NSTEP_OI) == 0) THEN
 !<---lwang            
 !JQI2023    IF(ASSIM_FLAG==0 .AND. (.NOT. SST_ASSIM .AND. .NOT. SSTGRD_ASSIM .AND. .NOT. SSHGRD_ASSIM .AND. .NOT. TSGRD_ASSIM) )CALL CURRENT_ASSIMILATION
 !JQI2023    IF(ASSIM_FLAG==1 .AND. (SST_ASSIM .OR. SSTGRD_ASSIM .OR. SSHGRD_ASSIM .OR. TSGRD_ASSIM)) CALL CURRENT_ASSIMILATION
-    IF(ASSIM_FLAG==0 .AND. (.NOT. SST_ASSIM .AND. .NOT. SSTGRD_ASSIM .AND. .NOT. SSSGRD_ASSIM &
-       .AND. .NOT. SSHGRD_ASSIM .AND. .NOT. TSGRD_ASSIM) )CALL CURRENT_ASSIMILATION
-    IF(ASSIM_FLAG==1 .AND. (SST_ASSIM .OR. SSTGRD_ASSIM .OR. SSSGRD_ASSIM .OR. SSHGRD_ASSIM &
-       .OR. TSGRD_ASSIM)) CALL CURRENT_ASSIMILATION
+      IF(ASSIM_FLAG==0 .AND. (.NOT. SST_ASSIM .AND. .NOT. SSTGRD_ASSIM .AND. .NOT. SSSGRD_ASSIM &
+         .AND. .NOT. SSHGRD_ASSIM .AND. .NOT. TSGRD_ASSIM) )CALL CURRENT_ASSIMILATION
+      IF(ASSIM_FLAG==1 .AND. (SST_ASSIM .OR. SSTGRD_ASSIM .OR. SSSGRD_ASSIM .OR. SSHGRD_ASSIM &
+         .OR. TSGRD_ASSIM)) CALL CURRENT_ASSIMILATION
+    END IF
 #   if defined (GCN)
     CALL BCOND_GCN(5,0)
 #   else
