@@ -94,7 +94,11 @@ module fvcom_mod
       REAL,ALLOCATABLE,TARGET :: FVCOM_VELX(:,:)
       REAL,ALLOCATABLE,TARGET :: FVCOM_VELY(:,:)
 
-  logical :: NUOPC4WAV
+      REAL,ALLOCATABLE,TARGET :: FVCOM_WVNX(:,:)
+      REAL,ALLOCATABLE,TARGET :: FVCOM_WVNY(:,:)
+      REAL,ALLOCATABLE,TARGET :: FVCOM_PRN(:,:)
+
+  logical :: NUOPC4WAV,NUOPC4MET
 
   !-----------------------------------------------------------------------------
   contains
@@ -308,7 +312,7 @@ module fvcom_mod
 !	  print*,"Not match ...... ",j2,m-the_data%NumOwnedND
 !	  stop
 !	end if  
-    print*,"Match ...... ",j2,the_data%NumOwnedND,myid
+!    print*,"Match ...... ",j2,the_data%NumOwnedND,myid
 
 !        close(23514)
 !        close(23518)

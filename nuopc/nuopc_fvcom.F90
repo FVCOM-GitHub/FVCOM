@@ -7,8 +7,11 @@
 #define MULTIPROCESSOR
 #define WET_DRY
 #define SEMI_IMPLICIT_disabled
-#define TVD
-#define MPDATA
+#define TVD_disabled
+#define MPDATA_disabled
+#define ATMESH_FORCING          !_disabled
+#define TWO_D_MODEL             !___disabled
+#define AIR_PRESSURE_disabled
 
 MODULE NUOPC_FVCOM
 
@@ -28,7 +31,9 @@ MODULE NUOPC_FVCOM
   USE MOD_NCLL
   USE MOD_SETUP
   USE MOD_SET_TIME
+# if !defined(ATMESH_FORCING)
   USE MOD_FORCE
+# endif
   USE MOD_OBCS
   USE MOD_REPORT
   USE PROBES
@@ -153,7 +158,9 @@ MODULE NUOPC_FVCOM
   !  SETUP THE MODEL FORCING                                                     !
   !==============================================================================!
 !  print*,"SETUP_FORCING"
-  CALL SETUP_FORCING
+# if !defined(ATMESH_FORCING)
+   CALL SETUP_FORCING
+# endif
 
 # if !defined (SEMI_IMPLICIT)
   IntStep_Seconds = ExtStep_seconds * Isplit
@@ -242,6 +249,8 @@ MODULE NUOPC_FVCOM
 
   IntTime=IntTime + IMDTI
 
+# if !defined (TWO_D_MODEL)
+
   !----ADJUST CONSISTENCY BETWEEN 3-D VELOCITY AND VERT-AVERAGED VELOCITIES------!
   CALL ADJUST2D3D(1)
 
@@ -255,14 +264,20 @@ MODULE NUOPC_FVCOM
 !  print*,'AFTER EXCHANGE ',myid,nprocs,par,MPI_FVCOM_GROUP
 
   !----SPECIFY THE SURFACE FORCING OF INTERNAL MODES-----------------------------!
+# if defined(ATMESH_FORCING)
+  CALL BCOND_GCN_ESMF(8,0)
+# else
   CALL BCOND_GCN(8,0)
-
+# endif
+# endif  
   !----SPECIFY THE BOTTOM ROUGHNESS AND CALCULATE THE BOTTOM STRESSES------------!
   CALL BOTTOM_ROUGHNESS
-
+  
 !==============================================================================!
 !  CALCULATE DISPERSION (GX/GY) AND BAROCLINIC PRESSURE GRADIENT TERMS         !
 !==============================================================================!
+# if !defined (TWO_D_MODEL)
+
   CALL ADVECTION_EDGE_GCN(ADVX,ADVY)          !Calculate 3-D Adv/Diff       !
 
   IF(RECALCULATE_RHO_MEAN) THEN
@@ -311,6 +326,7 @@ MODULE NUOPC_FVCOM
      UARD_OBCN(1:IOBCN)=0.0_SP
   END IF
 
+# endif
   !==============================================================================!
   !  LOOP OVER EXTERNAL TIME STEPS                                               !
   !==============================================================================!
@@ -330,15 +346,18 @@ MODULE NUOPC_FVCOM
 !                     BEGIN THREE D ADJUSTMENTS
 !==============================================================================!
 !==============================================================================!
+# if !defined (TWO_D_MODEL)
 
   !==============================================================================!
   !    ADJUST INTERNAL VELOCITY FIELD TO CORRESPOND TO EXTERNAL                  !
   !==============================================================================!
     CALL ADJUST2D3D(2)
 
+# endif
 !==============================================================================!
 !     CALCULATE INTERNAL VELOCITY FLUXES                                       |
 !==============================================================================!
+# if !defined (TWO_D_MODEL)
     CALL VERTVL_EDGE     ! Calculate/Update Sigma Vertical Velocity (Omega)   !
 
 #   if defined (WET_DRY)
@@ -380,6 +399,9 @@ MODULE NUOPC_FVCOM
 
   CALL WREAL           ! Calculate True Vertical Velocity (W)               !
 
+# endif
+
+# if !defined (TWO_D_MODEL)
   !==============================================================================!
   !    TURBULENCE MODEL SECTION                                                  |
   !==============================================================================!
@@ -546,7 +568,9 @@ MODULE NUOPC_FVCOM
   END IF
 !==============================================================================!
 !==============================================================================!
+# endif
   
+# if !defined (TWO_D_MODEL)
   !==============================================================================!
   !     UPDATE VELOCITY FIELD (NEEDED TO WAIT FOR SALINITY/TEMP/TURB/TRACER)     |
   !==============================================================================!
@@ -569,6 +593,7 @@ MODULE NUOPC_FVCOM
   END IF
 # endif
 
+# endif
   !
   !----SHIFT SEA SURFACE ELEVATION AND DEPTH TO CURRENT TIME LEVEL---------------!
   !
@@ -710,8 +735,11 @@ MODULE NUOPC_FVCOM
 !
 !------SURFACE BOUNDARY CONDITIONS FOR EXTERNAL MODEL--------------------------!
 !
+# if defined (ATMESH_FORCING)
+  CALL BCOND_GCN_ESMF(9,0)
+# else
   CALL BCOND_GCN(9,0)
-
+# endif
 !
 !------SAVE VALUES FROM CURRENT TIME STEP--------------------------------------!
 !
@@ -731,8 +759,15 @@ MODULE NUOPC_FVCOM
 
 !FREE SURFACE AMPLITUDE UPDATE  --> ELF
      CALL EXTEL_EDGE(K)
+# if defined (MULTIPROCESSOR)
      IF(PAR) CALL AEXCHANGE(NC,MYID,NPROCS,ELF)
+# endif
      
+# if defined (AIR_PRESSURE)
+     CALL BCOND_PA_AIR 
+     ELF_AIR = ELRK_AIR +ALPHA_RK(K)*(ELF_AIR-ELRK_AIR) 
+# endif
+       
      
      ! VALUES FOR THE OPEN BOUNDARY ARE ONLY UPDATED IN THE LOCAL DOMAIN
      ! THE HALO IS NOT SET HERE
@@ -754,7 +789,9 @@ MODULE NUOPC_FVCOM
      ! DAVID ADDED THIS EXCHANGE CALL:
      ! IT SEEMS LIKELY THAT THE HALO VALUES OF ELF WILL BE USED
      ! BEFORE THEY ARE SET CORRECTLY OTHERWISE
+# if defined (MULTIPROCESSOR)
      IF(PAR) CALL AEXCHANGE(NC,MYID,NPROCS,ELF)
+# endif
 
      CALL N2E2D(ELF,ELF1)
           
@@ -774,7 +811,9 @@ MODULE NUOPC_FVCOM
        CALL SET_VAR(ExtTime,VA=VAF)
      END IF
 
+# if defined (MULTIPROCESSOR)
      IF(PAR)CALL NODE_MATCH(1,NBN,BN_MLT,BN_LOC,BNC,MT,1,MYID,NPROCS,ELF)
+# endif
 
 
      !UPDATE WATER SURFACE ELEVATION
@@ -782,6 +821,10 @@ MODULE NUOPC_FVCOM
 
      EL  = ELF
      EL1 = ELF1
+
+# if defined (AIR_PRESSURE)
+     EL_AIR = ELF_AIR
+# endif       
 
      !!INTERPOLATE DEPTH FROM NODE-BASED TO ELEMENT-BASED VALUES
      CALL N2E2D(EL,EL1)
@@ -793,14 +836,27 @@ MODULE NUOPC_FVCOM
      VA  = VAF
      DTFA = D
 
+     !!ENSURE ALL CELLS ARE WET IN NO FLOOD/DRY CASE  
+# if !defined (WET_DRY)
+     CALL DEPTH_CHECK
+# endif
+     
      !EXCHANGE ELEMENT-BASED VALUES ACROSS THE INTERFACE
+# if defined (MULTIPROCESSOR)
      IF(PAR)CALL AEXCHANGE(EC,MYID,NPROCS,UA,VA,D1)
+# endif
 
+# if !defined (TWO_D_MODEL)
      !SAVE VALUES FOR 3D MOMENTUM CORRECTION AND UPDATE
      IF(K == 3)THEN
         UARD = UARD + UA*D1
         VARD = VARD + VA*D1
         EGF  = EGF  + EL/ISPLIT
+
+#   if defined (AIR_PRESSURE)
+        EGF_AIR = EGF_AIR + EL_AIR/ISPLIT
+#   endif
+
      END IF
      
      !CALCULATE VALUES USED FOR SALINITY/TEMP BOUNDARY CONDITIONS
@@ -811,7 +867,8 @@ MODULE NUOPC_FVCOM
            UARD_OBCN(I)=UARD_OBCN(I)+TMP/FLOAT(ISPLIT)
         END DO
      END IF
-
+# endif    
+!end !defined (TWO_D_MODEL)
      
      !UPDATE WET/DRY FACTORS
      IF(WETTING_DRYING_ON)CALL WD_UPDATE(1)
@@ -869,5 +926,204 @@ END SUBROUTINE EXTERNAL_STEP_ESMF
 !# endif
   END SUBROUTINE INITIALIZE_CONTROL_NUOPC
 
+!==============================================================================|
+!
+!==============================================================================|
+
+   SUBROUTINE BCOND_GCN_ESMF(IDX,K_RK)
+
+!==============================================================================|
+   USE ALL_VARS
+   USE BCS
+   USE MOD_OBCS
+   USE MOD_FORCE
+   USE MOD_PAR
+   USE MOD_WD
+   USE MOD_BULK
+
+#  if defined (HEATING_CALCULATED)
+   USE MOD_HEATFLUX, ONLY : HEATING_CALCULATE_ON,HEATING_FRESHWATER
+#  endif
+#  if defined (HEATING_SOLAR)
+   USE MOD_SOLAR, ONLY : HEATING_SOLAR_ON
+#  endif
+   USE MOD_HEATFLUX_SEDIMENT
+
+   IMPLICIT NONE
+   INTEGER, INTENT(IN) :: IDX
+   REAL(SP) :: ZREF(KBM1),ZREFJ(KBM1),TSIGMA(KBM1),SSIGMA(KBM1)
+   REAL(SP) :: TTMP(KBM1),STMP(KBM1),TREF(KBM1),SREF(KBM1)
+   REAL(SP) :: PHY_Z(KBM1),PHY_Z1(KBM1)
+   REAL(SP) :: TT1(KBM1),TT2(KBM1),SS1(KBM1),SS2(KBM1)
+!   REAL(SP) :: TIME1,FACT,UFACT,FORCE,QPREC,QEVAP,UI,VI,UNTMP,VNTMP,TX,TY,HFLUX
+   REAL(SP) :: TIME1,FACT,UFACT,FORCE,UI,VI,UNTMP,VNTMP,TX,TY,HFLUX
+!   REAL(SP) :: DTXTMP,DTYTMP,QPREC2,QEVAP2,SPRO,WDS,CD,SPCP,ROSEA
+!   REAL(SP) :: DTXTMP,DTYTMP,SPRO,WDS,CD,SPCP,ROSEA,ROSEA1(0:MT),SPRO1(0:MT) !,ROSEA1(MT),SPRO1(MT)
+   REAL(SP) :: DTXTMP,DTYTMP,SPRO,WDS,SPCP,ROSEA,ROSEA1(0:MT),SPRO1(0:MT) !,ROSEA1(MT),SPRO1(MT) ! Siqi Li, 2021-01-27
+   REAL(SP) :: PHAI_IJ,ALPHA1,DHFLUXTMP,DHSHORTTMP,HSHORT,TIMERK1
+
+   ! VARIABLES FOR LONG SHORE FLOW STUFF
+   REAL(SP) :: ANG_WND,WNDALONG,RHOINTNXT,RHOINTCUR,CUMEL
+   REAL(SP) :: TAU_X,TAU_Y, mag_wnd
+   REAL(SP), POINTER,DIMENSION(:) :: lcl_dat, gbl_dat
+
+
+   REAL(SP),POINTER :: eta_lcl(:), eta_gbl(:) ,elfgeo_gbl(:),elfgeo_lcl(:)
+
+  INTEGER  I,J,K,I1,I2,J1,J2,II,L1,L2,IERR
+  INTEGER  cdx,ndx,KDAM_TMP,K_RK
+  LOGICAL  finish
+
+!!$!=================|DEBUG|============================
+!!$   LOGICAL, save :: INIT=.false.
+!!$   INTEGER, save :: icount
+!!$   character(len=5):: ccount
+!!$   REAL(SP),POINTER :: temp_lcl(:),temp_gl(:) 
+!!$!=================|DEBUG|============================
+
+
+  if(dbg_set(dbg_sbr)) write(ipt,*) "Start: bcond_gcn: ",idx
+
+
+   SELECT CASE(IDX)
+!==============================================================================|
+   CASE(1) !Surface Elevation Boundary Conditions (Tidal Forcing)              !
+!==============================================================================|
+
+!==============================================================================|
+   CASE(2) !External Mode Velocity Boundary Conditions                         |
+!==============================================================================|
+
+
+!==============================================================================|
+   CASE(3) !3-D Velocity Boundary Conditions                                   !
+!==============================================================================|
+
+
+!==============================================================================|
+   CASE(4)                                                                     !
+!==============================================================================|
+!==============================================================================|
+   CASE(5) !!SOLID BOUNDARY CONDITIONS ON U AND V                              !
+!==============================================================================|
+
+!==============================================================================|
+   CASE(6) !Blank                                                              !
+!==============================================================================|
+
+!==============================================================================|
+   CASE(7) !Blank                                                              !
+!==============================================================================|
+
+!==============================================================================|
+   CASE(8) !!SURFACE FORCING FOR INTERNAL MODE                                 !
+!==============================================================================|
+
+      ! Siqi Li, 2021-01-27
+      ! Here we only read the wind speed or wind stress.
+      ! The calculation of wind stress was moved and now is placed
+      ! behind the heat part.       
+      IF (WIND_ON) THEN
+         IF (WIND_TYPE == SPEED)THEN
+!            CALL UPDATE_WIND_ESMF(IntTime,UUWIND,VVWIND)
+             UUWIND = UUWIND
+	     VVWIND = VVWIND          
+!            CALL ASIMPLE_DRAG(UUWIND,VVWIND,WUSURF,WVSURF) ! Siqi Li, 2021-01-27
+
+         ELSEIF(WIND_TYPE == STRESS)THEN
+!            CALL UPDATE_WIND(IntTime,WUSURF,WVSURF)
+         END IF
+      END IF
+
+      !---> Siqi Li, 2021-01-27
+      IF (WIND_ON) THEN
+         IF (WIND_TYPE == SPEED)THEN
+            CALL UPDATE_WINDSTRESS('INT')
+         END IF
+
+         ! For output only - don't divide by density
+         WUSURF_save = WUSURF * RAMP
+         WVSURF_save = WVSURF * RAMP
+
+         ! Divide by density 
+         WUSURF = -WUSURF * RAMP *0.001_SP
+         WVSURF = -WVSURF * RAMP *0.001_SP
+
+         ! MAJOR MISTAKE: NEED THE NEGATIVE SIGN FOR THE INTERNAL
+         ! STEP WIND STRESS
+
+      END IF
+      !<--- Siqi Li, 2021-01-27
+     
+      IF (PRECIPITATION_ON) THEN
+         CALL UPDATE_PRECIPITATION(IntTime,Qprec,Qevap)
+         ! NO RAMP FOR PRECIP/EVAP
+      END IF
+
+
+!
+!-- Set Groundwater flux ------------------------------------------------------|
+!
+      
+      IF (GROUNDWATER_ON) THEN
+         CALL UPDATE_GROUNDWATER(IntTime,BFWDIS,GW_TEMP=BFWTMP,GW_SALT=BFWSLT)
+         BFWDIS = RAMP * BFWDIS
+         ! DO NOT RAMP TEMP AND SALINITY
+      END IF
+      
+!==============================================================================|
+   CASE(9) !External Mode Surface BCs (River Flux/Wind Stress/Heat/Moist)      !
+!==============================================================================|
+# if !defined (SEMI_IMPLICIT)
+!
+!
+!-- Set Precipitation/Evaporation/Surface Wind ---------------------------------|
+!
+
+      IF (PRECIPITATION_ON) THEN
+         CALL UPDATE_PRECIPITATION(ExtTime,Qprec2,Qevap2)
+         ! NO RAMP FOR PRECIP/EVAP
+      END IF
+      
+      IF (WIND_ON) THEN
+
+         IF (WIND_TYPE == SPEED)THEN
+            CALL UPDATE_WIND(ExtTime,UUWIND,VVWIND)
+
+            !---> Siqi Li, 2021-01-27
+            !CALL ASIMPLE_DRAG(UUWIND,VVWIND,WUSURF2,WVSURF2)
+            CALL UPDATE_WINDSTRESS('EXT')
+            !<--- Siqi Li, 2021-01-27
+
+         ELSEIF(WIND_TYPE == STRESS)THEN
+            CALL UPDATE_WIND(ExtTime,WUSURF2,WVSURF2)
+         END IF
+
+# if defined (TWO_D_MODEL)
+         ! For output only - don't divide by density
+         WUSURF_save = WUSURF2 * RAMP
+         WVSURF_save = WVSURF2 * RAMP
+# endif	 
+
+         WUSURF2 = WUSURF2 * RAMP *0.001_SP
+         WVSURF2 = WVSURF2 * RAMP *0.001_SP
+         
+      END IF
+   
+!
+!-- Set Groundwater flux ------------------------------------------------------|
+!
+
+      IF (GROUNDWATER_ON) THEN
+         CALL UPDATE_GROUNDWATER(ExtTime,BFWDIS2)
+         BFWDIS2 = RAMP * BFWDIS2
+      END IF
+# endif      
+   END SELECT
+   
+   if(dbg_set(dbg_sbr)) write(ipt,*)&
+        & "End: bcond_gcn_esmf"
+   
+ END SUBROUTINE BCOND_GCN_ESMF
  
 END MODULE NUOPC_FVCOM
