@@ -15,8 +15,9 @@ module fvcom_mod
 
   use MOD_DRIVER, only : fvcom_pet_num
   use LIMS   ,    only : MGL,MT,M,NGL,NT,N,MYID,MSRID,NPROCS    !np,ne,nm,slam,sfea
-  use ALL_VARS,   only : NV,VX,VY,H,LAT,LON
+  use ALL_VARS,   only : NV,VX,VY,H,LAT,LON,NVG,LATC,LONC
   use MOD_PAR,    only : NGID_X,EGID_X,NLID,NMAP,ACOLLECT
+  use MOD_PAR,    only : NGID, EL_PID, NHE, HE_LST, EGID, ELID_X,HE_OWN,NLID_X,NLID
   use CONTROL,    only : MPI_FVCOM_GROUP
 !  use GLOBAL , only: IMAP_EL_LG,NODES_LG
 !  use GLOBAL , only: ETA2, UU2, VV2  ! Export water level and velocity fileds to wave model
@@ -30,7 +31,7 @@ module fvcom_mod
     type(ESMF_VM)                      :: vm
     !> \details This array contains the node coordinates of the mesh. For
     !! example, in a 2D mesh, the \c jth coordinate of the \c nth node
-    !! is stored in location <tt> 2*(n-1)+j</tt> of this array.
+    !!oords
     real(ESMF_KIND_R8), allocatable    :: NdCoords(:)
     !> \details This array contains the elevation of different nodes of the mesh
     real(ESMF_KIND_R8), allocatable    :: bathymetry(:)
@@ -60,6 +61,8 @@ module fvcom_mod
     !> \details An array containing the element types, which are all triangles in our
     !! application.
     integer(ESMF_KIND_I4), allocatable :: ElTypes(:)
+    !> \details This array contains the element coordinates of the mesh. 
+    real(ESMF_KIND_R8), allocatable    :: ElCoords(:)
     !> \details This is an array, which maps the indices of the owned nodes to the indices of the present
     !! nodes. For example, assume we are on <tt>PE = 1</tt>, and we have four nodes present, and the
     !! first and third nodes belong to <tt>PE = 0</tt>. So we have:
@@ -82,23 +85,26 @@ module fvcom_mod
   ! reading data time management info WW3 <-----> FVCOM exchange
   integer :: fvcom_cpl_int,fvcom_cpl_num,fvcom_cpl_den
 
-      REAL,ALLOCATABLE,TARGET :: FVCOM_SXX2(:,:)
-      REAL,ALLOCATABLE,TARGET :: FVCOM_SXY2(:,:)
-      REAL,ALLOCATABLE,TARGET :: FVCOM_SYY2(:,:)
+  REAL,ALLOCATABLE,TARGET :: FVCOM_SXX2(:,:)
+  REAL,ALLOCATABLE,TARGET :: FVCOM_SXY2(:,:)
+  REAL,ALLOCATABLE,TARGET :: FVCOM_SYY2(:,:)
 
-      REAL,ALLOCATABLE,TARGET :: FVCOM_WHS(:,:)
-      REAL,ALLOCATABLE,TARGET :: FVCOM_WLEN(:,:)
-      REAL,ALLOCATABLE,TARGET :: FVCOM_WDIR(:,:)
+  REAL,ALLOCATABLE,TARGET :: FVCOM_WHS(:,:)
+  REAL,ALLOCATABLE,TARGET :: FVCOM_WLEN(:,:)
+  REAL,ALLOCATABLE,TARGET :: FVCOM_WDIR(:,:)
 
-      REAL,ALLOCATABLE,TARGET :: FVCOM_ZETA(:,:)
-      REAL,ALLOCATABLE,TARGET :: FVCOM_VELX(:,:)
-      REAL,ALLOCATABLE,TARGET :: FVCOM_VELY(:,:)
+  REAL,ALLOCATABLE,TARGET :: FVCOM_ZETA(:,:)
+  REAL,ALLOCATABLE,TARGET :: FVCOM_VELX(:,:)
+  REAL,ALLOCATABLE,TARGET :: FVCOM_VELY(:,:)
 
-      REAL,ALLOCATABLE,TARGET :: FVCOM_WVNX(:,:)
-      REAL,ALLOCATABLE,TARGET :: FVCOM_WVNY(:,:)
-      REAL,ALLOCATABLE,TARGET :: FVCOM_PRN(:,:)
+  REAL,ALLOCATABLE,TARGET :: FVCOM_WVNX(:,:)
+  REAL,ALLOCATABLE,TARGET :: FVCOM_WVNY(:,:)
+  REAL,ALLOCATABLE,TARGET :: FVCOM_PRN(:,:)
 
   logical :: NUOPC4WAV,NUOPC4MET
+
+  ! module name
+  character(*), parameter :: modName = "(fvcom_mod)"
 
   !-----------------------------------------------------------------------------
   contains
@@ -128,17 +134,43 @@ module fvcom_mod
     type(ESMF_Mesh), intent(out) :: out_esmf_mesh
     type(meshdata), intent(in)   :: the_data
     integer, parameter           :: dim1=2, spacedim=2, NumND_per_El=3
+    type(ESMF_Distgrid)          :: nodeDistgrid, elementDistgrid
     integer                      :: rc
 
-    out_esmf_mesh=ESMF_MeshCreate(parametricDim=dim1, spatialDim=spacedim, &
-       nodeIDs=the_data%NdIDs, nodeCoords=the_data%NdCoords, &
-       nodeOwners=the_data%NdOwners, elementIDs=the_data%ElIDs, &
-       elementTypes=the_data%ElTypes, elementConn=the_data%ElConnect, &
-       rc=rc)
+    ! create node distgrid
+    nodeDistgrid = ESMF_DistgridCreate(the_data%NdIDs, rc=rc)
+
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+    ! create element distgrid
+    elementDistgrid = ESMF_DistgridCreate(the_data%ElIDs, rc=rc)
+
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+    ! create mesh
+    out_esmf_mesh=ESMF_MeshCreate(parametricDim=dim1, spatialDim=spacedim, &
+        nodeIDs=abs(the_data%NdIDs), &
+        nodeCoords=the_data%NdCoords, &
+        nodeOwners=the_data%NdOwners, &
+        nodalDistgrid=nodeDistgrid, &
+        elementIDs=abs(the_data%ElIDs), &
+        elementTypes=the_data%ElTypes, &
+        elementConn=the_data%ElConnect, &
+        elementCoords=the_data%ElCoords, &
+        elementDistgrid=elementDistgrid, &
+        coordSys=ESMF_COORDSYS_SPH_DEG, &
+        rc=rc)
+
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
 
   end subroutine create_parallel_esmf_mesh_from_meshdata
   !
@@ -186,8 +218,8 @@ module fvcom_mod
     the_data%NumEl = NT 
     the_data%NumNd = MT
     the_data%NumOwnedND = M
-	
-    print*, the_data%NumEl,NT,the_data%NumNd,MT,the_data%NumOwnedND,M,'NT,MT,M'
+
+    print*, 'NT,N,MT,M: ', NT, N, MT, M
     allocate(the_data%NdIDs(the_data%NumNd))
     allocate(local_node_numbers(the_data%NumNd))
     allocate(the_data%ElIDs(the_data%NumEl))
@@ -197,6 +229,7 @@ module fvcom_mod
     allocate(the_data%ElConnect(NumND_per_El*the_data%NumEl))
     allocate(the_data%NdOwners(the_data%NumNd))
     allocate(the_data%ElTypes(the_data%NumEl))
+    allocate(the_data%ElCoords(dim1*the_data%NumEl))
 
 !        read(unit=23518, fmt=*)
 !        read(unit=23518, fmt=*)
@@ -213,11 +246,11 @@ module fvcom_mod
     do i1 = 1,the_data%NumEl
       local_elem_numbers(i1) = EGID_X(i1)
     end do  
-    the_data%ElIDs = abs(local_elem_numbers)
+    the_data%ElIDs = local_elem_numbers
     do i1 = 1,the_data%NumNd
       local_node_numbers(i1) = NGID_X(i1)
     end do
-    the_data%NdIDs = abs(local_node_numbers)
+    the_data%NdIDs = local_node_numbers
 
     num_global_nodes = MGL
     allocate(node_owner_gl(num_global_nodes))
@@ -226,7 +259,7 @@ module fvcom_mod
 !JQI        allocate(the_data%owned_to_present_halo_nodes(m-the_data%NumOwnedND))
     allocate(tmp_owned_to_present_nodes(the_data%NumOwnedND))
     allocate(tmp_owned_to_present_halo_nodes(the_data%NumOwnedND))
-	
+
 !   read(unit=235100, fmt=*) node_owner
     node_owner = 0
     i11 = 0
@@ -258,10 +291,8 @@ module fvcom_mod
 !                the_data%bathymetry(i1)
 !        end do
     do i1 = 1, the_data%NumNd
-!      the_data%NdCoords((i1-1)*dim1 + 1) = lon(i1)
-!      the_data%NdCoords((i1-1)*dim1 + 2) = lat(i1)
-      the_data%NdCoords((i1-1)*dim1 + 1) = lat(i1)
-      the_data%NdCoords((i1-1)*dim1 + 2) = lon(i1)
+       the_data%NdCoords((i1-1)*dim1 + 1) = lon(i1)
+       the_data%NdCoords((i1-1)*dim1 + 2) = lat(i1)
        the_data%bathymetry(i1) = h(i1)
     end do
         
@@ -276,6 +307,11 @@ module fvcom_mod
       the_data%ElConnect((i1-1)*NumND_per_El+2) = NV(i1,2)
       the_data%ElConnect((i1-1)*NumND_per_El+3) = NV(i1,3)
 !      write(500+myid,*) i1,nv(i1,1),nv(i1,2),nv(i1,3)
+    end do
+
+    do i1 = 1, the_data%NumEl
+       the_data%ElCoords((i1-1)*dim1 + 1) = lonc(i1)
+       the_data%ElCoords((i1-1)*dim1 + 2) = latc(i1)
     end do
 
     do i1= 1, the_data%NumNd
@@ -300,7 +336,7 @@ module fvcom_mod
       end if
     end do
     the_data%ElTypes = ESMF_MESHELEMTYPE_TRI
-	
+
     the_data%NumOwnedNd_NOHALO = J1
     the_data%NumOwnedNd_HALO = J2
     allocate(the_data%owned_to_present_nodes(j1))
@@ -318,7 +354,6 @@ module fvcom_mod
 !        close(23518)
 !        close(235100)
   end subroutine extract_parallel_data_from_mesh
-
 
   subroutine read_config()
   ! This subroutine is not used with NEMS system. Because the 
@@ -359,5 +394,224 @@ module fvcom_mod
     call ESMF_ConfigDestroy(cf, rc=rc) ! Destroy the Config
         
   end subroutine read_config
+
+  subroutine eliminate_ghosts(the_data, localPet, dbug)
+    implicit none
+
+    type(meshdata), intent(inout) :: the_data
+    integer, intent(in)           :: localPet
+    logical, intent(in)           :: dbug
+
+    ! local variables
+    integer :: i, j, k, indx, indx2
+    integer :: n1, i1, j1, pe1, n2, i2, j2, pe2, n3, i3, j3, pe3
+    integer :: minNdIDs, maxNdIDs
+    integer :: NumEl_nog, NumNd_nog
+    integer :: NumND_per_El = 3
+    integer :: dim1 = 2
+    integer, allocatable  :: ElIDs(:)
+    integer, allocatable  :: ElConnect(:)
+    real(ESMF_KIND_R8), allocatable :: ElCoords(:)
+    integer, allocatable  :: ElMask(:)
+    integer, allocatable  :: NdIDs(:)
+    real(ESMF_KIND_R8), allocatable :: NdCoords(:)
+    integer, allocatable  :: NdOwners(:)
+    real(ESMF_KIND_R8), allocatable :: bathymetry(:)
+    integer, allocatable  :: NdMask(:)
+    character(len=1024)   :: msgString
+    character(len=*), parameter :: subname=trim(modName)//':(eliminate_ghosts) '
+
+    ! message for entering call
+    call ESMF_LogWrite(subname//' called', ESMF_LOGMSG_INFO)
+
+    ! create mask for elements
+    if (.not. allocated(ElMask)) allocate(ElMask(the_data%NumEl))
+    ElMask = 0
+
+    ! 1 to N are resident elements and N+1 to NT are ghost elements
+    do i = 1, N
+       ElMask(i) = the_data%ElIDs(i)
+    end do
+
+    ! debug
+    if (dbug) then
+       do i = 1, the_data%NumEl
+          ! get node owners
+          pe1 = the_data%NdOwners(the_data%ElConnect((i-1)*NumND_per_El+1))
+          pe2 = the_data%NdOwners(the_data%ElConnect((i-1)*NumND_per_El+2))
+          pe3 = the_data%NdOwners(the_data%ElConnect((i-1)*NumND_per_El+3))
+
+          write(msgString,'(8I8)') the_data%ElIDs(i), ElMask(i), pe1, pe2, pe3, &
+            the_data%ElConnect((i-1)*NumND_per_El+1), &
+            the_data%ElConnect((i-1)*NumND_per_El+2), &
+            the_data%ElConnect((i-1)*NumND_per_El+3)
+          call ESMF_LogWrite(subname//' EMASK: '//trim(msgString), ESMF_LOGMSG_INFO)
+       end do
+    end if
+
+    ElMask = abs(ElMask)
+
+    ! number of elements without ghosts
+    NumEl_nog = count(mask=ElMask > 0)
+    write(msgString,'(A,I8,A,I8)') 'NumEl = ', size(the_data%ElIDs), ' NumEl_no_ghost = ', NumEl_nog
+    if (dbug) call ESMF_LogWrite(subname//' '//trim(msgString), ESMF_LOGMSG_INFO)
+
+    ! allocate temporary arrays for element
+    if (.not. allocated(ElIDs)) allocate(ElIDs(NumEl_nog))
+    if (.not. allocated(ElConnect)) allocate(ElConnect(NumND_per_El*NumEl_nog)) 
+    if (.not. allocated(ElCoords)) allocate(ElCoords(dim1*NumEl_nog))
+
+    ! fill temporary element arrays with non-ghost data
+    j = 1
+    do i = 1, the_data%NumEl   
+       if (ElMask(i) > 0) then
+          ElIDs(j) = the_data%ElIDs(i)
+          ElConnect((j-1)*NumND_per_El+1) = the_data%ElConnect((i-1)*NumND_per_El+1)
+          ElConnect((j-1)*NumND_per_El+2) = the_data%ElConnect((i-1)*NumND_per_El+2)
+          ElConnect((j-1)*NumND_per_El+3) = the_data%ElConnect((i-1)*NumND_per_El+3)
+          ElCoords((j-1)*dim1+1) = the_data%ElCoords((i-1)*dim1+1)
+          ElCoords((j-1)*dim1+2) = the_data%ElCoords((i-1)*dim1+2)
+          j = j+1
+       end if
+    end do
+    deallocate(ElMask)
+
+    ! make local node ids in ElConnect monotonic again since we removed
+    ! ghosts elements
+    minNdIDs = minval(ElConnect, dim=1)
+    maxNdIDs = maxval(ElConnect, dim=1)
+    write(msgString,'(2I8)') minNdIDs, maxNdIDs
+    if (dbug) call ESMF_LogWrite(subname//' minNdIDs, maxNdIDs: '//trim(msgString), ESMF_LOGMSG_INFO)
+
+    ! create mask for unique list of nodes in the element connection
+    if (.not. allocated(NdMask)) allocate(NdMask(the_data%NumNd))
+    NdMask = 0
+
+    ! 1 to N are resident nodes and N+1 to NT are ghost elements
+    do i = minNdIDs, maxNdIDs
+       NdMask(i) = i
+    end do    
+
+    ! debug, print nodeids and associated masks
+    if (dbug) then
+       do i = 1, the_data%NumNd
+          write(msgString,'(4I8)') the_data%NdIDs(i), NLID_X(the_data%NdIDs(i)), NdMask(i), the_data%NdOwners(i)
+          call ESMF_LogWrite(subname//' NMASK: '//trim(msgString), ESMF_LOGMSG_INFO)
+       end do
+    end if
+
+    ! number of nodes without ghosts
+    NumNd_nog = count(mask=NdMask .gt. 0)
+    write(msgString,'(A,I8,A,I8)') 'NumNd = ', size(the_data%NdIDs), ' NumNd_no_ghost = ', NumNd_nog
+    if (dbug) call ESMF_LogWrite(subname//' '//trim(msgString), ESMF_LOGMSG_INFO)
+    write(msgString,'(A,2I8)') 'NdMask min/max = ', minval(NdMask, dim=1, mask=NdMask .gt. 0), &
+       maxval(NdMask, dim=1, mask=NdMask .gt. 0)
+    if (dbug) call ESMF_LogWrite(subname//' '//trim(msgString), ESMF_LOGMSG_INFO)
+
+    ! allocate temporary arrays for node 
+    if (.not. allocated(NdIDs)) allocate(NdIDs(NumNd_nog))
+    if (.not. allocated(NdCoords)) allocate(NdCoords(dim1*NumNd_nog))
+    if (.not. allocated(NdOwners)) allocate(NdOwners(NumNd_nog))
+    if (.not. allocated(bathymetry)) allocate(bathymetry(NumNd_nog))
+
+    ! fill temporary node arrays with non-ghost data
+    ! node ids in the node list are global ids
+    j = 1
+    do i = 1, the_data%NumNd
+       if (NdMask(i) .ne. 0) then 
+          NdIDs(j) = the_data%NdIDs(i)
+          NdCoords((j-1)*dim1+1) = the_data%NdCoords((i-1)*dim1+1)
+          NdCoords((j-1)*dim1+2) = the_data%NdCoords((i-1)*dim1+2)
+          NdOwners(j) = the_data%NdOwners(i)
+          bathymetry(j) = the_data%bathymetry(i)
+          j = j+1
+       end if
+    end do
+    deallocate(NdMask)
+
+    ! update data with non-ghost one
+    the_data%NumEl = NumEl_nog
+
+    if (allocated(the_data%ElIDs)) then
+       deallocate(the_data%ElIDs)
+       allocate(the_data%ElIDs(NumEl_nog))
+       the_data%ElIDs = ElIDs
+       deallocate(ElIDs)
+    end if
+
+    if (allocated(the_data%ElConnect)) then
+       deallocate(the_data%ElConnect)
+       allocate(the_data%ElConnect(NumND_per_El*NumEl_nog))
+       the_data%ElConnect = ElConnect
+       deallocate(ElConnect)
+    end if
+
+    if (allocated(the_data%ElCoords)) then
+       deallocate(the_data%ElCoords)
+       allocate(the_data%ElCoords(dim1*NumEl_nog))
+       the_data%ElCoords = ElCoords
+       deallocate(ElCoords)
+    end if
+
+    if (allocated(the_data%ElTypes)) then
+       deallocate(the_data%ElTypes)
+       allocate(the_data%ElTypes(NumEl_nog))
+       the_data%ElTypes = ESMF_MESHELEMTYPE_TRI
+    end if
+
+    the_data%NumNd = NumNd_nog
+
+    if (allocated(the_data%NdIDs)) then
+       deallocate(the_data%NdIDs)
+       allocate(the_data%NdIDs(NumNd_nog))
+       the_data%NdIDs = NdIDs
+       deallocate(NdIDs)
+    end if
+
+    if (allocated(the_data%NdCoords)) then
+       deallocate(the_data%NdCoords)
+       allocate(the_data%NdCoords(dim1*NumNd_nog))
+       the_data%NdCoords = NdCoords
+       deallocate(NdCoords)
+    end if
+
+    if (allocated(the_data%NdOwners)) then
+       deallocate(the_data%NdOwners)
+       allocate(the_data%NdOwners(NumNd_nog))
+       the_data%NdOwners = NdOwners
+       deallocate(NdOwners)
+    end if
+
+    if (allocated(the_data%bathymetry)) then
+       deallocate(the_data%bathymetry)
+       allocate(the_data%bathymetry(NumNd_nog))
+       the_data%bathymetry = bathymetry
+       deallocate(bathymetry)
+    end if
+
+    if (dbug) then
+       ! debug, output local, global ids and coordinates of nodes accociated
+       ! with element
+       do i = 1, the_data%NumEl
+          write(msgString,'(4I8,2F8.3)') the_data%ElIDs(i), &
+            the_data%ElConnect((i-1)*NumND_per_El+1), the_data%ElConnect((i-1)*NumND_per_El+2), &
+            the_data%ElConnect((i-1)*NumND_per_El+3), &
+            the_data%ElCoords((i-1)*dim1+1), the_data%ElCoords((i-1)*dim1+2)
+          call ESMF_LogWrite(subname//' ELEM: '//trim(msgString), ESMF_LOGMSG_INFO)
+       end do
+
+       ! debug, output nodeid, owners and coordinates
+       do i = 1, the_data%NumNd
+          write(msgString,'(2I8,3F10.3)') the_data%NdIDs(i), the_data%NdOwners(i), &
+            the_data%NdCoords((i-1)*dim1+1), the_data%NdCoords((i-1)*dim1+2), &
+            the_data%bathymetry(i)
+          call ESMF_LogWrite(subname//' NODE: '//trim(msgString), ESMF_LOGMSG_INFO)
+       end do
+    end if
+
+    ! message for exiting call
+    call ESMF_LogWrite(subname//' done', ESMF_LOGMSG_INFO)
+
+  end subroutine eliminate_ghosts
 
 end module
