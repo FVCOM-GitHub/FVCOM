@@ -234,7 +234,7 @@ module fvcom_cap
 
     ! query attributes
     ! fvcom name
-    call NUOPC_CompAttributeGet(model, name='fvcom_name', value=cvalue, &
+    call NUOPC_CompAttributeGet(model, name='case_name', value=cvalue, &
       isPresent=isPresent, isSet=isSet, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
