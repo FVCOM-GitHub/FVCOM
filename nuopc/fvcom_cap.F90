@@ -619,11 +619,13 @@ module fvcom_cap
 !        print *,"ADC ..3.............................................. >> "
     !
     
-    call ESMF_MeshWrite(ModelMesh, filename="fvcom_mesh.nc", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
+    if (dbug) then  
+       call ESMF_MeshWrite(ModelMesh, filename="fvcom_mesh", rc=rc)
+       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, &
+         file=__FILE__)) &
+         return  ! bail out
+    end if
 
 !    print *,"FVCOM >> "
 !    print *,"NumNd", mdata%NumNd
