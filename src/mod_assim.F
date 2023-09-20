@@ -3528,9 +3528,16 @@ in:  DO WHILE(.TRUE.)
      ! relatively low.
      IF (ECNT ==0) THEN
          K = TS_OBS(I)%N_CELL
+#      if defined (SPHERICAL) 
+         ! Siqi Li, OI@20230920
+         CALL ARC(X0,Y0,XG(NVG(K, 1)),YG(NVG(K, 1)),XTRI(1))
+         CALL ARC(X0,Y0,XG(NVG(K, 2)),YG(NVG(K, 2)),XTRI(2))
+         CALL ARC(X0,Y0,XG(NVG(K, 3)),YG(NVG(K, 3)),XTRI(3))
+#      else
          XTRI(1) = SQRT( (X0 - XG(NVG(K, 1)))**2 + (Y0 - YG(NVG(K, 1)))**2 )
          XTRI(2) = SQRT( (X0 - XG(NVG(K, 2)))**2 + (Y0 - YG(NVG(K, 2)))**2 )
          XTRI(3) = SQRT( (X0 - XG(NVG(K, 3)))**2 + (Y0 - YG(NVG(K, 3)))**2 )
+#      endif
          DO K = 1, 3
              IF (TS_RADIUS < XTRI(K)) THEN
                  J = K
