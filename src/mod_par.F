@@ -262,6 +262,7 @@ MODULE MOD_PAR
 !===================================================================================|
 
    SUBROUTINE INIT_MPI_ENV(MYID,NPROCS,SERIAL,PAR,MSR,MSRID) 
+     USE CONTROL, ONLY : MPI_COMM_FVCOM
 !===================================================================================|
 !  INITIALIZE MPI ENVIRONMENT                                                       |
 !===================================================================================|
@@ -685,7 +686,7 @@ MODULE MOD_PAR
    !
    ! G. Cowles, April 2016 
    !
-   USE CONTROL, ONLY : casename,NMLUNIT
+   USE CONTROL, ONLY : casename, NMLUNIT, MPI_COMM_FVCOM
    IMPLICIT NONE
    INTEGER, INTENT(IN)  :: NGL
    INTEGER, INTENT(IN) :: NVG(0:NGL,4)
@@ -1016,7 +1017,7 @@ MODULE MOD_PAR
    endif !MSR
 
    !Broadcast the partition (el_pid) to everybody 
-   CALL MPI_BCAST(EL_PID,NGL,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
+   CALL MPI_BCAST(EL_PID,NGL,MPI_INTEGER,0,MPI_COMM_FVCOM,IERR)
 
 
   END SUBROUTINE DOMDEC

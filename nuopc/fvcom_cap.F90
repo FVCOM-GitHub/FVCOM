@@ -7,7 +7,7 @@
 #define MULTIPROCESSOR
 #define SPHERICAL
 #define WET_DRY
-#define TWO_D_MODEL___disabled
+#define TWO_D_MODEL          !___disabled
 #define WAVE_ROLLER___disabled
 
 module fvcom_cap
@@ -36,6 +36,7 @@ module fvcom_cap
   use ALL_VARS   , only : WAVESTRX_2D, WAVESTRY_2D,WAVESTRX_3D,WAVESTRY_3D,nv
   use ALL_VARS   , only : U_STOKES_2D, V_STOKES_2D,U_STOKES_3D,V_STOKES_3D
   use ALL_VARS   , only : PAR, INTSTEP_SECONDS
+  use ALL_VARS   , only : UUWIND,VVWIND
   use MOD_PAR    , only : NBN,BN_MLT,BN_LOC,BNC,NODE_MATCH
   use MOD_PAR    , only : NC,EC,AEXCHANGE
   use MOD_PAR    , only : NMAP,MPI_F,MPI_FVCOM_GROUP,NGID_X,ACOLLECT
@@ -48,12 +49,14 @@ module fvcom_cap
   use mod_driver , only : eyear, emonth, eday, ehour, eminute, esecond
 
   use fvcom_mod, only: FVCOM_WHS,  FVCOM_WLEN, FVCOM_WDIR
+  use fvcom_mod, only: FVCOM_WVNX,  FVCOM_WVNY, FVCOM_PRN
 
-  use fvcom_mod, only: NUOPC4WAV
+  use fvcom_mod, only: NUOPC4WAV,NUOPC4MET
 
   use fvcom_mod, only: meshdata
   use fvcom_mod, only: create_parallel_esmf_mesh_from_meshdata
   use fvcom_mod, only: extract_parallel_data_from_mesh
+  use fvcom_mod, only: eliminate_ghosts
   
   implicit none
 
@@ -89,12 +92,17 @@ module fvcom_cap
 
 !JQI2021  logical, save            :: first_exchange = .true.
 !JQI2021  integer, save            :: iunit_log = 10000
+    logical :: wave_forcing, meteo_forcing, surge_forcing
 
 
 !JQI2021  real,parameter :: wave_force_limmit = 0.05
 
 ! The FVCOM domain name
   character(len=20) :: fvcom_name
+
+  ! config options
+  type(ESMF_MeshLoc) :: meshloc
+  logical :: dbug
   
   !-----------------------------------------------------------------------------
   contains
@@ -134,7 +142,7 @@ module fvcom_cap
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
+    
     !Assume no need to change clock settings
     ! attach specializing method(s)
 !    call NUOPC_CompSpecialize(model, specLabel=model_label_SetClock, &
@@ -214,9 +222,9 @@ module fvcom_cap
     type(ESMF_VM)                :: vm
     type(ESMF_Clock)             :: dclock
     type(ESMF_Time)              :: currTime, stopTime
-    integer                      :: esmf_comm, fvcom_comm, ierr
+    integer                      :: esmf_comm,fvcom_comm,ierr
     logical                      :: isPresent, isSet
-    character(len=ESMF_MAXSTR)   :: cvalue
+    character(len=ESMF_MAXSTR)   :: message, cvalue
     character(len=*),parameter   :: subname='(fvcom_cap:InitializeP1)'
 
     rc = ESMF_SUCCESS
@@ -224,8 +232,9 @@ module fvcom_cap
     write(info,*) subname,' --- initialization phase 1 begin --- '
     call ESMF_LogWrite(info, ESMF_LOGMSG_INFO, rc=dbrc)
 
-    ! query attribute
-    call NUOPC_CompAttributeGet(model, name='fvcom_name', value=cvalue, &
+    ! query attributes
+    ! fvcom name
+    call NUOPC_CompAttributeGet(model, name='case_name', value=cvalue, &
       isPresent=isPresent, isSet=isSet, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -238,6 +247,42 @@ module fvcom_cap
       fvcom_name = 'sci'
     end if
     call ESMF_LogWrite(trim(subname)//': fvcom_name = '//trim(fvcom_name), ESMF_LOGMSG_INFO)
+
+    ! mesh location for fields
+    call NUOPC_CompAttributeGet(model, name='meshloc', value=cvalue, & 
+      isPresent=isPresent, isSet=isSet, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    if (isPresent .and. isSet) then
+       if (trim(cvalue) == 'node') then
+          meshloc = ESMF_MESHLOC_NODE
+       else
+          meshloc = ESMF_MESHLOC_ELEMENT
+       end if
+    else
+       cvalue = 'node'
+       meshloc = ESMF_MESHLOC_NODE
+    end if
+    write(message, '(A)') trim(subname)//' meshloc is set to '//trim(cvalue)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    ! debug option
+    call NUOPC_CompAttributeGet(model, name='dbug', value=cvalue, &
+      isPresent=isPresent, isSet=isSet, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    dbug = .false.
+    if (isPresent .and. isSet) then
+       if (trim(cvalue) .eq. '.true.' .or. trim(cvalue) .eq. 'true') dbug = .true.
+    end if
+    write(message, '(A,L)') trim(subname)//' debug flag is set to ', dbug
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     ! query the driver for its clock
     call NUOPC_ModelGet(model, driverClock=dclock, rc=rc)
@@ -430,14 +475,16 @@ module fvcom_cap
     call fld_list_add(num=fldsToFvcom_num, fldlist=fldsToFvcom, stdname=trim(tmpName), shortname=trim(tmpShortName))
 
     !--------- import fields from atm to Fvcom -------------
-!    call fld_list_add(num=fldsToFvcom_num, fldlist=fldsToFvcom, stdname=
-!    "air_pressure_at_sea_level", shortname= "pmsl" )
-!    call fld_list_add(num=fldsToFvcom_num, fldlist=fldsToFvcom, stdname=
-!    "inst_merid_wind_height10m", shortname= "imwh10m" )
-!    call fld_list_add(num=fldsToFvcom_num, fldlist=fldsToFvcom,
-!    stdname="inst_zonal_wind_height10m" , shortname= "izwh10m" )
+    call fld_list_add(num=fldsToFvcom_num, fldlist=fldsToFvcom, stdname=   &
+    "air_pressure_at_sea_level", shortname= "pmsl" )
+    call fld_list_add(num=fldsToFvcom_num, fldlist=fldsToFvcom, stdname=   &
+    "inst_zonal_wind_height10m", shortname= "izwh10m" )
+    call fld_list_add(num=fldsToFvcom_num, fldlist=fldsToFvcom,            &
+    stdname="inst_merid_wind_height10m" , shortname= "imwh10m" )
 
     !--------- export fields from Sea Fvcom -------------
+    call fld_list_add(num=fldsFrFvcom_num, fldlist=fldsFrFvcom, &
+         stdname="ocean_mask", shortname= "omask" )
     call fld_list_add(num=fldsFrFvcom_num, fldlist=fldsFrFvcom, &
          stdname="sea_surface_height_above_sea_level", shortname= "seahgt" )
     call fld_list_add(num=fldsFrFvcom_num, fldlist=fldsFrFvcom, &
@@ -543,7 +590,8 @@ module fvcom_cap
     type(meshdata)               :: mdata
     type(ESMF_Mesh)              :: ModelMesh,meshIn,meshOut
     type(ESMF_VM)                :: vm
-    integer                      :: localPet, petCount
+    real(ESMF_KIND_R8), pointer  :: dataPtr_mask(:)
+    integer                      :: i, localPet, petCount
     character(len=*),parameter   :: subname='(fvcom_cap:RealizeFieldsProvidingGrid)'
 
     rc = ESMF_SUCCESS
@@ -563,24 +611,27 @@ module fvcom_cap
     mdata%vm = vm
     !print *,localPet,"< LOCAL pet, ADC ..1.............................................. >> "
     ! create a Mesh object for Fields
-    !call extract_parallel_data_from_mesh(ROOTDIR, mdata, localPet)
     call extract_parallel_data_from_mesh(mdata, localPet)
-    !    print *,"ADC ..2.............................................. >> "
+    ! keep only non-ghost elements, required for CMEPS coupling
+    call eliminate_ghosts(mdata, localPet, dbug)
+!        print *,"ADC ..2.............................................. >> "
     call create_parallel_esmf_mesh_from_meshdata(mdata,ModelMesh )
-    !    print *,"ADC ..3.............................................. >> "
+!        print *,"ADC ..3.............................................. >> "
     !
     
-    call ESMF_MeshWrite(ModelMesh, filename="fvcom_mesh.nc", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
+    if (dbug) then  
+       call ESMF_MeshWrite(ModelMesh, filename="fvcom_mesh", rc=rc)
+       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, &
+         file=__FILE__)) &
+         return  ! bail out
+    end if
 
-    !print *,"FVCOM >> "
-    !print *,"NumNd", mdata%NumNd
-    !print *,"NumOwnedNd", mdata%NumOwnedNd
-    !print *,"NumEl", mdata%NumEl
-    !print *,"NumND_per_El", mdata%NumND_per_El
+!    print *,"FVCOM >> "
+!    print *,"NumNd", mdata%NumNd
+!    print *,"NumOwnedNd", mdata%NumOwnedNd
+!    print *,"NumEl", mdata%NumEl
+!    print *,"NumND_per_El", mdata%NumND_per_El
 
 
     meshIn  = ModelMesh ! for now out same as in
@@ -601,9 +652,24 @@ module fvcom_cap
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+!
+    ! initialize export field omask (required for coupling through CMEPS)
+    ! assuming that mask is not changing in time
+    ! we could move this to Advance call and try to use ISWETN (at node points),
+    ! ISWETC (at element cells)
+    do i = 1, fldsFrFvcom_num
+       if (trim(fldsFrFvcom(i)%shortname) == 'omask' .and. fldsFrFvcom(i)%connected) then
+          call State_getFldPtr_(ST=exportState, fldname='omask', fldptr=dataPtr_mask, rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+          dataPtr_mask = 0.0
+       end if
+    end do
 
     write(info,*) subname,' --- initialization phase 2 completed --- '
-!    print *,      subname,' --- initialization phase 2 completed --- '
+    print *,      subname,' --- initialization phase 2 completed --- '
     call ESMF_LogWrite(info, ESMF_LOGMSG_INFO, line=__LINE__, file=__FILE__, rc=dbrc)
   end subroutine InitializeP2
   
@@ -632,7 +698,6 @@ module fvcom_cap
 
     type(ESMF_Field)                   :: field
     type(ESMF_DistGrid)                :: nodeDistgrid
-    type(ESMF_Array)                   :: array
     type(ESMF_RouteHandle)             :: haloHandle
     integer                            :: i
     character(len=*),parameter         :: subname='(fvcom_cap:FVCOM_RealizeFields)'
@@ -645,28 +710,21 @@ module fvcom_cap
     ! Create an ESMF Array with a halo region from a node DistGrid.
 
     do i = 1, nfields
+      field = ESMF_FieldCreate(name=field_defs(i)%shortname, mesh=mesh, &
+         typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, rc=rc)
 
-      array = ESMF_ArrayCreate(nodeDistgrid, typekind=ESMF_TYPEKIND_R8,  &
-              haloSeqIndexList=mdata%owned_to_present_halo_nodes, name=field_defs(i)%shortname,rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-
-      field = ESMF_FieldCreate(name=field_defs(i)%shortname, mesh=mesh, array=array, &
-              meshLoc=ESMF_MESHLOC_NODE, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-	  
+  
       ! Create the RouteHandle for the halo communication.
-      call ESMF_FieldHaloStore(field,routehandle=haloHandle, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-	
+      !call ESMF_FieldHaloStore(field,routehandle=haloHandle, rc=rc)
+      !if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      !  line=__LINE__, &
+      !  file=__FILE__)) &
+      !  return  ! bail out
+
       ! Do the halo communication.
 !!JQI      call ESMF_FieldHalo(field, routehandle=haloHandle, rc=rc)  
 
@@ -739,15 +797,12 @@ module fvcom_cap
     ! initialize internal clock
     ! - on entry, the component clock is a copy of the parent clock
     ! - the parent clock is on the slow timescale atm timesteps
-    ! - reset the component clock to have a timeStep that is for fvcom-wav of
-    ! the parent
+    ! - reset the component clock to have a timeStep that is for fvcom-wav of the parent
     !   -> timesteps
     
-    !call ESMF_TimeIntervalSet(ADCTimeStep, s=     adc_cpl_int, sN=adc_cpl_num,
-    !sD=adc_cpl_den, rc=rc) ! 5 minute steps
+    !call ESMF_TimeIntervalSet(ADCTimeStep, s=     adc_cpl_int, sN=adc_cpl_num, sD=adc_cpl_den, rc=rc) ! 5 minute steps
     !TODO: use nint !!?
-!    call ESMF_TimeIntervalSet(ADCTimeStep, s= adc_cpl_int , rc=rc) ! 5 minute
-!    steps
+!    call ESMF_TimeIntervalSet(ADCTimeStep, s= adc_cpl_int , rc=rc) ! 5 minute steps
 !    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
 !      line=__LINE__, &
 !      file=__FILE__)) &
@@ -855,9 +910,9 @@ module fvcom_cap
     real(ESMF_KIND_R8), pointer:: dataPtr_wavlen(:)
     real(ESMF_KIND_R8), pointer:: dataPtr_wavdir(:)
 
-!    real(ESMF_KIND_R8), pointer:: dataPtr_pmsl(:)
-!    real(ESMF_KIND_R8), pointer:: dataPtr_imwh10m(:)
-!    real(ESMF_KIND_R8), pointer:: dataPtr_izwh10m(:)
+    real(ESMF_KIND_R8), pointer:: dataPtr_uwnd(:)
+    real(ESMF_KIND_R8), pointer:: dataPtr_vwnd(:)
+    real(ESMF_KIND_R8), pointer:: dataPtr_pres(:)
 
     type(ESMF_StateItem_Flag)  :: itemType
     type(ESMF_Mesh)            :: mesh
@@ -872,7 +927,7 @@ module fvcom_cap
     integer :: ss,ssN,ssD
     integer :: j, k,ierr
     character*(ESMF_MAXSTR)    :: tmpShortName
-    logical :: wave_forcing, meteo_forcing, surge_forcing
+!JQI20230620    logical :: wave_forcing, meteo_forcing, surge_forcing
 
     type(ESMF_Time) :: BeforeCaribbeanTime,AfterCaribbeanTime
     
@@ -881,6 +936,9 @@ module fvcom_cap
     real(sp), allocatable :: TMP_WHS(:),TMP_WLEN(:),TMP_WDIR(:)
     real(sp), allocatable :: TMP1_WHS(:),TMP1_WLEN(:),TMP1_WDIR(:)
     real(sp), allocatable :: WHS(:),WLEN(:),WDIR(:)
+
+    real(sp), allocatable :: TMP_WVNX(:),TMP_WVNY(:),TMP_PRN(:)
+    real(sp), allocatable :: TMP1_WVNX(:),TMP1_WVNY(:),TMP1_PRN(:)
 
     rc = ESMF_SUCCESS
     dbrc = ESMF_SUCCESS
@@ -963,8 +1021,8 @@ module fvcom_cap
     endif
 
 
-     !print *, '  nCplFVCOM = ', nCplFVCOM
-     !print *, '  FVCOMCouplingTimeInterval = ', timeStepAbs
+!     print *, '  nCplFVCOM = ', nCplFVCOM
+!     print *, '  FVCOMCouplingTimeInterval = ', timeStepAbs
 !    print*, "STOP HERE?????????"
     !-----------------------------------------
     !   IMPORT
@@ -1046,10 +1104,10 @@ module fvcom_cap
 
       ! Fill owned nodes from imported data to model variable
       ! devide by water density to convert from N.m-2 to m2s-2
-	
+
 !      print*, "SIZE =",size(dataPtr_sxx2),mdataIn%NumOwnedNd_NoHalo,  &
 !                                          mdataIn%NumOwnedNd_Halo
-	
+
       do i1 = 1, mdataIn%NumOwnedNd_NoHalo
         FVCOM_WHS(mdataIn%owned_to_present_nodes(i1),1)  = dataPtr_wavhs(i1)
         FVCOM_WLEN(mdataIn%owned_to_present_nodes(i1),1) = dataPtr_wavlen(i1)
@@ -1125,15 +1183,15 @@ module fvcom_cap
         CALL ACOLLECT(MYID,MSRID,NPROCS,NMAP,WLEN,TMP_WLEN)
         CALL ACOLLECT(MYID,MSRID,NPROCS,NMAP,WDIR,TMP_WDIR)
 
-      do i1=1,mgl
-        write(100+myid,*) i1,tmp_whs(i1)
-      end do
-      do i1=1,mgl
-        write(200+myid,*) i1,tmp_wlen(i1)
-      end do
-      do i1=1,mgl
-        write(300+myid,*) i1,tmp_wdir(i1)
-      end do
+!      do i1=1,mgl
+!        write(100+myid,*) i1,tmp_whs(i1)
+!      end do
+!      do i1=1,mgl
+!        write(200+myid,*) i1,tmp_wlen(i1)
+!      end do
+!      do i1=1,mgl
+!        write(300+myid,*) i1,tmp_wdir(i1)
+!      end do
 
 
 !JQI!    NOTE: FVCOM accepts wave-driven stresses "in units of velocity squared
@@ -1225,12 +1283,12 @@ module fvcom_cap
     !-----------------------------------------
     !   IMPORT from ATM
     !-----------------------------------------
-    meteo_forcing= .false.
-!JQI   do num = 1,fldsToFvcom_num
-!JQI      if (fldsToFvcom(num)%shortname == 'pmsl')    meteo_forcing = meteo_forcing .and. fldsToFvcom(num)%connected
-!JQI      if (fldsToFvcom(num)%shortname == 'imwh10m') meteo_forcing = meteo_forcing .and. fldsToFvcom(num)%connected
-!JQI      if (fldsToFvcom(num)%shortname == 'izwh10m') meteo_forcing = meteo_forcing .and. fldsToFvcom(num)%connected
-!JQI   end do
+    meteo_forcing= .true.
+    do num = 1,fldsToFvcom_num
+      if (fldsToFvcom(num)%shortname == 'pmsl')    meteo_forcing = meteo_forcing .and. fldsToFvcom(num)%connected
+      if (fldsToFvcom(num)%shortname == 'imwh10m') meteo_forcing = meteo_forcing .and. fldsToFvcom(num)%connected
+      if (fldsToFvcom(num)%shortname == 'izwh10m') meteo_forcing = meteo_forcing .and. fldsToFvcom(num)%connected
+    end do
     
     if ( meteo_forcing) then
 !JQI        !NWS = 39   ! over write NWS option to be sure we incldue wind forcing
@@ -1242,47 +1300,51 @@ module fvcom_cap
                                       !TODO: 
         !Get and fill imported fields
         ! <<<<< RECEIVE and UN-PACK pmsl
-!JQI        call State_getFldPtr_(ST=importState,fldname='pmsl',fldptr=dataPtr_pmsl,rc=rc,dump=.true.,timeStr=timeStr)
-!JQI        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!JQI          line=__LINE__, &
-!JQI          file=__FILE__)) &
-!JQI          return  ! bail out
+!JQI        call State_getFldPtr_(ST=importState,fldname='pmsl',fldptr=dataPtr_pres,dump=.true.,timeStr=timeStr,rc=rc)
+        call State_getFldPtr(ST=importState,fldname='pmsl',fldptr=dataPtr_pres,rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
 
         !print *, 'size > 5 dataPtr_pmsl>', size(dataPtr_pmsl) !, dataPtr_pmsl(5:)
         
         !-----------------------------------------
         ! <<<<< RECEIVE and UN-PACK imwh10m    V-Y wind comp
 !JQI        call State_getFldPtr_(ST=importState,fldname='imwh10m',fldptr=dataPtr_imwh10m,rc=rc,dump=.false.,timeStr=timeStr)
-!JQI        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!JQI          line=__LINE__, &
-!JQI          file=__FILE__)) &
-!JQI          return  ! bail out
+        call State_getFldPtr(ST=importState,fldname='imwh10m',fldptr=dataPtr_vwnd,rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+        print*, 'vwnd min,max = ', minval(dataPtr_vwnd), maxval(dataPtr_vwnd)
         !-----------------------------------------
         ! <<<<< RECEIVE and UN-PACK izwh10m    U-X  wind comp
 !JQI        call State_getFldPtr_(ST=importState,fldname='izwh10m',fldptr=dataPtr_izwh10m,rc=rc,dump=.false.,timeStr=timeStr)
- !JQI       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!JQI          line=__LINE__, &
-!JQI          file=__FILE__)) &
-!JQI          return  ! bail out
+        call State_getFldPtr(ST=importState,fldname='izwh10m',fldptr=dataPtr_uwnd,rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
         
 !JQI        write(info,*) subname,' --- meteo forcing exchange OK / atm feilds are all connected --- / Model advances '
 !JQI        call ESMF_LogWrite(info, ESMF_LOGMSG_INFO, rc=dbrc)
         !print *, info
 
         ! Allocate arrays for radiation stresses.
- !JQI       IF(.NOT.ALLOCATED(WVNX1)) ALLOCATE(WVNX1(1:NP))
-!JQI        IF(.NOT.ALLOCATED(WVNY1)) ALLOCATE(WVNY1(1:NP))
-!JQI        IF(.NOT.ALLOCATED(PRN1) ) ALLOCATE(PRN1 (1:NP))
+        IF(.NOT.ALLOCATED(FVCOM_WVNX)) ALLOCATE(FVCOM_WVNX(0:MT,1:2))
+        IF(.NOT.ALLOCATED(FVCOM_WVNY)) ALLOCATE(FVCOM_WVNY(0:MT,1:2))
+        IF(.NOT.ALLOCATED(FVCOM_PRN) ) ALLOCATE(FVCOM_PRN (0:MT,1:2))
 
- !JQI       IF(.NOT.ALLOCATED(WVNX2)) ALLOCATE(WVNX2(1:NP))
-!JQI        IF(.NOT.ALLOCATED(WVNY2)) ALLOCATE(WVNY2(1:NP))
-!JQI        IF(.NOT.ALLOCATED(PRN2) ) ALLOCATE(PRN2 (1:NP))
+!        IF(.NOT.ALLOCATED(FVCOM_WVNX2)) ALLOCATE(WVNX2(1:NP))
+!        IF(.NOT.ALLOCATED(FVCOM_WVNY2)) ALLOCATE(WVNY2(1:NP))
+!        IF(.NOT.ALLOCATED(PRN2) ) ALLOCATE(PRN2 (1:NP))
 
         !print *, 'maxval(WVNX2)', maxval(WVNX2)
 
- !JQI       WVNX1 = WVNX2   
-!JQI        WVNY1 = WVNY2  
-!JQI        PRN1  = PRN2
+        FVCOM_WVNX(:,1) = FVCOM_WVNX(:,2)   
+        FVCOM_WVNY(:,1) = FVCOM_WVNY(:,2)  
+        FVCOM_PRN(:,1)  = FVCOM_PRN(:,2)
 
         !call UPDATER( dataPtr_izwh10m(:), dataPtr_imwh10m(:), dataPtr_pmsl(:),3)
        
@@ -1299,6 +1361,48 @@ module fvcom_cap
 !JQI        do i1 = 1, mdataOut%NumOwnedNd, 1
 !JQI            PRN2(mdataOut%owned_to_present_nodes(i1) ) = dataPtr_pmsl(i1) / (1025 * 9.81)    !convert Pascal to mH2O
         
+        do i1 = 1, mdataIn%NumOwnedNd_NoHalo, 1
+           FVCOM_WVNX(mdataIn%owned_to_present_nodes(i1),2) =  dataPtr_uwnd(i1) !* 0.0  !zonal is u-comp or x-comp
+           FVCOM_WVNY(mdataIn%owned_to_present_nodes(i1),2) =  dataPtr_vwnd(i1) !* 0.0  !Meridionalis v-comp or y-comp
+           FVCOM_PRN(mdataIn%owned_to_present_nodes(i1),2 ) =  dataPtr_pres(i1) / (1025 * 9.81)    !convert Pascal to mH2O
+        end do
+
+        do i1 = 1, mdataIn%NumOwnedNd_Halo, 1
+           FVCOM_WVNX(mdataIn%owned_to_present_halo_nodes(i1),2) =  dataPtr_uwnd(i1+mdataIn%NumOwnedNd_NoHalo) !* 0.0  !zonal is u-comp or x-comp
+           FVCOM_WVNY(mdataIn%owned_to_present_halo_nodes(i1),2) =  dataPtr_vwnd(i1+mdataIn%NumOwnedNd_NoHalo) !* 0.0  !Meridionalis v-comp or y-comp
+           FVCOM_PRN(mdataIn%owned_to_present_halo_nodes(i1),2 ) =  dataPtr_pres(i1+mdataIn%NumOwnedNd_NoHalo) / (1025 * 9.81)    !convert Pascal to mH2O
+        end do
+
+      IF(PAR)THEN
+       
+        IF(.NOT. ALLOCATED(TMP_WVNX)) ALLOCATE(TMP_WVNX(0:MGL))
+        IF(.NOT. ALLOCATED(TMP_WVNY)) ALLOCATE(TMP_WVNY(0:MGL))
+        IF(.NOT. ALLOCATED(TMP_PRN )) ALLOCATE(TMP_PRN(0:MGL))
+        IF(.NOT. ALLOCATED(TMP1_WVNX)) ALLOCATE(TMP1_WVNX(0:MT))
+        IF(.NOT. ALLOCATED(TMP1_WVNY)) ALLOCATE(TMP1_WVNY(0:MT))
+        IF(.NOT. ALLOCATED(TMP1_PRN)) ALLOCATE(TMP1_PRN(0:MT))
+
+        TMP1_WVNX(:) = FVCOM_WVNX(:,2)
+        TMP1_WVNY(:) = FVCOM_WVNY(:,2)
+        TMP1_PRN (:) = FVCOM_PRN (:,2)
+
+        CALL ACOLLECT(MYID,MSRID,NPROCS,NMAP,TMP1_WVNX,TMP_WVNX)
+        CALL ACOLLECT(MYID,MSRID,NPROCS,NMAP,TMP1_WVNY,TMP_WVNY)
+        CALL ACOLLECT(MYID,MSRID,NPROCS,NMAP,TMP1_PRN,TMP_PRN)
+
+        CALL MPI_BCAST(TMP_WVNX,MGL,MPI_F,0,MPI_FVCOM_GROUP,IERR)
+        CALL MPI_BCAST(TMP_WVNY,MGL,MPI_F,0,MPI_FVCOM_GROUP,IERR)
+        CALL MPI_BCAST(TMP_PRN ,MGL,MPI_F,0,MPI_FVCOM_GROUP,IERR)
+
+        do i1 = 1, mt
+         FVCOM_WVNX(i1,2)   = TMP_WVNX(NGID_X(i1))
+         FVCOM_WVNY(i1,2)   = TMP_WVNY(NGID_X(i1))
+         FVCOM_PRN (i1,2)   = TMP_PRN (NGID_X(i1))
+        end do
+
+       ! DEALLOCATE(TMP_SXX2,TMP_SYY2)
+       ! DEALLOCATE(TMP1_SXX2,TMP1_SYY2)
+      END IF
           !if ( abs(dataPtr_pmsl(i1) ).gt. 1e11)  then
           !  STOP '  dataPtr_pmsl > mask '     
           !end if
@@ -1396,10 +1500,15 @@ module fvcom_cap
         !print *, 'in cap after maxval(WVNY2)', maxval(WVNY2)    
 
 
-!JQI    else
-!JQI        NUOPC4MET = .false.
-!JQI        write(info,*) subname,' --- no meteo forcing exchange / atm feilds are not all connected --- '
-!JQI        call ESMF_LogWrite(info, ESMF_LOGMSG_INFO, rc=dbrc)
+      DO I1=1,NT
+          UUWIND(I1)  = (FVCOM_WVNX(NV(I1,1),2)+FVCOM_WVNX(NV(I1,2),2)+FVCOM_WVNX(NV(I1,3),2))/3.0_SP
+          VVWIND(I1)  = (FVCOM_WVNY(NV(I1,1),2)+FVCOM_WVNY(NV(I1,2),2)+FVCOM_WVNY(NV(I1,3),2))/3.0_SP
+      END DO	  
+
+    else
+        NUOPC4MET = .false.
+        write(info,*) subname,' --- no meteo forcing exchange / atm feilds are not all connected --- '
+        call ESMF_LogWrite(info, ESMF_LOGMSG_INFO, rc=dbrc)
         !print *, info
         !stop
     endif
@@ -1413,6 +1522,15 @@ module fvcom_cap
       if (fldsFrFvcom(num)%shortname == 'vvcurr') &
           surge_forcing = surge_forcing .and. fldsFrFvcom(num)%connected
     end do
+
+    ! dump import state
+    if (dbug) then
+       call StateWriteVTK(importState, 'state_imp_'//trim(timeStr), rc=rc)
+       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, &
+         file=__FILE__)) &
+         return  ! bail out
+    end if
 
     !------------------------------------------
     !---------------  RUN  --------------------
@@ -1530,6 +1648,15 @@ module fvcom_cap
       !print *, info
     end if
 
+    ! dump export state
+    if (dbug) then
+       call StateWriteVTK(exportState, 'state_exp_'//trim(timeStr), rc=rc)
+       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, &
+         file=__FILE__)) &
+         return  ! bail out
+    end if
+
 !    deallocate(unode)
 !    deallocate(vnode)
       
@@ -1564,12 +1691,12 @@ module fvcom_cap
     if (ESMF_LogFoundError(rcToCheck=lrc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return
     if (present(rc)) rc = lrc
 
-    call ESMF_FieldHaloStore(lfield, routehandle = haloHandle, rc=lrc)
-    if (ESMF_LogFoundError(rcToCheck=lrc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return
+    !call ESMF_FieldHaloStore(lfield, routehandle = haloHandle, rc=lrc)
+    !if (ESMF_LogFoundError(rcToCheck=lrc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return
 
     !Halo update
-    call ESMF_FieldHalo(lfield, routehandle = haloHandle, rc=lrc)
-    if (ESMF_LogFoundError(rcToCheck=lrc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return
+    !call ESMF_FieldHalo(lfield, routehandle = haloHandle, rc=lrc)
+    !if (ESMF_LogFoundError(rcToCheck=lrc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return
     !!
     !!TODO: this should not be here. It should finalize once
 !!JQI    call ESMF_FieldHaloRelease (routehandle = haloHandle, rc=lrc)
@@ -1578,15 +1705,17 @@ module fvcom_cap
     !write(info,*) ' --- ATM  halo routehandel in work >>>>>  ---'
     !call ESMF_LogWrite(info, ESMF_LOGMSG_INFO, rc=dbrc)
 
-    if (dump) then
-      if (.not. present(timeStr)) timeStr="_"
-      call ESMF_FieldWrite(lfield, &
-        fileName='field_ocn_'//trim(fldname)//trim(timeStr)//'.nc', &
-        rc=rc,overwrite=.true.)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
+    if (present(dump)) then
+      if (dump) then
+        if (.not. present(timeStr)) timeStr="_"
+        call ESMF_FieldWrite(lfield, &
+          fileName='field_ocn_'//trim(fldname)//trim(timeStr)//'.nc', &
+          rc=rc,overwrite=.true.)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+      end if
     end if
   end subroutine State_GetFldPtr_
 
@@ -1615,16 +1744,16 @@ module fvcom_cap
     call ESMF_FieldGet(lfield, farrayPtr=fldptr, rc=lrc)
     if (ESMF_LogFoundError(rcToCheck=lrc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return
 
-    call ESMF_FieldHaloStore(lfield, routehandle = haloHandle, rc=lrc)
-    if (ESMF_LogFoundError(rcToCheck=lrc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return
+    !call ESMF_FieldHaloStore(lfield, routehandle = haloHandle, rc=lrc)
+    !if (ESMF_LogFoundError(rcToCheck=lrc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return
 
     !Halo update
-    call ESMF_FieldHalo(lfield,routehandle = haloHandle, rc=lrc)
-    if (ESMF_LogFoundError(rcToCheck=lrc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return
+    !call ESMF_FieldHalo(lfield,routehandle = haloHandle, rc=lrc)
+    !if (ESMF_LogFoundError(rcToCheck=lrc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return
     !!
     !!TODO: this should not be here. It should finalize once
-    call ESMF_FieldHaloRelease (routehandle = haloHandle, rc=lrc)
-    if (ESMF_LogFoundError(rcToCheck=lrc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return 
+    !call ESMF_FieldHaloRelease (routehandle = haloHandle, rc=lrc)
+    !if (ESMF_LogFoundError(rcToCheck=lrc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return 
 
     if (present(rc)) rc = lrc
   end subroutine State_GetFldPtr
@@ -1746,6 +1875,8 @@ module fvcom_cap
    REAL(SP), PARAMETER :: eps1 = 1E-14_SP
    REAL(SP), PARAMETER :: WAVE_LENGTH_MIN = 0.01_SP
    REAL(SP), PARAMETER :: PI = 3.1415926
+   
+   IF(wave_forcing)THEN
 !---------------Jianzhong----------------------------
    IF(.NOT.ALLOCATED(SXX)) ALLOCATE(SXX(0:MT,KB))
    IF(.NOT.ALLOCATED(SXY)) ALLOCATE(SXY(0:MT,KB))
@@ -2011,7 +2142,7 @@ module fvcom_cap
      END DO
    END DO
 #  else
-   CALL RADIATION_STRESS_2D
+!JQI202306   CALL RADIATION_STRESS_2D
 #  endif
    WAVESTRX_2D = WAVESTRX_2D*RAMP
    WAVESTRY_2D = WAVESTRY_2D*RAMP
@@ -2061,6 +2192,8 @@ module fvcom_cap
    IF(PAR)CALL AEXCHANGE(EC,MYID,NPROCS,U_STOKES_3D,V_STOKES_3D) 
    IF(PAR)CALL AEXCHANGE(EC,MYID,NPROCS,U_STOKES_2D,V_STOKES_2D) 
 #  endif
+
+   END IF
 
    RETURN
    END SUBROUTINE RADIATION_STRESS  
@@ -2198,5 +2331,61 @@ module fvcom_cap
    RETURN
    END SUBROUTINE RADIATION_STRESS_Z
 !==============================================================================|
+
+  subroutine StateWriteVTK(state, prefix, rc)
+
+    ! input arguments
+    type(ESMF_State), intent(in) :: state
+    character(len=*), intent(in) :: prefix
+    integer, intent(out), optional :: rc
+
+    ! local variables
+    integer :: i, itemCount
+    type(ESMF_Field) :: field
+    character(ESMF_MAXSTR), allocatable :: itemNameList(:)
+    character(len=*),parameter  :: subname='(fvcom_cap:StateWriteVTK)'
+
+    rc = ESMF_SUCCESS
+    call ESMF_LogWrite(trim(subname)//": called", ESMF_LOGMSG_INFO)
+
+    ! get number of fields in the state
+    call ESMF_StateGet(state, itemCount=itemCount, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+    ! get item names
+    if (.not. allocated(itemNameList)) allocate(itemNameList(itemCount))
+
+    call ESMF_StateGet(state, itemNameList=itemNameList, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+    ! loop over fields and write them
+    do i = 1, itemCount
+       ! get field
+       call ESMF_StateGet(state, itemName=trim(itemNameList(i)), field=field, rc=rc)
+       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
+
+       ! write it
+       call ESMF_FieldWriteVTK(field, trim(prefix)//'_'//trim(itemNameList(i)), rc=rc)
+       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
+    end do
+
+    ! clean temporary variables
+    if (allocated(itemNameList)) deallocate(itemNameList)
+
+    call ESMF_LogWrite(trim(subname)//": done", ESMF_LOGMSG_INFO)
+
+  end subroutine StateWriteVTK
 
 end module
