@@ -39,7 +39,7 @@
 	$(CC) -c $(CFLAGS) $(INCS) $*.c
 
 .F.o:
-	$(CPP) $(CPPARGS) $(PETSC_FC_INCLUDES) $*.F > $*.f90
+	$(CPP) $(CPPARGS) $(if $(PETSC_FC_INCLUDES), $(PETSC_FC_INCLUDES) $(INCS)) $*.F > $*.f90
 	$(FC)  -c $(FFLAGS) $(INCS) $*.f90
 	\rm $*.f90
 
