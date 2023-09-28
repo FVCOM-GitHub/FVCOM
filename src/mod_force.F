@@ -5683,7 +5683,30 @@ CONTAINS
     ! GET THE INTERPOLATION COEFFICIENTS
     ALLOCATE(XLON(lons,lats))
     ALLOCATE(XLAT(lons,lats))
-   
+
+!
+# if !defined (SPHERICAL) && !defined (PROJ)
+!---> Siqi Li, Lu Wang, PROJ@20230928
+    VAR => FIND_VAR(NCF,"yy",FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR &
+         & ("SET_FILE_INTERP:",&
+         & "FILE NAME: "//TRIM(NCF%FNAME),&
+         & "COULD NOT FIND VARIABLE 'yy'")
+
+    CALL NC_CONNECT_PVAR(VAR,XLAT)
+    CALL NC_READ_VAR(VAR)
+
+
+    VAR => FIND_VAR(NCF,"xx",FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR &
+         & ("SET_FILE_INTERP:",&
+         & "FILE NAME: "//TRIM(NCF%FNAME),&
+         & "COULD NOT FIND VARIABLE 'xx'")
+
+    CALL NC_CONNECT_PVAR(VAR,XLON)
+    CALL NC_READ_VAR(VAR)
+!<---
+# else
     VAR => FIND_VAR(NCF,"XLAT",FOUND)
     IF(.not. FOUND) CALL FATAL_ERROR &
          & ("SET_FILE_INTERP:",&
@@ -5702,8 +5725,9 @@ CONTAINS
     
     CALL NC_CONNECT_PVAR(VAR,XLON)
     CALL NC_READ_VAR(VAR)
-    
-# if !defined(SPHERICAL)
+# endif    
+
+# if !defined(SPHERICAL) && defined (PROJ)
     ALLOCATE(HEATX(lons,lats))
     ALLOCATE(HEATY(lons,lats))
     

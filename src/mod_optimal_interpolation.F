@@ -116,9 +116,15 @@
 
    REAL(SP) :: DIS(SIZE(X1))
 
-   DIS = (X1 - X2)*PARAM
-
-   C = EXP(-SUM(DIS**2))
+!---> Lu Wang, R_Cressman@20230829   
+!   DIS = (X1 - X2)*PARAM
+!
+!   C = EXP(-SUM(DIS**2))
+   DIS(1) = (X1(1)-X2(1))**2.0 + (X1(2)-X2(2))**2.0
+   C = 1.0/PARAM(1)**2.0
+   C = (C-DIS(1)) / (C+DIS(1))
+   IF (C<0) C = 0.0
+!<--- 
 
    END FUNCTION BACKGROUND_COVARIANCE 
 

@@ -6902,7 +6902,8 @@ END SUBROUTINE NC_WRITE_VAR
 !====================================================================
 !====================================================================
 ! Watch out - pointing to part of an array is tricky. The index may be reset
-SUBROUTINE NC_READ_VAR(VAR,STKCNT,STKRNG,IOSTART,IOCOUNT,IOSTRIDE,DEALERID,PARALLEL)
+!SUBROUTINE NC_READ_VAR(VAR,STKCNT,STKRNG,IOSTART,IOCOUNT,IOSTRIDE,DEALERID,PARALLEL)
+SUBROUTINE NC_READ_VAR(VAR,STKCNT,STKRNG,IOSTART,IOCOUNT,IOSTRIDE,DEALERID,PARALLEL,FLAG_NV) !Siqi Li nv@20230908
   USE CONTROL
   implicit none
   TYPE(NCVAR), POINTER :: VAR
@@ -6911,6 +6912,7 @@ SUBROUTINE NC_READ_VAR(VAR,STKCNT,STKRNG,IOSTART,IOCOUNT,IOSTRIDE,DEALERID,PARAL
   INTEGER, INTENT(IN), OPTIONAL :: DEALERID
   LOGICAL, INTENT(IN), OPTIONAL :: PARALLEL
   INTEGER, ALLOCATABLE,TARGET, OPTIONAL :: IOSTART(:), IOCOUNT(:), IOSTRIDE(:)
+  LOGICAL, INTENT(IN), OPTIONAL :: FLAG_NV !Siqi Li, Lu Wang nv@20230908
 
   ! LOCAL CONTROL VARIALBES
   INTEGER :: DEALER
@@ -7008,6 +7010,8 @@ SUBROUTINE NC_READ_VAR(VAR,STKCNT,STKRNG,IOSTART,IOCOUNT,IOSTRIDE,DEALERID,PARAL
   CHARACTER(len=3) :: char1,char2,char3
   ! DATA FOR PUT VAR COMMANDS:
   INTEGER :: STATUS, I
+  INTEGER :: I1, I2, I1_START, I1_END, I1_COUNT, NSTACK  !Siqi Li, Lu Wang nv@20230908
+  LOGICAL :: FLAGNV !Siqi Li, Lu Wang nv@20230908 
   CHARACTER(LEN=120)          :: errmsg
 
   IF(DBG_SET(DBG_SBR)) WRITE(IPT,*) "START NC_READ_VAR:"
@@ -8795,10 +8799,31 @@ SUBROUTINE NC_READ_VAR(VAR,STKCNT,STKRNG,IOSTART,IOCOUNT,IOSTRIDE,DEALERID,PARAL
              & "DIM2 does not match!")
 
         GARR_INT => VAR%ARR_INT(1:RDIMS(1),1:RDIMS(2))
-        
-        status = NF90_GET_VAR(VAR%NCID,VAR%VARID,GARR_INT,NSTART,NCOUNT,NSTRIDE)
-        CALL HANDLE_NCERR(status,trim(errmsg))
-        
+        !---> Siqi Li, Lu Wang nv@20230908 
+        !status = NF90_GET_VAR(VAR%NCID,VAR%VARID,GARR_INT,NSTART,NCOUNT,NSTRIDE)
+        !CALL HANDLE_NCERR(status,trim(errmsg))
+        IF (PRESENT(FLAG_NV)) THEN
+          FLAGNV = FLAG_NV
+        ELSE
+          FLAGNV = .FALSE.
+        ENDIF
+        IF (FLAGNV) THEN
+          NSTACK = 10000
+          DO I1 = 1, ceiling(float(RDIMS(1))/float(NSTACK))
+            I1_START = NSTACK*(I1-1) + 1
+            I1_END = MINVAL((/NSTACK*I1, RDIMS(1)/))
+            I1_COUNT = I1_END - I1_START + 1
+            DO I2 = 1, RDIMS(2)
+              status = NF90_GET_VAR(VAR%NCID,VAR%VARID,GARR_INT(I1_START:I1_END,I2),(/I1_START,I2/),(/I1_COUNT,1/),NSTRIDE)
+              CALL HANDLE_NCERR(status,trim(errmsg))
+            END DO
+          END DO
+        ELSE
+          status = NF90_GET_VAR(VAR%NCID,VAR%VARID,GARR_INT,NSTART,NCOUNT,NSTRIDE)
+          CALL HANDLE_NCERR(status,trim(errmsg))
+        END IF
+        !<---Siqi Li, Lu Wang 
+
      ELSE ! PAR CASE 
         
 # if defined (MULTIPROCESSOR)
@@ -8841,9 +8866,31 @@ SUBROUTINE NC_READ_VAR(VAR,STKCNT,STKRNG,IOSTART,IOCOUNT,IOSTRIDE,DEALERID,PARAL
               
            END IF
            
-           status = NF90_GET_VAR(VAR%NCID,VAR%VARID,GARR_INT,NSTART,NCOUNT,NSTRIDE)
-           CALL HANDLE_NCERR(status,trim(errmsg))
-           
+           !---> Siqi Li, Lu Wang nv@20230908 
+           !status = NF90_GET_VAR(VAR%NCID,VAR%VARID,GARR_INT,NSTART,NCOUNT,NSTRIDE)
+           !CALL HANDLE_NCERR(status,trim(errmsg))
+           IF (PRESENT(FLAG_NV)) THEN
+             FLAGNV = FLAG_NV
+           ELSE
+             FLAGNV = .FALSE.
+           ENDIF
+           IF (FLAGNV) THEN
+             NSTACK = 10000
+             DO I1 = 1, ceiling(float(RDIMS(1))/float(NSTACK))
+               I1_START = NSTACK*(I1-1) + 1
+               I1_END = MINVAL((/NSTACK*I1, RDIMS(1)/))
+               I1_COUNT = I1_END - I1_START + 1
+               DO I2 = 1, RDIMS(2)
+                 status = NF90_GET_VAR(VAR%NCID,VAR%VARID,GARR_INT(I1_START:I1_END,I2),(/I1_START,I2/),(/I1_COUNT,1/),NSTRIDE)
+                 CALL HANDLE_NCERR(status,trim(errmsg))
+               END DO
+             END DO
+           ELSE
+             status = NF90_GET_VAR(VAR%NCID,VAR%VARID,GARR_INT,NSTART,NCOUNT,NSTRIDE)
+             CALL HANDLE_NCERR(status,trim(errmsg))
+           END IF
+           !<---Siqi Li, Lu Wang  
+
         END IF ! YOU ARE THE DEALER
            
         

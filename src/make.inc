@@ -97,12 +97,7 @@ dashL= $(empty) -L
 #            FLAG_USE_NETCDF4     = -DUSE_NETCDF4
 #            FLAG_USE_COMPRESSION = -DUSE_COMPRESSION
              IOLIBS       =  -lnetcdff -lnetcdf #-lhdf5_hl -lhdf5 -lz -lcurl -lm
-#             IOLIBS       =  -lnetcdf #-L/hosts/mao/usr/medm/install/netcdf/3.6.3/em64t/lib -lnetcdf
              IOINCS       =  #-I/hosts/mao/usr/medm/install/netcdf/3.6.3/em64t/include
-#             IOLIBS       =  -L/usr/local/install/netcdf/gcc_ifort/3.6.2/lib  -lnetcdf
-#             IOINCS       =  -I/usr/local/install/netcdf/gcc_ifort/3.6.2/include
-##             IOLIBS       = -L/usr/local/install/netcdf-4.4.1.1-with-fortran/lib -lnetcdff -lnetcdf
-##             IOINCS       = -I/usr/local/install/netcdf-4.4.1.1-with-fortran/include
 #--------------------------------------------------------------------------
 #     PETSC 
 #       PETSC IS REQUIRED IF ANY OF THE FOLLOWING FLAGS IS TURNED ON:
@@ -143,7 +138,7 @@ dashL= $(empty) -L
 
 #            FLAG_1 =  -DDOUBLE_PRECISION 
 
-## SINGLE PRECISION OUTPUT FOR VISIT
+#        SINGLE PRECISION OUTPUT FOR VISIT
 #            FLAG_1 =  -DDOUBLE_PRECISION -DSINGLE_OUTPUT
 
 #--------------------------------------------------------------------------
@@ -210,12 +205,10 @@ dashL= $(empty) -L
 #
 #--------------------------------------------------------------------------
 
-             FLAG_6 = -DPROJ
+#             FLAG_6 = -DPROJ
 
-	     #             PROJLIBS       = -lfproj4 -lproj -lm
-	     #             PROJINCS       =
-             PROJLIBS       = -L/hosts/hydra.smast.umassd.edu/data2/siqili/new_hydra/install/fproj/lib -lfproj4 -L/hosts/hydra.smast.umassd.edu/data2/siqili/new_hydra/install/proj/lib -lproj -lm
-             PROJINCS       = -I/hosts/hydra.smast.umassd.edu/data2/siqili/new_hydra/install/fproj/include -I/hosts/hydra.smast.umassd.edu/data2/siqili/new_hydra/install/proj/include
+#             PROJLIBS       = -lfproj4 -lproj -lm
+#             PROJINCS       =
 
 
 #--------------------------------------------------------------------------
