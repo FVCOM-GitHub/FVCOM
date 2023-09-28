@@ -774,9 +774,11 @@ CONTAINS !------------------------------------------------------------------!
     end if
    SSSGRD_TIME_WINDOW = SSSGRD_TIME_WINDOW*3600.0   ! convert hours -> seconds
     REWIND(ASSIMUNIT)
-    
-    IF(SSSGRD_ASSIM /= SSTGRD_ASSIM) CALL FATAL_ERROR("SSTGRD and SSSGRD must turn on or turn off at the same time")
 
+!----> Siqi Li, SSS@20230928
+!    IF(SSSGRD_ASSIM /= SSTGRD_ASSIM) CALL FATAL_ERROR("SSTGRD and SSSGRD must turn on or turn off at the same time")
+    IF (SSSGRD_ASSIM .AND. (.NOT.SSTGRD_ASSIM)) CALL FATAL_ERROR("SSSGRD cannot be turned on without SSTGRD")
+!<----
 
     if(DBG_SET(dbg_scl)) &
          & write(IPT,*) "Read_Name_List:"
