@@ -1573,6 +1573,7 @@ SUBROUTINE INTERNAL_STEP
 !==================================================================================!
 #   if !defined (MPDATA)
   IF( RIVER_TS_SETTING == 'calculated')THEN
+     CALL MPI_BARRIER(MPI_FVCOM_GROUP,IERR)  ! Siqi Li, FATAL_ERROR@20230928
      CALL ADJUST_TS
   END IF
 #   endif   
