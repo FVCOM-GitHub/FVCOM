@@ -229,7 +229,7 @@ CONTAINS
 
 
   Subroutine Fatal_Error(ER1,ER2,ER3,ER4)
-    USE CONTROL, only: PRG_NAMEs
+    USE CONTROL, only: PRG_NAME
     implicit none
     character(Len=*) :: ER1
     CHARACTER(LEN=*), OPTIONAL   :: ER2
