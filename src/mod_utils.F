@@ -236,7 +236,7 @@ CONTAINS
     CHARACTER(LEN=*), OPTIONAL   :: ER3
     CHARACTER(LEN=*), OPTIONAL   :: ER4
 
-!    if(DBG_SET(dbg_log)) then   ! Siqi Li, FATAL_ERROR@20230928
+    if(DBG_SET(dbg_log)) then   ! Siqi Li, FATAL_ERROR@20230928
        write(IPT,*) "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
        write(IPT,*) TRIM(PRG_NAME)//" Fatal Error!"
        write(IPT,*) ER1
@@ -245,7 +245,7 @@ CONTAINS
        IF(PRESENT(ER4)) WRITE(IPT,*) ER4
        write(IPT,*) "Stopping "//TRIM(PRG_NAME)
        write(IPT,*) "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
- !   end if   ! Siqi Li, FATAL_ERROR@20230928
+    end if   ! Siqi Li, FATAL_ERROR@20230928
     call pstop
   End Subroutine Fatal_Error
 
