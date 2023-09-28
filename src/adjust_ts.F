@@ -44,7 +44,13 @@
 !==============================================================================|
 
    IF (DBG_SET(DBG_SBR)) WRITE(IPT,*) "Start: adjust_ts"
-   
+
+!---> Siqi Li, ADJUST_TS@2023-09-23
+   IF (TRIM(TS_ADJUST_METHOD)/='average' .AND. TRIM(TS_ADJUST_METHOD)/='maximum')&
+       CALL FATAL_ERROR("THE PARAMETER TS_ADJUST_METHOD SHOULD BE 'average' or 'maximum'")
+!<--- Siqi Li
+
+
    IF(NUMQBC > 0)THEN   
 
 !JQI NOV2021
@@ -169,8 +175,8 @@
          END DO
        END IF
      END DO
-    ELSE
-     CALL FATAL_ERROR("THE PARAMETER TS_ADJUST_METHOD SHOULD BE 'average' or 'maximum'")
+!    ELSE
+!     CALL FATAL_ERROR("THE PARAMETER TS_ADJUST_METHOD SHOULD BE 'average' or 'maximum'")
     END IF
 !JQI NOV2021
 
