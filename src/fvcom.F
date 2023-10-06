@@ -848,6 +848,7 @@ PROGRAM FVCOM
      end if
 
      CALL REPORT('INITIAL CONDITIONS')
+     IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
 
      if(DBG_SET(dbg_log)) THEN
         write(IPT,*) "!===================================================="
@@ -869,6 +870,7 @@ PROGRAM FVCOM
              & Call REPORT_TIME(IINT,ISTART,IEND,IntTime)
         
         IF(REPORT_NOW(IINT,IREPORT)) CALL REPORT('FLOW FIELD STATS')
+        IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
 
         !==============================================================================!
         !  CALL ARCHIVE TO WRITE THE OUTPUT (SELECTED BASED ON INTTIME)                !
@@ -965,6 +967,7 @@ PROGRAM FVCOM
      end if
 
      CALL REPORT('INITIAL CONDITIONS')
+     IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
 
      if(DBG_SET(dbg_log)) THEN
         write(IPT,*) "===================================================="
@@ -1040,6 +1043,7 @@ PROGRAM FVCOM
                 & Call REPORT_TIME(IINT,INT_START,INT_END,IntTime)
 
            IF(REPORT_NOW(IINT,IREPORT)) CALL REPORT('FLOW FIELD STATS')
+           IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
 
 !JQI2023           IF(SST_ASSIM.OR.SSTGRD_ASSIM.OR.SSHGRD_ASSIM.OR.TSGRD_ASSIM)THEN
            IF(SST_ASSIM.OR.SSTGRD_ASSIM.OR.SSSGRD_ASSIM.OR.SSHGRD_ASSIM.OR.TSGRD_ASSIM)THEN
@@ -1129,6 +1133,7 @@ PROGRAM FVCOM
                 & Call REPORT_TIME(IINT,INT_START,INT_END,IntTime)
 
            IF(REPORT_NOW(IINT,IREPORT)) CALL REPORT('FLOW FIELD STATS')
+           IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
 
            !==============================================================================!
            !  CALL ARCHIVE TO WRITE THE OUTPUT (SELECTED BASED ON INTTIME)                !
@@ -1377,6 +1382,7 @@ PROGRAM FVCOM
      end if
 
      CALL REPORT('INITIAL CONDITIONS')
+     IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
 
      if(DBG_SET(dbg_log)) THEN
         write(IPT,*) "===================================================="
@@ -1454,6 +1460,7 @@ PROGRAM FVCOM
    end if
    
    CALL REPORT('INITIAL CONDITIONS')
+   IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
    
    if(DBG_SET(dbg_log)) THEN
       write(IPT,*) "===================================================="
@@ -1587,6 +1594,7 @@ PROGRAM FVCOM
      end if
 
      CALL REPORT('INITIAL CONDITIONS')
+     IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
 
      if(DBG_SET(dbg_log)) THEN
         write(IPT,*) "===================================================="
@@ -1618,6 +1626,7 @@ PROGRAM FVCOM
      end if
 
      CALL REPORT('INITIAL CONDITIONS')
+     IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
 
      if(DBG_SET(dbg_log)) THEN
         write(IPT,*) "===================================================="
@@ -1686,6 +1695,7 @@ PROGRAM FVCOM
                 & Call REPORT_TIME(IINT,INT_START,INT_END,IntTime)
 
            IF(REPORT_NOW(IINT,IREPORT)) CALL REPORT('FLOW FIELD STATS')
+           IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
 
            !==============================================================================!
            !  CALL SHUTDOWN CHECK TO LOOK FOR BAD VALUES                                  !
@@ -1746,6 +1756,7 @@ PROGRAM FVCOM
                 & Call REPORT_TIME(IINT,INT_START,INT_END,IntTime)
 
            IF(REPORT_NOW(IINT,IREPORT)) CALL REPORT('FLOW FIELD STATS')
+           IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
 
 
            !==============================================================================!
@@ -1802,7 +1813,8 @@ PROGRAM FVCOM
    end if
    
    CALL REPORT('INITIAL CONDITIONS')
-   
+   IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
+
    if(DBG_SET(dbg_log)) THEN
       write(IPT,*) "===================================================="
       write(IPT,*) "===================================================="
@@ -1837,6 +1849,7 @@ PROGRAM FVCOM
      end if
 
      CALL REPORT('INITIAL CONDITIONS')
+     IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
 
      if(DBG_SET(dbg_log)) THEN
         write(IPT,*) "===================================================="
@@ -1920,6 +1933,7 @@ PROGRAM FVCOM
                 & Call REPORT_TIME(IINT,INT_START,INT_END,IntTime)
 
            IF(REPORT_NOW(IINT,IREPORT)) CALL REPORT('FLOW FIELD STATS')
+           IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
 
            !==============================================================================!
            !  CALL SHUTDOWN CHECK TO LOOK FOR BAD VALUES                                  !
@@ -1978,6 +1992,7 @@ PROGRAM FVCOM
                 & Call REPORT_TIME(IINT,INT_START,INT_END,IntTime)
 
            IF(REPORT_NOW(IINT,IREPORT)) CALL REPORT('FLOW FIELD STATS')
+           IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
 
            !==============================================================================!
            !  CALL ARCHIVE TO WRITE THE OUTPUT (SELECTED BASED ON INTTIME)                !
@@ -2073,6 +2088,7 @@ PROGRAM FVCOM
 !     NSTEPS = CALCULATE_NUMBER_OF_TIMESTEPS(StartTime,EndTime)
 !     IEND = ISTART + NSTEPS
      CALL REPORT('INITIAL CONDITIONS')
+     IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
 
      if(DBG_SET(dbg_log)) THEN
         write(IPT,*) "===================================================="
@@ -2094,6 +2110,7 @@ PROGRAM FVCOM
              & Call REPORT_TIME(IINT,ISTART,IEND,IntTime)
         
         IF(REPORT_NOW(IINT,IREPORT)) CALL REPORT('FLOW FIELD STATS')
+        IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
 
         !==============================================================================!
         !  CALL ARCHIVE TO WRITE THE OUTPUT (SELECTED BASED ON INTTIME)                !
@@ -2260,6 +2277,7 @@ IF (ENKF_memberCONTR ==1 ) THEN
      end if
 
      CALL REPORT('INITIAL CONDITIONS')
+     IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
 
      if(DBG_SET(dbg_log)) THEN
         write(IPT,*) "===================================================="
@@ -2292,6 +2310,7 @@ IF (ENKF_memberCONTR ==1 ) THEN
      end if
 
      CALL REPORT('INITIAL CONDITIONS')
+     IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
 
      if(DBG_SET(dbg_log)) THEN
         write(IPT,*) "===================================================="
@@ -2360,6 +2379,7 @@ IF (ENKF_memberCONTR ==1 ) THEN
                 & Call REPORT_TIME(IINT,INT_START,INT_END,IntTime)
 
            IF(REPORT_NOW(IINT,IREPORT)) CALL REPORT('FLOW FIELD STATS')
+           IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
 
            !==============================================================================!
            !  CALL SHUTDOWN CHECK TO LOOK FOR BAD VALUES                                  !
@@ -2420,6 +2440,7 @@ IF (ENKF_memberCONTR ==1 ) THEN
                 & Call REPORT_TIME(IINT,INT_START,INT_END,IntTime)
 
            IF(REPORT_NOW(IINT,IREPORT)) CALL REPORT('FLOW FIELD STATS')
+           IF(NAN_CHECK) CALL CHECK_NAN  ! Siqi Li, NAN@20230601
 
            !==============================================================================!
            !  CALL ARCHIVE TO WRITE THE OUTPUT (SELECTED BASED ON INTTIME)                !

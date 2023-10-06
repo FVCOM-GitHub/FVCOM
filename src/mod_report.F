@@ -338,4 +338,125 @@ MODULE MOD_REPORT
   END SUBROUTINE REPORT
   !==============================================================================|
 
+  SUBROUTINE CHECK_NAN
+    !==============================================================================|
+    !     CHECK WHETHER THERE IS NAN IN UA, VA, EL, U, V, T1, S1                   |
+    !     Siqi Li, NAN@20230601
+    !==============================================================================|
+    USE ALL_VARS !, ONLY : UA, VA, EL, U, V, T1, S1 
+# if defined (MULTIPROCESSOR)  
+    USE MOD_PAR, ONLY : NMAP, EMAP, ACOLLECT
+# endif
+    USE Mod_Utils, ONLY: PSTOP  
+
+    INTEGER  :: I, J
+    CHARACTER(10) :: formatString  
+    REAL(SP), ALLOCATABLE :: GLB_UA(:), GLB_VA(:), GLB_EL(:), &
+                             GLB_U(:,:), GLB_V(:,:),          &
+                             GLB_T1(:,:), GLB_S1(:,:)
+    LOGICAL  :: ISNAN_UA, ISNAN_VA, ISNAN_EL, ISNAN_U, ISNAN_V, ISNAN_T1, ISNAN_S1
+
+    ALLOCATE(GLB_UA(0:NGL))
+    ALLOCATE(GLB_VA(0:NGL))
+    ALLOCATE(GLB_EL(0:MGL))
+    ALLOCATE(GLB_U(0:NGL,KB))
+    ALLOCATE(GLB_V(0:NGL,KB))
+    ALLOCATE(GLB_T1(0:MGL,KB))
+    ALLOCATE(GLB_S1(0:MGL,KB))
+
+# if defined (MULTIPROCESSOR)
+    CALL ACOLLECT(MYID,MSRID,NPROCS,EMAP,UA,GLB_UA)
+    CALL ACOLLECT(MYID,MSRID,NPROCS,EMAP,VA,GLB_VA)
+    CALL ACOLLECT(MYID,MSRID,NPROCS,NMAP,EL,GLB_EL)
+    CALL ACOLLECT(MYID,MSRID,NPROCS,EMAP,U,GLB_U)
+    CALL ACOLLECT(MYID,MSRID,NPROCS,EMAP,V,GLB_V)
+    CALL ACOLLECT(MYID,MSRID,NPROCS,NMAP,T1,GLB_T1)
+    CALL ACOLLECT(MYID,MSRID,NPROCS,NMAP,S1,GLB_S1)
+# else
+    GLB_UA = UA
+    GLB_VA = VA
+    GLB_EL = EL
+    GLB_U = U
+    GLB_V = V
+    GLB_T1 = T1
+    GLB_S1 = S1
+# endif
+
+    ISNAN_UA = ISNAN(SUM(GLB_UA(1:NGL)))
+    ISNAN_VA = ISNAN(SUM(GLB_VA(1:NGL)))
+    ISNAN_EL = ISNAN(SUM(GLB_EL(1:MGL)))
+    ISNAN_U  = ISNAN(SUM(GLB_U(1:NGL,1:KBM1)))
+    ISNAN_V  = ISNAN(SUM(GLB_V(1:NGL,1:KBM1)))
+    ISNAN_T1 = ISNAN(SUM(GLB_T1(1:MGL,1:KBM1)))
+    ISNAN_S1 = ISNAN(SUM(GLB_S1(1:MGL,1:KBM1)))
+
+
+
+   ! Output the node/cell and layer/level id with the NaN value
+    IF (MSR) THEN
+      ! UA, VA
+      IF (ISNAN_UA .or. ISNAN_VA) THEN
+        WRITE(formatString, '(A,I0,A)') '(', 2, 'F8.2)'
+        OPEN(UNIT=NANUNIT, FILE='NAN_UAVA.dat')
+        DO I = 1, NGL
+          WRITE(NANUNIT, formatString) GLB_UA(I), GLB_VA(I)
+        END DO
+        CLOSE(NANUNIT)
+        WRITE(*,*) 'The Model stops because there are NaN values. Check NAN_UAVA.dat files.'
+      END IF
+      ! EL
+      IF (ISNAN_EL) THEN
+        WRITE(formatString, '(A,I0,A)') '(', 1, 'F8.2)'
+        OPEN(UNIT=NANUNIT, FILE='NAN_EL.dat')
+        DO I = 1, MGL
+          WRITE(NANUNIT, formatString) GLB_EL(I)
+        END DO
+        CLOSE(NANUNIT)
+        WRITE(*,*) 'The Model stops because there are NaN values. Check NAN_EL.dat files.'
+      END IF
+      ! U, V
+      IF (ISNAN_U .or.  ISNAN_V) THEN
+        WRITE(formatString, '(A,I0,A)') '(', 2*KBM1, 'F8.2)'
+        OPEN(UNIT=NANUNIT, FILE='NAN_UV.dat')
+        DO I = 1, NGL
+          WRITE(NANUNIT, formatString) GLB_U(I,1:KBM1), GLB_V(I,1:KBM1)
+        END DO
+        CLOSE(NANUNIT)
+        WRITE(*,*) 'The Model stops because there are NaN values. Check NAN_UV.dat files.'
+      END IF
+      ! T1
+      IF (ISNAN_T1) THEN
+        WRITE(formatString, '(A,I0,A)') '(', KBM1, 'F8.2)'
+        OPEN(UNIT=NANUNIT, FILE='NAN_T.dat')
+        DO I = 1, MGL
+          WRITE(NANUNIT, formatString) GLB_T1(I,1:KBM1)
+        END DO
+        CLOSE(NANUNIT)
+        WRITE(*,*) 'The Model stops because there are NaN values. Check NAN_T.dat files.'
+      END IF
+      ! S1
+      IF (ISNAN_S1) THEN
+        WRITE(formatString, '(A,I0,A)') '(', KBM1, 'F8.2)'
+        OPEN(UNIT=NANUNIT, FILE='NAN_S.dat')
+        DO I = 1, MGL
+          WRITE(NANUNIT, formatString) GLB_S1(I,1:KBM1)
+        END DO
+        CLOSE(NANUNIT)
+        WRITE(*,*) 'The Model stops because there are NaN values. Check NAN_S.dat files.'
+      END IF
+
+    END IF
+
+    DEALLOCATE(GLB_UA)
+    DEALLOCATE(GLB_VA)
+    DEALLOCATE(GLB_EL)
+    DEALLOCATE(GLB_U)
+    DEALLOCATE(GLB_V)
+    DEALLOCATE(GLB_T1)
+    DEALLOCATE(GLB_S1)     
+    IF (ISNAN_T1) CALL PSTOP
+
+  END SUBROUTINE CHECK_NAN
+  !==============================================================================|
+
 END MODULE MOD_REPORT

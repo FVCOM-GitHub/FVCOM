@@ -232,6 +232,7 @@ CONTAINS
     INPUT_DIR = "/Your/relative/path/to/input/files"
     OUTPUT_DIR = "/Your/relative/path/to/output/files :Must already exist!"
     IREPORT = 0
+    NAN_CHECK = .FALSE.  ! Siqi Li, NAN@20230601
     VISIT_ALL_VARS = .False.
     WAIT_FOR_VISIT = .False.
     USE_MPI_IO_MODE = .FALSE.
