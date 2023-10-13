@@ -46,8 +46,10 @@
    IF (DBG_SET(DBG_SBR)) WRITE(IPT,*) "Start: adjust_ts"
 
 !---> Siqi Li, ADJUST_TS@2023-09-23
-   IF (TRIM(TS_ADJUST_METHOD)/='average' .OR. TRIM(TS_ADJUST_METHOD)/='maximum')&
-       CALL FATAL_ERROR("THE PARAMETER TS_ADJUST_METHOD SHOULD BE 'average' or 'maximum'")
+   IF(NUMQBC > 0)THEN     
+     IF (TRIM(TS_ADJUST_METHOD)/='average' .OR. TRIM(TS_ADJUST_METHOD)/='maximum')&
+         CALL FATAL_ERROR("THE PARAMETER TS_ADJUST_METHOD SHOULD BE 'average' or 'maximum'")
+   END IF
 !<--- Siqi Li
 
 
