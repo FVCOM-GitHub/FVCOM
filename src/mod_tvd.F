@@ -34,7 +34,7 @@ MODULE MOD_TVD
 !
    REAL(SP), ALLOCATABLE :: DELF(:)  
 
-   REAL(SP), ALLOCATABLE :: Anear_node(:), Bnear_node(:)
+   INTEGER(SP), ALLOCATABLE :: Anear_node(:), Bnear_node(:)
    REAL(SP), ALLOCATABLE :: YUAdist(:), YUBdist(:), XUAdist(:), XUBdist(:)
 
 CONTAINS
