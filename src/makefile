@@ -176,7 +176,7 @@ tarfile:
 #--------------------------------------------------------------------------
 
 clean:
-		/bin/rm -f *.o *.mod *.f90
+		/bin/rm -f *.o *.mod *.f90 fvcom libfvcom.a
 
 clobber:	
 		make clean
