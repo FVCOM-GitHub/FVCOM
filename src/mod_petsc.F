@@ -356,7 +356,7 @@ use petscis
   !count number of nodes in my local Petsc partition ==> [N_verts] halt if partition is empty
   N_VERTS = PART_NODES(MYID)
 
-  print*,'N_VERTS and M=',N_VERTS,M,MT,MYID
+!  print*,'N_VERTS and M=',N_VERTS,M,MT,MYID
   IF(N_VERTS == 0) THEN
     WRITE(PUNIT,*) 'MY PETSc PARTITION DOSE NOT CONTAIN ANY UNKNOWNS'
     CALL MPI_FINALIZE(IERR)
