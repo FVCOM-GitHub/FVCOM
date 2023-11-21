@@ -1825,14 +1825,14 @@ END SUBROUTINE GENMAP_NESTING
        CALL NC_READ_VAR(VAR,STKRNG=NESTING_DATA%RNG)
        VAR_S1=> VAR
 
-# if defined (NH)
+! # if defined (NH)  ! Lu Wang, HYW_OUT@20231121
        VAR => FIND_VAR(NESTING_FILE,"hyw",FOUND)
        IF(.not. FOUND) CALL FATAL_ERROR &
             & ("IN NESTING FILE OBJECT NO 'hyw' FOUND?")
        CALL NC_CONNECT_PVAR(VAR, NESTING_DATA%HYW_BLK)
        CALL NC_READ_VAR(VAR,STKRNG=NESTING_DATA%RNG)
        VAR_HYW=> VAR
-# endif
+！# endif ! Lu Wang, HYW_OUT@20231121
 
        IF(TRIM(NESTING_TYPE) == '3')THEN 
        
@@ -2704,7 +2704,8 @@ END SUBROUTINE GENMAP_NESTING
     D%HYW_BLK(:,:,D%IDX) = W4ZT(G%NLID(:),:)
 !<--- Modified by Dr. Lai 2021-01-15
 # else
-    D%HYW_BLK(:,:,D%IDX) = 0.0_SP
+    ！D%HYW_BLK(:,:,D%IDX) = 0.0_SP
+    D%HYW_BLK(:,:,D%IDX) = CALC_HYW(G)  ! Lu Wang, HYW_OUT@20231121
 # endif
     D%TIME_BLK(D%IDX) = INTTIME
 
