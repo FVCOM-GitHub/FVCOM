@@ -789,12 +789,18 @@
 !
 ! 13. Source text
 !
+!      IPOS = 1
+! 100  CONTINUE
+!      IF (IVAL/10**IPOS.GE.1.) THEN
+!         IPOS = IPOS + 1
+!         GO TO 100
+!      END IF
+!      ALLOCATE(CVAL(IPOS))
+
       IPOS = 1
- 100  CONTINUE
-      IF (IVAL/10**IPOS.GE.1.) THEN
-         IPOS = IPOS + 1
-         GO TO 100
-      END IF
+      DO WHILE(IVAL/10**IPOS.GE.1.)
+        IPOS = IPOS + 1
+      ENDDO
       ALLOCATE(CVAL(IPOS))
 
       DO I=IPOS,1,-1

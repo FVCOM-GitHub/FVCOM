@@ -2678,37 +2678,69 @@
 !   print*,"TIMCO=",TIMCO,"IFLTIM=",IFLTIM(IGR1),"IFLEND=",IFLEND(IGR1)
 !   print*,"IFLINT=",IFLINT(IGR1), "DTW=",DTW
 
-200 IF(TIMCO <= IFLTIM(IGR1)) GOTO 400
-   TIMR1 = IFLTIM(IGR1)
-   IFLTIM(IGR1) = IFLTIM(IGR1) + IFLINT(IGR1)
-   IF(IFLTIM(IGR1) > IFLEND(IGR1))THEN
-     TIMR1 = IFLEND(IGR1)
-     IFLTIM(IGR1) = 1.E10
-     IF(IGR2 > 0) IFLTIM(IGR2) = IFLTIM(IGR1)
-     GOTO 400
-   ENDIF
+!200 IF(TIMCO <= IFLTIM(IGR1)) GOTO 400
+!   TIMR1 = IFLTIM(IGR1)
+!   IFLTIM(IGR1) = IFLTIM(IGR1) + IFLINT(IGR1)
+!   IF(IFLTIM(IGR1) > IFLEND(IGR1))THEN
+!     TIMR1 = IFLEND(IGR1)
+!     IFLTIM(IGR1) = 1.E10
+!     IF(IGR2 > 0) IFLTIM(IGR2) = IFLTIM(IGR1)
+!     GOTO 400
+!   ENDIF
+!!JQI   DT_WI1 = INT(IFLTIM(IGR1)/IFLINT(IGR1))
+
+!   IF(IGR2 > 0)THEN
+!     IFLTIM(IGR2) = IFLTIM(IGR1)
+!!JQI     DT_WI2 = INT(IFLTIM(IGR2)/IFLINT(IGR2))
+!   ENDIF
+!!  Interpolation over the computational grid
+!   DO IG = 1, MT
+!     IF(IGR2 == 0)THEN
+!!JQIJQI       COMPDA(IG,JX3) = ARR(IG,DT_WI1)
+!     ELSE
+!!JQIJQI       COMPDA(IG,JX3) = ARR(IG,DT_WI1)
+!!JQIJQI       COMPDA(IG,JY3) = ARR2(IG,DT_WI2)
+!     ENDIF
+!   END DO
+   
+!   GOTO 200
+   
+!!
+!!   Interpolation in time
+!!
+!400  W3 = (TIMCO-TIMR1) / (IFLTIM(IGR1)-TIMR1)
+!     W1 = 1.-W3
+     
+   DO WHILE(TIMCO > IFLTIM(IGR1))
+     TIMR1 = IFLTIM(IGR1)
+     IFLTIM(IGR1) = IFLTIM(IGR1) + IFLINT(IGR1)
+     IF(IFLTIM(IGR1) > IFLEND(IGR1))THEN
+       TIMR1 = IFLEND(IGR1)
+       IFLTIM(IGR1) = 1.E10
+       IF(IGR2 > 0) IFLTIM(IGR2) = IFLTIM(IGR1)
+       EXIT
+     ENDIF
 !JQI   DT_WI1 = INT(IFLTIM(IGR1)/IFLINT(IGR1))
 
-   IF(IGR2 > 0)THEN
-     IFLTIM(IGR2) = IFLTIM(IGR1)
+     IF(IGR2 > 0)THEN
+       IFLTIM(IGR2) = IFLTIM(IGR1)
 !JQI     DT_WI2 = INT(IFLTIM(IGR2)/IFLINT(IGR2))
-   ENDIF
+     ENDIF
 !  Interpolation over the computational grid
-   DO IG = 1, MT
-     IF(IGR2 == 0)THEN
+     DO IG = 1, MT
+       IF(IGR2 == 0)THEN
 !JQIJQI       COMPDA(IG,JX3) = ARR(IG,DT_WI1)
-     ELSE
+       ELSE
 !JQIJQI       COMPDA(IG,JX3) = ARR(IG,DT_WI1)
 !JQIJQI       COMPDA(IG,JY3) = ARR2(IG,DT_WI2)
-     ENDIF
-   END DO
-   
-   GOTO 200
-   
+       ENDIF
+     END DO
+   ENDDO
+
 !
 !   Interpolation in time
 !
-400  W3 = (TIMCO-TIMR1) / (IFLTIM(IGR1)-TIMR1)
+     W3 = (TIMCO-TIMR1) / (IFLTIM(IGR1)-TIMR1)
      W1 = 1.-W3
      
 !     WaveTime = WaveTime + IMDTW
