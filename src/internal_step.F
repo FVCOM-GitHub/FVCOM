@@ -498,12 +498,8 @@ SUBROUTINE INTERNAL_STEP
   
 # endif
 
-!JQIGOTO# if defined (WAVE_ONLY)
-!JQIGOTO  goto 5501
-!JQIGOTO# endif
-!JQIGOTO
 # if !defined (WAVE_ONLY)      
-!JQIGOTO
+
 # if !defined(ONE_D_MODEL) && !defined (SEMI_IMPLICIT)
   !==============================================================================!
   !  LOOP OVER EXTERNAL TIME STEPS                                               !
@@ -1831,12 +1827,8 @@ SUBROUTINE INTERNAL_STEP
   ELTDT = ELT
 # endif
 
-!JQIGOTO# if defined (WAVE_ONLY)
-!JQIGOTO   5501 continue
-!JQIGOTO# endif
-!JQIGOTO
 # endif      
-!JQIGOTO
+
 
 !!$  CALL DUMP_PROBE_DATA 
 

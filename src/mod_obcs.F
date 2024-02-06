@@ -304,17 +304,11 @@ CONTAINS
                  equi_rr = equi_astr(equi_id(j))%ee(k) 
                  equi_l  = equi_astr(equi_id(j))%ir(k)+1                    
 
-!JQIGOTO                 goto (901, 902, 903) equi_l
-!JQIGOTO  902            equi_rr = equi_astr(equi_id(j))%ee(k)*0.36309D0*(1.0D0-5.0D0*slat*slat)/slat
-!JQIGOTO                 goto 901
-!JQIGOTO  903            equi_rr = equi_astr(equi_id(j))%ee(k)*2.59808D0*slat
-!JQIGOTO  901            continue
-
-                 if(equi_l == 2)then                                                             !JQIGOTO
-                   equi_rr = equi_astr(equi_id(j))%ee(k)*0.36309D0*(1.0D0-5.0D0*slat*slat)/slat  !JQIGOTO
-                 else if(equi_l == 3)then                                                        !JQIGOTO
-                   equi_rr = equi_astr(equi_id(j))%ee(k)*2.59808D0*slat                          !JQIGOTO
-		 end if                                                                          !JQIGOTO
+                 if(equi_l == 2)then                                                             
+                   equi_rr = equi_astr(equi_id(j))%ee(k)*0.36309D0*(1.0D0-5.0D0*slat*slat)/slat 
+                 else if(equi_l == 3)then                                                        
+                   equi_rr = equi_astr(equi_id(j))%ee(k)*2.59808D0*slat                         
+		 end if                                                                          
 
                  equi_uudbl = equi_astr(equi_id(j))%ldel(k)*equi_p+equi_astr(equi_id(j))%mdel(k)*equi_enp+    &
 		              equi_astr(equi_id(j))%ndel(k)*equi_pp+equi_astr(equi_id(j))%ph(k)

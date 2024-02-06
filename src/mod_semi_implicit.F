@@ -1273,8 +1273,7 @@ END IF
   UA_N = 0.0_SP
   VA_N = 0.0_SP
 
-!JQIGOTO  DO I=1, N
-  ELOOP: DO I=1, N    !JQIGOTO
+  ELOOP: DO I=1, N    
 
     IF(ISBCE(I) == 1) THEN
       ALPHA1=ALPHA(I)
@@ -1290,8 +1289,7 @@ END IF
                 UA_N(I) = UNTMP*COS(ANGLEQ(J))
                 VA_N(I) = UNTMP*SIN(ANGLEQ(J))
               ENDIF
-              CYCLE ELOOP   !JQIGOTO
-!JQIGOTO              GOTO 21
+              CYCLE ELOOP   
             END IF
           END DO
         ELSE IF(RIVER_INFLOW_LOCATION == 'edge') THEN
@@ -1303,8 +1301,7 @@ END IF
                 UA_N(I) = UNTMP*COS(ANGLEQ(J))
                 VA_N(I) = UNTMP*SIN(ANGLEQ(J))
               ENDIF
-              CYCLE ELOOP    !JQIGOTO
-!JQIGOTO              GOTO 21
+              CYCLE ELOOP    
             END IF
           END DO
         END IF
@@ -1316,10 +1313,8 @@ END IF
         VA_N(I)= UNTMP*SIN(ALPHA1)
       ENDIF
 
-!JQIGOTO21  CONTINUE
     END IF
-  END DO ELOOP    !JQIGOTO
-!JQIGOTO  END DO
+  END DO ELOOP    
 
   RETURN
   END SUBROUTINE UV2D_SBD
@@ -1341,8 +1336,7 @@ END IF
   V_N = 0.0_SP
 
   DO I=1, N
-!JQIGOTO    DO K=1, KBM1
-    INLOOP: DO K=1, KBM1      !JQIGOTO
+    INLOOP: DO K=1, KBM1      
 
       IF(ISBCE(I).EQ.1) THEN
         ALPHA1=ALPHA(I)
@@ -1358,8 +1352,7 @@ END IF
                   U_N(I,K) = UNTMP*COS(ANGLEQ(J))
                   V_N(I,K) = UNTMP*SIN(ANGLEQ(J))
                 ENDIF
-		CYCLE INLOOP      !JQIGOTO
-!JQIGOTO                GOTO 31
+		CYCLE INLOOP     
               ENDIF
             ENDDO
           ELSE IF(RIVER_INFLOW_LOCATION .EQ. 'edge') THEN
@@ -1371,8 +1364,7 @@ END IF
                   U_N(I,K) = UNTMP*COS(ANGLEQ(J))
                   V_N(I,K) = UNTMP*SIN(ANGLEQ(J))
                 ENDIF
-		CYCLE INLOOP      !JQIGOTO
-!JQIGOTO                GOTO 31
+		CYCLE INLOOP      
               ENDIF
             ENDDO
           ELSE
@@ -1396,10 +1388,8 @@ END IF
           end if
 #         endif
 
-!JQIGOTO31    CONTINUE
       ENDIF
-    END DO INLOOP      !JQIGOTO
-!JQIGOTO    ENDDO
+    END DO INLOOP      
   ENDDO
 
   RETURN

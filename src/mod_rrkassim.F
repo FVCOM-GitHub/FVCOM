@@ -962,15 +962,14 @@ IDUMMY=0
     SAVE iset,gset
 
     IF(ISET==0) THEN
-    RSQ=2 !xing 20210604 remove goto
-    DO WHILE (RSQ >=1. .OR. RSQ == 0.) !xing 20210604 remove goto
+    RSQ=2 
+    DO WHILE (RSQ >=1. .OR. RSQ == 0.) 
      CALL RAN2(IDUM,REV2)
       V1=2.*REV2-1.
       CALL RAN2(IDUM,REV2)
       V2=2.*REV2-1.
       RSQ=V1**2+V2**2
-   END DO !xing 20210604 remove goto
-!      IF(RSQ >=1. .OR. RSQ == 0.) GOTO 1
+   END DO 
       FAC=SQRT(-2.*LOG(RSQ)/RSQ)
       GSET=V1*FAC
       REV=V2*FAC

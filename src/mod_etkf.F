@@ -1897,13 +1897,12 @@ MODULE MOD_ETKF
    DATA iset/0/
 
    if (iset.eq.0) then
-  rsq=2 !xing 20210604 remove goto
-  DO WHILE (rsq >=1. .or. rsq == 0.) !xing 20210604 remove goto
+  rsq=2 
+  DO WHILE (rsq >=1. .or. rsq == 0.) 
      v1=2.*ran2(idum)-1.
       v2=2.*ran2(idum)-1.
       rsq=v1**2+v2**2
-  END DO  !xing 20210604 remove goto
-  !  if(rsq.ge.1..or.rsq.eq.0.)goto 1
+  END DO  
          fac=sqrt(-2.*log(rsq)/rsq)
          gset=v1*fac
          gasdev=v2*fac

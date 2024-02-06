@@ -2487,8 +2487,7 @@ MODULE MOD_WQM
 !
    SRCD = 0.04
 
-!JQIGOTO1000 CONTINUE
-   IN: DO WHILE(.TRUE.)       !JQIGOTO
+   IN: DO WHILE(.TRUE.)    
      N_0  = N_0 + 1
 !
 ! Calculate value of function (F2) and derivative of function (FF or FP4)
@@ -2509,12 +2508,11 @@ MODULE MOD_WQM
      ERR   = ABS(SRCD - SRCD2)
      IF(ERR > 0.005_SP .AND. N_0 < 8) THEN
        SRCD = SRCD2
-       CYCLE IN          !JQIGOTO
-!JQIGOTO      GOTO 1000
-     ELSE             !JQIGOTO
-       EXIT IN          !JQIGOTO
+       CYCLE IN         
+     ELSE            
+       EXIT IN         
      END IF
-   END DO IN            !JQIGOTO
+   END DO IN           
         
    IF(ERR > 0.005_SP .AND. N_0 >= 8) THEN 
      WRITE(6,'(5X,"SOLUTION DID NOT CONVERGE")')

@@ -1943,10 +1943,8 @@ CONTAINS
      Do I=1,NT
         if(abs(yloc-yc(i))<1.0) &
         CALL ARC(xloc,yloc,XC(I),YC(I),radlist(i,1))
-!JQIGOTO        if(radlist(i,1)<1.0E-6) goto 10
-        if(radlist(i,1)<1.0E-6) exit      !JQIGOTO
+        if(radlist(i,1)<1.0E-6) exit      
      END Do
-!JQIGOTO10 continue
 # else
      radlist(1:nt,1) = abs(xc(1:nt)-xloc) + abs(yc(1:nt)-yloc)
 # endif
@@ -3163,8 +3161,7 @@ END SUBROUTINE GET_VALUE
      TLINE(1:80) = INPLINE(1:80)
 
 !----PROCESS LINE CONTINUATIONS------------------------------------------------!
-!JQIGOTO 110 CONTINUE
-     IN: DO WHILE(.TRUE.)      !JQIGOTO
+     IN: DO WHILE(.TRUE.)     
        I = LEN_TRIM(INPLINE)
        IF(I /= 0)THEN
 #        if defined (COMPAQ) || defined (INTEL) || defined (IRIX)
@@ -3176,14 +3173,13 @@ END SUBROUTINE GET_VALUE
            READ(INPUTF,'(a)',END=20) INPLINE
            NLINE = NLINE + 1
            TLINE( NREP*80 + 1 : NREP*80 +80) = INPLINE(1:80)
-           CYCLE IN     !JQIGOTO
-!JQIGOTO           GOTO 110
-         ELSE           !JQIGOTO
-	   EXIT IN      !JQIGOTO
+           CYCLE IN     
+         ELSE           
+	   EXIT IN     
          END IF
        END IF
        EXIT IN
-     END DO IN          !JQIGOTO 
+     END DO IN          
      IF(NREP > 4)CALL Fatal_Error("CANNOT HAVE > 4 LINE CONTINUATIONS")
 
 !----REMOVE LINE CONTINUATION CHARACTER \\-------------------------------------!
@@ -3361,8 +3357,7 @@ END SUBROUTINE GET_VALUE
      TLINE(1:80) = INPLINE(1:80)
 
 !----PROCESS LINE CONTINUATIONS------------------------------------------------!
-!JQIGOTO 110 CONTINUE
-     IN: DO WHILE(.TRUE.)      !JQIGOTO
+     IN: DO WHILE(.TRUE.)     
        I = LEN_TRIM(INPLINE)
        IF(I > 2)THEN
 #        if defined (COMPAQ) || defined (INTEL) || defined (IRIX)
@@ -3374,14 +3369,13 @@ END SUBROUTINE GET_VALUE
            READ(INPUTF,'(a)',END=20) INPLINE
            NLINE = NLINE + 1
            TLINE( NREP*80 + 1 : NREP*80 +80) = INPLINE(1:80)
-           CYCLE IN     !JQIGOTO
-!JQIGOTO           GOTO 110
-         ELSE           !JQIGOTO
-	   EXIT IN      !JQIGOTO
+           CYCLE IN     
+         ELSE           
+	   EXIT IN      
          END IF
        END IF
        EXIT
-     END DO IN          !JQIGOTO  
+     END DO IN           
      IF(NREP > 4)CALL Fatal_Error("CANNOT HAVE > 4 LINE CONTINUATIONS")
 
 !----REMOVE LINE CONTINUATION CHARACTER \\-------------------------------------!

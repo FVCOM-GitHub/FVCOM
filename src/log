@@ -1,0 +1,499 @@
+bcond_gcn.F:!JQIGOTO   DO I=1,N
+bcond_gcn.F:   ELOOP: DO I=1,N    !JQIGOTO
+bcond_gcn.F:!JQIGOTO               GOTO 21
+bcond_gcn.F:               CYCLE ELOOP    !JQIGOTO
+bcond_gcn.F:!JQIGOTO               GOTO 21
+bcond_gcn.F:               CYCLE ELOOP   !JQIGOTO
+bcond_gcn.F:!JQIGOTO21     CONTINUE
+bcond_gcn.F:   END DO ELOOP    !JQIGOTO
+bcond_gcn.F:!JQIGOTO   END DO
+bcond_gcn.F:!JQIGOTO     do k =1, kbm1
+bcond_gcn.F:     e3loop: do k =1, kbm1     !JQIGOTO
+bcond_gcn.F:!JQIGOTO                 goto 31
+bcond_gcn.F:                 cycle E3LOOP       !JQIGOTO
+bcond_gcn.F:!JQIGOTO                 goto 31
+bcond_gcn.F:                 cycle E3LOOP       !JQIGOTO
+bcond_gcn.F:!JQIGOTO31     continue
+bcond_gcn.F:     end do e3loop      !JQIGOTO
+bcond_gcn.F:!JQIGOTO     end do
+bcond_gcn.F:!JQIGOTO     do k =1, kbm1
+bcond_gcn.F:     e5loop: do k =1, kbm1      !JQIGOTO
+bcond_gcn.F:                 cycle e5loop      !JQIGOTO
+bcond_gcn.F:!JQIGOTO                 goto 51
+bcond_gcn.F:                 cycle e5loop      !JQIGOTO
+bcond_gcn.F:!JQIGOTO                 goto 51
+bcond_gcn.F:!JQIGOTO51     continue
+bcond_gcn.F:     end do e5loop    !JQIGOTO
+bcond_gcn.F:!JQIGOTO     end do
+bcond_gcy.F:!JQIGOTO   DO I=1,N
+bcond_gcy.F:   ELOOP: DO I=1,N       !JQIGOTO
+bcond_gcy.F:               CYCLE ELOOP    !JQIGOTO
+bcond_gcy.F:!JQIGOTO               GOTO 21
+bcond_gcy.F:               CYCLE ELOOP    !JQIGOTO
+bcond_gcy.F:!JQIGOTO               GOTO 21
+bcond_gcy.F:!JQIGOTO21     CONTINUE
+bcond_gcy.F:   END DO ELOOP      !JQIGOTO
+bcond_gcy.F:!JQIGOTO   END DO
+bcond_gcy.F:!JQIGOTO     do k =1, kbm1
+bcond_gcy.F:     e3loop: do k =1, kbm1      !JQIGOTO
+bcond_gcy.F:                 cycle e3loop      !JQIGOTO
+bcond_gcy.F:!JQIGOTO                 goto 31
+bcond_gcy.F:                 cycle e3loop      !JQIGOTO
+bcond_gcy.F:!JQIGOTO                 goto 31
+bcond_gcy.F:!JQIGOTO31       continue
+bcond_gcy.F:     end do e3loop   !JQIGOTO
+bcond_gcy.F:!JQIGOTO     end do
+bcond_gcy.F:!JQIGOTO     do k =1, kbm1
+bcond_gcy.F:     e5loop: do k =1, kbm1      !JQIGOTO
+bcond_gcy.F:                 cycle e5loop      !JQIGOTO
+bcond_gcy.F:!JQIGOTO                 goto 51
+bcond_gcy.F:                 cycle e5loop      !JQIGOTO
+bcond_gcy.F:!JQIGOTO                 goto 51
+bcond_gcy.F:!JQIGOTO51       continue
+bcond_gcy.F:     end do e5loop   !JQIGOTO
+bcond_gcy.F:!JQIGOTO     end do
+ice_init.F:!        if (nml_error > 0) goto 10 ! An error occurred
+ice_init.F:!        if (nml_error < 0) goto 20 ! End of file condition
+internal_step.F:!JQIGOTO# if defined (WAVE_ONLY)
+internal_step.F:!JQIGOTO  goto 5501
+internal_step.F:!JQIGOTO# endif
+internal_step.F:!JQIGOTO
+internal_step.F:!JQIGOTO
+internal_step.F:!JQIGOTO# if defined (WAVE_ONLY)
+internal_step.F:!JQIGOTO   5501 continue
+internal_step.F:!JQIGOTO# endif
+internal_step.F:!JQIGOTO
+internal_step.F:!JQIGOTO
+mod_assim.F:!JQIGOTO     DO I=1,NGL
+mod_assim.F:     INLOOP: DO I=1,NGL   !JQIGOTO
+mod_assim.F:           EXIT INLOOP      !JQIGOTO
+mod_assim.F:!JQIGOTO           GOTO 300
+mod_assim.F:     END DO INLOOP      !JQIGOTO
+mod_assim.F:!JQIGOTO     ENDDO
+mod_assim.F:!JQIGOTO300  CONTINUE
+mod_assim.F:!JQIGOTO     DO I=1,NGL
+mod_assim.F:     INLOOP: DO I=1,NGL   !JQIGOTO
+mod_assim.F:           EXIT INLOOP      !JQIGOTO 
+mod_assim.F:!JQIGOTO           GOTO 300
+mod_assim.F:     END DO INLOOP      !JQIGOTO
+mod_assim.F:!JQIGOTO     ENDDO
+mod_assim.F:!JQIGOTO300  CONTINUE
+mod_assim.F:	   RETURN     !JQIGOTO
+mod_assim.F:!JQIGOTO           GOTO 386
+mod_assim.F:   RETURN     !JQIGOTO
+mod_assim.F:!JQIGOTO386 RETURN
+mod_assim.F:	   RETURN     !JQIGOTO
+mod_assim.F:!JQIGOTO           GOTO 387
+mod_assim.F:   RETURN     !JQIGOTO
+mod_assim.F:!JQIGOTO387 RETURN
+mod_assim.F:           RETURN   !JQIGOTO
+mod_assim.F:!JQIGOTO           GOTO 386
+mod_assim.F:   RETURN   !JQIGOTO
+mod_assim.F:!JQIGOTO386 RETURN
+mod_assim.F:           RETURN   !JQIGOTO
+mod_assim.F:!JQIGOTO           GOTO 387
+mod_assim.F:   RETURN   !JQIGOTO
+mod_assim.F:!JQIGOTO387 RETURN
+mod_bio_3D.F:!JQIGOTO          N_DATA=1
+mod_bio_3D.F:!JQIGOTO 11       READ(1,*,END=12)DEPTH_STD(N_DATA),DATA_BIO(N_DATA)
+mod_bio_3D.F:!JQIGOTO          N_DATA=N_DATA+1
+mod_bio_3D.F:!JQIGOTO          GO TO 11
+mod_bio_3D.F:!JQIGOTO 12       N_DATA=N_DATA-1
+mod_bio_3D.F:          N_DATA=0                                                 !JQIGOTO 
+mod_bio_3D.F:	  DO WHILE(.TRUE.)                                         !JQIGOTO
+mod_bio_3D.F:            READ(1,*,IOSTAT=IOS)DEPTH_STD(N_DATA),DATA_BIO(N_DATA) !JQIGOTO
+mod_bio_3D.F:            IF(IOS < 0) exit                                       !JQIGOTO
+mod_bio_3D.F:            N_DATA=N_DATA+1                                        !JQIGOTO
+mod_bio_3D.F:          END DO                                                   !JQIGOTO
+mod_bio_3D.F:!JQIGOTO          N_DATA=1
+mod_bio_3D.F:!JQIGOTO 21       READ(1,*,END=22)DEPTH_STD(N_DATA),DATA_BIO(N_DATA)
+mod_bio_3D.F:!JQIGOTO          N_DATA=N_DATA+1
+mod_bio_3D.F:!JQIGOTO          GO TO 21
+mod_bio_3D.F:!JQIGOTO 22       N_DATA=N_DATA-1
+mod_bio_3D.F:          N_DATA=0                                                 !JQIGOTO
+mod_bio_3D.F:	  DO WHILE(.TRUE.)                                         !JQIGOTO
+mod_bio_3D.F:            READ(1,*,IOSTAT=IOS)DEPTH_STD(N_DATA),DATA_BIO(N_DATA) !JQIGOTO
+mod_bio_3D.F:            IF(IOS < 0) exit                                       !JQIGOTO
+mod_bio_3D.F:            N_DATA=N_DATA+1                                        !JQIGOTO
+mod_bio_3D.F:          END DO                                                   !JQIGOTO
+mod_bio_3D.F:!JQIGOTO          N_DATA=1
+mod_bio_3D.F:!JQIGOTO 31       READ(1,*,END=32)DEPTH_STD(N_DATA),DATA_BIO(N_DATA)
+mod_bio_3D.F:!JQIGOTO          N_DATA=N_DATA+1
+mod_bio_3D.F:!JQIGOTO          GO TO 31
+mod_bio_3D.F:!JQIGOTO 32       N_DATA=N_DATA-1
+mod_bio_3D.F:          N_DATA=0                                                 !JQIGOTO
+mod_bio_3D.F:	  DO WHILE(.TRUE.)                                         !JQIGOTO
+mod_bio_3D.F:            READ(1,*,IOSTAT=IOS)DEPTH_STD(N_DATA),DATA_BIO(N_DATA) !JQIGOTO
+mod_bio_3D.F:            IF(IOS < 0) exit                                       !JQIGOTO
+mod_bio_3D.F:            N_DATA=N_DATA+1                                        !JQIGOTO
+mod_bio_3D.F:          END DO                                                   !JQIGOTO
+mod_bio_3D.F:!JQIGOTO          N_DATA=1
+mod_bio_3D.F:!JQIGOTO 41       READ(1,*,END=42)DEPTH_STD(N_DATA),DATA_BIO(N_DATA)
+mod_bio_3D.F:!JQIGOTO          N_DATA=N_DATA+1
+mod_bio_3D.F:!JQIGOTO          GO TO 41
+mod_bio_3D.F:!JQIGOTO 42       N_DATA=N_DATA-1
+mod_bio_3D.F:          N_DATA=0                                                 !JQIGOTO
+mod_bio_3D.F:	  DO WHILE(.TRUE.)                                         !JQIGOTO
+mod_bio_3D.F:            READ(1,*,IOSTAT=IOS)DEPTH_STD(N_DATA),DATA_BIO(N_DATA) !JQIGOTO
+mod_bio_3D.F:            IF(IOS < 0) exit                                       !JQIGOTO
+mod_bio_3D.F:            N_DATA=N_DATA+1                                        !JQIGOTO
+mod_bio_3D.F:          END DO                                                   !JQIGOTO
+mod_bio_3D.F:!JQIGOTO          N_DATA=1
+mod_bio_3D.F:!JQIGOTO 51       READ(1,*,END=52)DEPTH_STD(N_DATA),DATA_BIO(N_DATA)
+mod_bio_3D.F:!JQIGOTO          N_DATA=N_DATA+1
+mod_bio_3D.F:!JQIGOTO          GO TO 51
+mod_bio_3D.F:!JQIGOTO 52       N_DATA=N_DATA-1
+mod_bio_3D.F:          N_DATA=0                                                 !JQIGOTO
+mod_bio_3D.F:	  DO WHILE(.TRUE.)                                         !JQIGOTO
+mod_bio_3D.F:            READ(1,*,IOSTAT=IOS)DEPTH_STD(N_DATA),DATA_BIO(N_DATA) !JQIGOTO
+mod_bio_3D.F:            IF(IOS < 0) exit                                       !JQIGOTO
+mod_bio_3D.F:            N_DATA=N_DATA+1                                        !JQIGOTO
+mod_bio_3D.F:          END DO                                                   !JQIGOTO
+mod_bio_3D.F:!JQIGOTO          N_DATA=1
+mod_bio_3D.F:!JQIGOTO 61       READ(1,*,END=62)DEPTH_STD(N_DATA),DATA_BIO(N_DATA)
+mod_bio_3D.F:!JQIGOTO          N_DATA=N_DATA+1
+mod_bio_3D.F:!JQIGOTO          GO TO 61
+mod_bio_3D.F:!JQIGOTO 62       N_DATA=N_DATA-1
+mod_bio_3D.F:          N_DATA=0                                                 !JQIGOTO
+mod_bio_3D.F:	  DO WHILE(.TRUE.)                                         !JQIGOTO
+mod_bio_3D.F:            READ(1,*,IOSTAT=IOS)DEPTH_STD(N_DATA),DATA_BIO(N_DATA) !JQIGOTO
+mod_bio_3D.F:            IF(IOS < 0) exit                                       !JQIGOTO
+mod_bio_3D.F:            N_DATA=N_DATA+1                                        !JQIGOTO
+mod_bio_3D.F:          END DO                                                   !JQIGOTO
+mod_enkfassim.F:  rsq=2 !xing 20210604 remove goto
+mod_enkfassim.F:  DO WHILE (rsq >=1. .or. rsq == 0.) !xing 20210604 remove goto
+mod_enkfassim.F:  END DO !xing 20210604 remove goto
+mod_enkfassim.F:    !  if(rsq.ge.1..or.rsq.eq.0.)goto 1 !xing 20210604 remove goto 
+mod_enkf_obs.F:!JQIGOTO     DO I=1,NGL
+mod_enkf_obs.F:     ELOOP: DO I=1,NGL      !JQIGOTO
+mod_enkf_obs.F:	   EXIT ELOOP     !JQIGOTO
+mod_enkf_obs.F:!JQIGOTO	   GOTO 300
+mod_enkf_obs.F:     END DO ELOOP      !JQIGOTO	
+mod_enkf_obs.F:!JQIGOTO     ENDDO	
+mod_enkf_obs.F:!JQIGOTO300  CONTINUE
+mod_enkf_obs.F:!JQIGOTO     DO I=1,NGL
+mod_enkf_obs.F:     ELOOP: DO I=1,NGL     !JQIGOTO
+mod_enkf_obs.F:	   EXIT ELOOP      !JQIGOTO
+mod_enkf_obs.F:!JQIGOTO	   GOTO 300
+mod_enkf_obs.F:     END DO ELOOP      !JQIGOTO	
+mod_enkf_obs.F:!JQIGOTO     ENDDO	
+mod_enkf_obs.F:!JQIGOTO300  CONTINUE
+mod_enkf_obs.F:!JQIGOTO     DO I=1,NGL
+mod_enkf_obs.F:     ELOOP: DO I=1,NGL      !JQIGOTO
+mod_enkf_obs.F:	   EXIT ELOOP      !JQIGOTO
+mod_enkf_obs.F:!JQIGOTO	   GOTO 300
+mod_enkf_obs.F:     END DO ELOOP      !JQIGOTO	
+mod_enkf_obs.F:!JQIGOTO     ENDDO	
+mod_enkf_obs.F:!JQIGOTO300  CONTINUE
+mod_enkf_obs.F:!JQIGOTO     DO I=1,NGL
+mod_enkf_obs.F:     ELOOP: DO I=1,NGL      !JQIGOTO
+mod_enkf_obs.F:	   EXIT ELOOP      !JQIGOTO
+mod_enkf_obs.F:!JQIGOTO	   GOTO 300
+mod_enkf_obs.F:     END DO ELOOP      !JQIGOTO	
+mod_enkf_obs.F:!JQIGOTO     ENDDO	
+mod_enkf_obs.F:!JQIGOTO300  CONTINUE
+mod_etkf.F:  rsq=2 !xing 20210604 remove goto
+mod_etkf.F:  DO WHILE (rsq >=1. .or. rsq == 0.) !xing 20210604 remove goto
+mod_etkf.F:  END DO  !xing 20210604 remove goto
+mod_etkf.F:  !  if(rsq.ge.1..or.rsq.eq.0.)goto 1
+mod_input.F:          cycle ! C, F77, and F90 use "continue", "goto", and "cycle"
+mod_obcs.F:!JQIGOTO                 goto (901, 902, 903) equi_l
+mod_obcs.F:!JQIGOTO  902            equi_rr = equi_astr(equi_id(j))%ee(k)*0.36309D0*(1.0D0-5.0D0*slat*slat)/slat
+mod_obcs.F:!JQIGOTO                 goto 901
+mod_obcs.F:!JQIGOTO  903            equi_rr = equi_astr(equi_id(j))%ee(k)*2.59808D0*slat
+mod_obcs.F:!JQIGOTO  901            continue
+mod_obcs.F:                 if(equi_l == 2)then                                                             !JQIGOTO
+mod_obcs.F:                   equi_rr = equi_astr(equi_id(j))%ee(k)*0.36309D0*(1.0D0-5.0D0*slat*slat)/slat  !JQIGOTO
+mod_obcs.F:                 else if(equi_l == 3)then                                                        !JQIGOTO
+mod_obcs.F:                   equi_rr = equi_astr(equi_id(j))%ee(k)*2.59808D0*slat                          !JQIGOTO
+mod_obcs.F:		 end if                                                                          !JQIGOTO
+mod_pwp.F:!JQIGOTO 10 CONTINUE
+mod_pwp.F:    DO WHILE(.TRUE.)      !JQIGOTO
+mod_pwp.F:    END DO       !JQIGOTO
+mod_pwp.F:!JQIGOTO    GOTO 10
+mod_rrkassim.F:    RSQ=2 !xing 20210604 remove goto
+mod_rrkassim.F:    DO WHILE (RSQ >=1. .OR. RSQ == 0.) !xing 20210604 remove goto
+mod_rrkassim.F:   END DO !xing 20210604 remove goto
+mod_rrkassim.F:!      IF(RSQ >=1. .OR. RSQ == 0.) GOTO 1
+mod_rrkf_obs.F:!JQIGOTO     DO I=1,NGL
+mod_rrkf_obs.F:     INLOOP: DO I=1,NGL      !JQIGOTO
+mod_rrkf_obs.F:	   EXIT INLOOP    !JQIGOTO
+mod_rrkf_obs.F:!JQIGOTO	   GOTO 300
+mod_rrkf_obs.F:     END DO INLOOP      !JQIGOTO	
+mod_rrkf_obs.F:!JQIGOTO     ENDDO	
+mod_rrkf_obs.F:!JQIGOTO300  CONTINUE
+mod_rrkf_obs.F:!JQIGOTO     DO I=1,NGL
+mod_rrkf_obs.F:     INLOOP: DO I=1,NGL      !JQIGOTO
+mod_rrkf_obs.F:	   EXIT INLOOP      !JQIGOTO
+mod_rrkf_obs.F:!JQIGOTO	   GOTO 300
+mod_rrkf_obs.F:     END DO INLOOP       !JQIGOTO	
+mod_rrkf_obs.F:!JQIGOTO     ENDDO	
+mod_rrkf_obs.F:!JQIGOTO300  CONTINUE
+mod_rrkf_obs.F:!JQIGOTO     DO I=1,NGL
+mod_rrkf_obs.F:     INLOOP: DO I=1,NGL      !JQIGOTO
+mod_rrkf_obs.F:	   EXIT INLOOP       !JQIGOTO
+mod_rrkf_obs.F:!JQIGOTO	   GOTO 300
+mod_rrkf_obs.F:     END DO INLOOP      !JQIGOTO	
+mod_rrkf_obs.F:!JQIGOTO     ENDDO	
+mod_rrkf_obs.F:!JQIGOTO300  CONTINUE
+mod_rrkf_obs.F:!JQIGOTO     DO I=1,NGL
+mod_rrkf_obs.F:     INLOOP: DO I=1,NGL      !JQIGOTO
+mod_rrkf_obs.F:	   EXIT INLOOP      !JQIGOTO
+mod_rrkf_obs.F:!JQIGOTO	   GOTO 300
+mod_rrkf_obs.F:     END DO INLOOP      !JQIGOTO	
+mod_rrkf_obs.F:!JQIGOTO     ENDDO	
+mod_rrkf_obs.F:!JQIGOTO300  CONTINUE
+mod_semi_implicit.F:!JQIGOTO  DO I=1, N
+mod_semi_implicit.F:  ELOOP: DO I=1, N    !JQIGOTO
+mod_semi_implicit.F:              CYCLE ELOOP   !JQIGOTO
+mod_semi_implicit.F:!JQIGOTO              GOTO 21
+mod_semi_implicit.F:              CYCLE ELOOP    !JQIGOTO
+mod_semi_implicit.F:!JQIGOTO              GOTO 21
+mod_semi_implicit.F:!JQIGOTO21  CONTINUE
+mod_semi_implicit.F:  END DO ELOOP    !JQIGOTO
+mod_semi_implicit.F:!JQIGOTO  END DO
+mod_semi_implicit.F:!JQIGOTO    DO K=1, KBM1
+mod_semi_implicit.F:    INLOOP: DO K=1, KBM1      !JQIGOTO
+mod_semi_implicit.F:		CYCLE INLOOP      !JQIGOTO
+mod_semi_implicit.F:!JQIGOTO                GOTO 31
+mod_semi_implicit.F:		CYCLE INLOOP      !JQIGOTO
+mod_semi_implicit.F:!JQIGOTO                GOTO 31
+mod_semi_implicit.F:!JQIGOTO31    CONTINUE
+mod_semi_implicit.F:    END DO INLOOP      !JQIGOTO
+mod_semi_implicit.F:!JQIGOTO    ENDDO
+mod_sng.F:!JQIGOTO       if (sng(idx:idx) == ' ' .or. sng(idx:idx) == '=') goto 100
+mod_sng.F:       if (sng(idx:idx) == ' ' .or. sng(idx:idx) == '=') exit      !JQIGOTO
+mod_sng.F:!JQIGOTO100 continue
+mod_sng.F:!JQIGOTO    do idx1=1,lng1
+mod_sng.F:    outloop: do idx1=1,lng1    !JQIGOTO
+mod_sng.F:!JQIGOTO             if (sng1(idx1+idx2-1:idx1+idx2-1) /= sng2(idx2:idx2)) goto 200
+mod_sng.F:             if (sng1(idx1+idx2-1:idx1+idx2-1) /= sng2(idx2:idx2)) cycle outloop    !JQIGOTO
+mod_sng.F:          exit outloop     !JQIGOTO
+mod_sng.F:!JQIGOTO          goto 100
+mod_sng.F:!JQIGOTO200    continue
+mod_sng.F:!JQIGOTO    end do                    ! end loop over characters
+mod_sng.F:    end do outloop       !JQIGOTO            ! end loop over characters
+mod_sng.F:!JQIGOTO100 continue
+mod_sng.F:!JQIGOTO       if (sng(idx:idx) /= ' '.and.sng(idx:idx) /= char(0)) goto 100
+mod_sng.F:       if (sng(idx:idx) /= ' '.and.sng(idx:idx) /= char(0)) exit     !JQIGOTO
+mod_sng.F:!JQIGOTO100 continue
+mod_sng.F:!JQIGOTO       if (sng(idx:idx) == char(0) .or. iachar(sng(idx:idx)) > 127) goto 100
+mod_sng.F:       if (sng(idx:idx) == char(0) .or. iachar(sng(idx:idx)) > 127) exit      !JQIGOTO
+mod_sng.F:!JQIGOTO100 continue
+mod_sng.F:       if (iachar(sng1(idx:idx)) == iachar(sng2(idx:idx))) cycle ! Goto next iteration
+mod_sng.F:!JQIGOTO       goto 100            ! Exit Branch
+mod_sng.F:       return            ! Exit Branch      !JQIGOTO
+mod_sng.F:!JQIGOTO100 continue                  ! Exit branch for unequal values inside loop
+mod_utils.F:!JQIGOTO        if(radlist(i,1)<1.0E-6) goto 10
+mod_utils.F:        if(radlist(i,1)<1.0E-6) exit      !JQIGOTO
+mod_utils.F:!JQIGOTO10 continue
+mod_utils.F:!JQIGOTO 110 CONTINUE
+mod_utils.F:     IN: DO WHILE(.TRUE.)      !JQIGOTO
+mod_utils.F:           CYCLE IN     !JQIGOTO
+mod_utils.F:!JQIGOTO           GOTO 110
+mod_utils.F:         ELSE           !JQIGOTO
+mod_utils.F:	   EXIT IN      !JQIGOTO
+mod_utils.F:     END DO IN          !JQIGOTO 
+mod_utils.F:!JQIGOTO 110 CONTINUE
+mod_utils.F:     IN: DO WHILE(.TRUE.)      !JQIGOTO
+mod_utils.F:           CYCLE IN     !JQIGOTO
+mod_utils.F:!JQIGOTO           GOTO 110
+mod_utils.F:         ELSE           !JQIGOTO
+mod_utils.F:	   EXIT IN      !JQIGOTO
+mod_utils.F:     END DO IN          !JQIGOTO  
+mod_wqm.F:!JQIGOTO1000 CONTINUE
+mod_wqm.F:   IN: DO WHILE(.TRUE.)       !JQIGOTO
+mod_wqm.F:       CYCLE IN          !JQIGOTO
+mod_wqm.F:!JQIGOTO      GOTO 1000
+mod_wqm.F:     ELSE             !JQIGOTO
+mod_wqm.F:       EXIT IN          !JQIGOTO
+mod_wqm.F:   END DO IN            !JQIGOTO
+ocpids.F:!JQI       GOTO 920
+ocpmix.F:!     40.02, Sep. 00: Replaced computed GOTO with CASE construct
+swancom1.F:!JQIGOTO       GOTO 700                                                        
+swancom1.F:!JQIGOTO700  CONTINUE                                                          
+swancom1.F:!JQIGOTO           DO 20 II = 1, NPTST                     
+swancom1.F:!JQIGOTO              IF (IX.NE.XYTST(2*II-1)) GOTO 20 
+swancom1.F:!JQIGOTO              IF (IY.NE.XYTST(2*II  )) GOTO 20                            
+swancom1.F:!JQIGOTO              TSTFL = .TRUE.                                              
+swancom1.F:!JQIGOTO  20       CONTINUE                                                       
+swancom1.F:           IN: DO II = 1, NPTST                                 !JQIGOTO                        
+swancom1.F:              IF (IX.NE.XYTST(2*II-1)) CYCLE IN                 !JQIGOTO                            
+swancom1.F:              IF (IY.NE.XYTST(2*II  )) CYCLE IN                 !JQIGOTO                           
+swancom1.F:              TSTFL = .TRUE.                                    !JQIGOTO   
+swancom1.F:           END DO IN                                            !JQIGOTO   
+swancom1.F:!JQIGOTO 10   IF ( ICONV.EQ.0 .AND. IT.LT.MAXIT ) THEN
+swancom1.F:      IN: DO WHILE(.TRUE.)                                   !JQIGOTO
+swancom1.F:            CYCLE IN                                   !JQIGOTO
+swancom1.F:!JQIGOTO            GOTO 10
+swancom1.F:!JQIGOTO         GOTO 10
+swancom1.F:         CYCLE IN                                   !JQIGOTO
+swancom1.F:      EXIT IN                                      !JQIGOTO
+swancom1.F:      END DO IN                                    !JQIGOTO
+swancom1.F:!JQIGOTO 10   IF ( ICONV.EQ.0 .AND. IT.LT.MAXIT ) THEN
+swancom1.F:      IN: DO WHILE(.TRUE.)                          !JQIGOTO
+swancom1.F:      IF ( ICONV.EQ.0 .AND. IT.LT.MAXIT ) THEN      !JQIGOTO
+swancom1.F:            CYCLE IN                                      !JQIGOTO
+swancom1.F:!JQIGOTO            GOTO 10
+swancom1.F:         CYCLE IN                                         !JQIGOTO
+swancom1.F:!JQIGOTO         GOTO 10
+swancom1.F:      EXIT                                                !JQIGOTO
+swancom1.F:      END DO IN                                           !JQIGOTO
+swancom1.F:!JQIGOTO               DO 20 II = 1, NPTST
+swancom1.F:!JQIGOTO                  IF (IX.NE.XYTST(2*II-1)) GOTO 20
+swancom1.F:!JQIGOTO                  IF (IY.NE.XYTST(2*II  )) GOTO 20
+swancom1.F:!JQIGOTO                  TSTFL = .TRUE.
+swancom1.F:!JQIGOTO  20           CONTINUE
+swancom1.F:                  IF (IX.NE.XYTST(2*II-1)) CYCLE IN     !JQIGOTO
+swancom1.F:                  IF (IY.NE.XYTST(2*II  )) CYCLE IN     !JQIGOTO
+swancom1.F:!JQIGOTO  20           CONTINUE
+swancom3.F:!JQIGOTO   DO IS = 1, MSC
+swancom3.F:   IN: DO IS = 1, MSC       !JQIGOTO
+swancom3.F:       EXIT IN              !JQIGOTO
+swancom3.F:!JQIGOTO       GOTO 11
+swancom3.F:!JQIGOTO   ENDDO
+swancom3.F:!JQIGOTO11 CONTINUE
+swancom3.F:!JQIGOTO     DO J=1, 50
+swancom3.F:     OUT: DO J=1, 50                    !JQIGOTO
+swancom3.F:         IF(AUX == 0.) EXIT OUT         !JQIGOTO
+swancom3.F:!JQIGOTO         IF(AUX == 0.) GOTO 5000
+swancom3.F:!JQIGOTO     ENDDO
+swancom3.F:!JQIGOTO5000 CONTINUE
+swancom3.F:!JQIGOTO     DO II = 1, 20
+swancom3.F:       IF(ABS( TAUNEW - TAUTOT ) <= 1.E-5 ) EXIT IN    !JQIGOTO
+swancom3.F:!JQIGOTO       IF(ABS( TAUNEW - TAUTOT ) <= 1.E-5 ) GOTO 3000
+swancom3.F:     END DO IN          !JQIGOTO
+swancom3.F:!JQIGOTO     ENDDO
+swancom3.F:!JQIGOTO3000 CONTINUE
+swanmain.F:!JQI     IF(LEVERR > MAXERR) GOTO 900                                  
+swanmain.F:!200 IF(TIMCO <= IFLTIM(IGR1)) GOTO 400
+swanmain.F:!     GOTO 400
+swanmain.F:!   GOTO 200
+swanpre1.F:!JQI         IF(XP < -.9E10) GOTO 101
+swanser.F:!JQIGOTO100 IF(IF <= LENTXT .AND. .NOT. FOUND)THEN
+swanser.F:!JQIGOTO     IF(.NOT. (TEXT(IF:IF) ==  ' ' .OR.                   &
+swanser.F:!JQIGOTO       ICHAR(TEXT(IF:IF)) == ITABVL))THEN
+swanser.F:!JQIGOTO       FOUND = .TRUE.
+swanser.F:!JQIGOTO     ELSE
+swanser.F:!JQIGOTO       IF = IF + 1
+swanser.F:!JQIGOTO     ENDIF
+swanser.F:!JQIGOTO     GOTO 100
+swanser.F:!JQIGOTO   ENDIF
+swanser.F:   IFLOOP: DO WHILE(.TRUE.)                             !JQIGOTO
+swanser.F:     IF(IF <= LENTXT .AND. .NOT. FOUND)THEN             !JQIGOTO
+swanser.F:       IF(.NOT. (TEXT(IF:IF) ==  ' ' .OR.         &     !JQIGOTO
+swanser.F:          ICHAR(TEXT(IF:IF)) == ITABVL))THEN            !JQIGOTO
+swanser.F:         FOUND = .TRUE.                                 !JQIGOTO
+swanser.F:       ELSE                                             !JQIGOTO
+swanser.F:         IF = IF + 1                                    !JQIGOTO
+swanser.F:       ENDIF                                            !JQIGOTO
+swanser.F:       CYCLE IFLOOP                                     !JQIGOTO
+swanser.F:     ENDIF                                              !JQIGOTO
+swanser.F:     EXIT IFLOOP                                        !JQIGOTO
+swanser.F:   END DO IFLOOP                                        !JQIGOTO
+swanser.F:!JQIGOTO200 IF(IL > 1 .AND. .NOT. FOUND)THEN
+swanser.F:!JQIGOTO    IL = IL - 1
+swanser.F:!JQIGOTO     IF(.NOT. (TEXT(IL:IL) ==  ' ' .OR.           &
+swanser.F:!JQIGOTO       ICHAR(TEXT(IL:IL)) == ITABVL))THEN
+swanser.F:!JQIGOTO       FOUND = .TRUE.
+swanser.F:!JQIGOTO     ENDIF
+swanser.F:!JQIGOTO     GOTO 200
+swanser.F:!JQIGOTO   ENDIF
+swanser.F:   ILLOOP: DO WHILE(.TRUE.)                             !JQIGOTO
+swanser.F:     IF(IL > 1 .AND. .NOT. FOUND)THEN                   !JQIGOTO
+swanser.F:       IL = IL - 1                                      !JQIGOTO
+swanser.F:       IF(.NOT. (TEXT(IL:IL) ==  ' ' .OR.           &   !JQIGOTO
+swanser.F:          ICHAR(TEXT(IL:IL)) == ITABVL))THEN            !JQIGOTO
+swanser.F:         FOUND = .TRUE.                                 !JQIGOTO
+swanser.F:       ENDIF                                            !JQIGOTO
+swanser.F:       CYCLE ILLOOP                                     !JQIGOTO
+swanser.F:     ENDIF                                              !JQIGOTO
+swanser.F:     EXIT ILLOOP                                        !JQIGOTO
+swanser.F:   END DO ILLOOP                                        !JQIGOTO
+swanser.F:!JQIGOTO 100  FPK  = (1./PKPER)                                                   
+swanser.F:      OUT: DO WHILE(.TRUE.)          !JQIGOTO
+swanser.F:      FPK  = (1./PKPER)              !JQIGOTO                                                  
+swanser.F:          CYCLE OUT                      !JQIGOTO
+swanser.F:!JQIGOTO          GOTO 100
+swanser.F:      EXIT OUT                           !JQIGOTO
+swanser.F:      END DO OUT                         !JQIGOTO
+swanser.F:!JQIGOTO	   IF (PPTAIL.LE.0.) THEN
+swanser.F:!JQIGOTO             CALL MSGERR (2,'error tail computation')
+swanser.F:!JQIGOTO             GOTO 480
+swanser.F:!JQIGOTO           END IF
+swanser.F:!JQIGOTO           CKTAIL = 1. / (PPTAIL * (1. + PPTAIL * (FRINTH-1.)))        
+swanser.F:!JQIGOTO           DO ID=1,MDC
+swanser.F:!JQIGOTO             ETOT   = ETOT + CETAIL * SIG2 * AC2(ID,MSC,IG)             
+swanser.F:!JQIGOTO             EKTOT  = EKTOT + CKTAIL * SKK * AC2(ID,MSC,IG)             
+swanser.F:!JQIGOTO           END DO
+swanser.F:!JQIGOTO 480       CONTINUE
+swanser.F:	   IFLOOP: DO WHILE(.TRUE.)                                !JQIGOTO
+swanser.F:             IF (PPTAIL.LE.0.) THEN                                !JQIGOTO
+swanser.F:               CALL MSGERR (2,'error tail computation')            !JQIGOTO
+swanser.F:               EXIT IFLOOP                                         !JQIGOTO
+swanser.F:             END IF                                                !JQIGOTO
+swanser.F:             CKTAIL = 1. / (PPTAIL * (1. + PPTAIL * (FRINTH-1.)))  !JQIGOTO 
+swanser.F:             DO ID=1,MDC                                           !JQIGOTO
+swanser.F:               ETOT   = ETOT + CETAIL * SIG2 * AC2(ID,MSC,IG)      !JQIGOTO     
+swanser.F:               EKTOT  = EKTOT + CKTAIL * SKK * AC2(ID,MSC,IG)      !JQIGOTO     
+swanser.F:             END DO                                                !JQIGOTO
+swanser.F:	     EXIT IFLOOP                                           !JQIGOTO
+swanser.F:           END DO IFLOOP                                           !JQIGOTO
+swmod3.F:      !goto 9999
+swmod3.F:!        goto 9999
+swmod3.F:          !goto 9999
+swmod3.F:                !goto 9999
+swmod3.F:          !goto 9999
+swmod3.F:                !goto 9999
+swmod3.F:                  !goto 9999
+swmod3.F:            state_num = 9000!goto 9000
+swmod3.F:            state_num = 9000 !goto 9000
+swmod3.F:            state_num = 9000 !goto 9000
+swmod3.F:             !goto 9000
+swmod3.F:            state_num = 9000 !goto 9000
+swmod3.F:       !goto 9000
+swmod3.F:      !goto 9999
+swmod3.F:      !goto 9999
+swmod3.F:        !goto 9999
+swmod3.F:          !goto 9999
+swmod3.F:            !goto 9999
+swmod3.F:          !goto 9999
+swmod3.F:            !goto 9999
+swmod3.F:              !goto 9999
+swmod3.F:                    !goto 9999
+swmod3.F:      !goto 9999
+swmod3.F:!!!     goto 9999
+swmod3.F:          !goto 9999
+swmod3.F:        if(iq_err/=0) state_num = 9999!goto 9999
+swmod3.F:            state_num = 9999 !goto 9999
+swmod3.F:        state_num = 9999 !goto 9999
+swmod3.F:          state_num = 9999!goto 9999
+swmod3.F:            state_num = 9999 !goto 9999
+swmod3.F:                state_num=9999!goto 9999
+swmod3.F:                state_num=9999 !goto 9999
+swmod3.F:        state_num = 9999!goto 9999
+swmod3.F:        if(nlocusx==0) state_num = 9999 !goto 9999
+swmod3.F:            state_num = 9999  !goto 9999
+swmod3.F:            state_num = 9999 !goto 9999
+swmod3.F:              state_num = 9999 !goto 9999
+swmod3.F:          state_num = 9999 !goto 9999
+swmod3.F:              state_num = 9999 ! goto 9999
+swmod3.F:              state_num = 9999 !goto 9999
+swmod3.F:              state_num = 9999 !goto 9999
+swmod3.F:            state_num = 9999 !goto 9999
+swmod3.F:        state_num = 9999 !goto 9999
+swmod3.F:        state_num = 9999 !goto 9999
+swmod3.F:          state_num = 9999 !goto 9999
+swmod3.F:          !state_num = 9999 !goto 9999
+swmod3.F:          !state_num = 9999 !goto 9999
+swmod3.F:        !state_num = 9999 !goto 9999
+swmod3.F:      if(ik1==ik3 .and. ia1==ia3) state_num = 9999!goto 9999  ! skip routine if k1=k3
+swmod3.F:        if(iq_err/=0) state_num = 9999 !goto 9999
+swmod3.F:            state_num = 9999 !goto 9999
+swmod3.F:              state_num = 9999 !goto 9999
+swmod3.F:          state_num = 9999 !goto 9999
+swmod3.F:          state_num = 9999 !goto 9999
+swmod3.F:          state_num = 9999 !goto 9999
+swmod3.F:          state_num = 9999 !goto 9999
+swmod3.F:        if(iq_err /=0 .and. state_num == 0) state_num = 9999 !goto 9999
+swmod3.F:                    state_num = 9999 !goto 9999

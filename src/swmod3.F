@@ -894,7 +894,6 @@
     if(n1==1) then
       y2 = y1(1)
       state_num = 9999
-      !goto 9999
     end if
 !
 !  check minimum and maximum data values
@@ -908,7 +907,6 @@
       if (abs(xmin1-xmax1) < eps .or. abs(x1(1)-x1(n1)) < eps) then
         ierr = 2
         state_num = 9999
-!        goto 9999
       end if
 !
       IF  (state_num == 0) THEN
@@ -916,7 +914,6 @@
           n2 > 1) then
           ierr = 3
           state_num = 9999
-          !goto 9999
         end if
 !
 ! check input data for monotonicity
@@ -929,7 +926,6 @@
                 write(*,*) 'z_intp1: i1 x1(i1) x1(i1+1):',i1,x1(i1),x1(i1+1)
                 state_num = 9999
                 EXIT
-                !goto 9999
               end if
             end do
 !           
@@ -940,7 +936,6 @@
                   write(*,*) 'z_intp1: i2 x2(i2) x2(i2+1):',i2,x2(i2),x2(i2+1)
                   state_num = 9999
                   EXIT
-          !goto 9999
                 end if
               end do
             ENDIF
@@ -951,7 +946,6 @@
                 write(*,*) 'z_intp1: i1 x1(i1) x1(i1+1):',i1,x1(i1),x1(i1+1)
                 state_num = 9999
                 EXIT
-                !goto 9999
               end if
             end do
 !
@@ -962,7 +956,6 @@
                   write(*,*) 'z_intp1: i2 x2(i2) x2(i2+1):',i2,x2(i2),x2(i2+1)
                   state_num = 9999
                   EXIT
-                  !goto 9999
                 end if
               end do
             ENDIF
@@ -1349,7 +1342,7 @@
           fm = func(xm)
           s = sqrt(fm**2-fl*fh)
           if(s == 0.) THEN 
-            state_num = 9000!goto 9000
+            state_num = 9000
             EXIT
           ENDIF
           xnew = xm+(xm-xl)*(sign(1.,fl-fh)*fm/s)
@@ -1359,14 +1352,14 @@
 !
           if (abs(xnew-zriddr) <= xacc) then
 !              if(luprint>0) write(luprint,'(a)') 'Z_ROOT2: xnew=zriddr'
-            state_num = 9000 !goto 9000
+            state_num = 9000 
             EXIT
           end if
 !
           zriddr = xnew
           fnew = func(zriddr)
           if (fnew == 0.) THEN
-            state_num = 9000 !goto 9000
+            state_num = 9000 
             EXIT
           ENDIF
 !           
@@ -1385,11 +1378,10 @@
              ierr = 1
              state_num = 9000
              EXIT
-             !goto 9000
           endif
 !
           if(abs(xh-xl) <= xacc) THEN
-            state_num = 9000 !goto 9000
+            state_num = 9000 
             EXIT
           ENDIF
 !
@@ -1403,7 +1395,6 @@
          if(luprint > 0) write(luprint,'(a)') 'Z_ROOT2: -> ierr=2'
          state_num = 9000
        ENDIF
-       !goto 9000
     else if (fl == 0.) then
       zriddr = xx1
     else if (fh == 0.) then
@@ -1411,7 +1402,6 @@
     else
       ierr = 3
       state_num = 9999
-      !goto 9999
 ! 'root must be bracketed in zriddr'
     endif
 !
@@ -2212,14 +2202,12 @@
     if(iq_type<1 .or. iq_type>3) then
       ierror = 1
       state_num = 9999
-      !goto 9999
     end if
 !
     IF ( state_num == 0 ) THEN
       if(iq_grid<1 .or. iq_grid>3) then
         ierror = 2
         state_num =9999
-        !goto 9999
       end if
     ENDIF
 !   
@@ -2250,7 +2238,6 @@
           write(iscreen,'(a,i4,2f10.2)') 'XNL_INIT iq_grid dstep dgap:', &
                                        iq_grid,dstep,dgap
           state_num = 9999
-          !goto 9999
         end if
 !
 !  check if sector is symmetric around zero in the case of sector grid
@@ -2261,7 +2248,6 @@
             'XNL_INIT iq_grid dird(1) dird(n):',iq_grid,dird(1),dird(ndir)
             ierror = 32
             state_num = 9999
-            !goto 9999
           end if
         ENDIF
       end if
@@ -2299,7 +2285,6 @@
           call q_error('e','FILEIO','Problem in deleting error file *.ERR')
           ierror = 4
           state_num = 9999
-          !goto 9999
         end if
 !
 ! create new files, first create logging file
@@ -2352,7 +2337,6 @@
           if (iq_err /=0) then
             ierror = 5
             state_num = 9999
-            !goto 9999
           end if
 !---------------------------------------------------------------------------------
 !  check settings for inconsistencies
@@ -2362,7 +2346,6 @@
             if (iq_err /=0) then
               ierror = 6
               state_num = 9999
-              !goto 9999
             end if
 !---------------------------------------------------------------------------------
 ! determine minimum size of number of points on locus as stored in database
@@ -2399,7 +2382,6 @@
                     ierror = 7
                     state_num = 9999
                     EXIT
-                    !goto 9999
                   end if
                 end if
 !               
@@ -2602,7 +2584,6 @@
       xnl = 0.
       call q_error('w','DEPTH','Zero transfer returned')
       state_num = 9999
-      !goto 9999
     end if
 !
 !  check if iquad has changed since last call, this is no more allowed
@@ -2611,7 +2592,6 @@
 !!      call q_error('e','IQUAD','Value of IQUAD differs from initial value')
 !!      ierror = 1
 !!      state_num = 9999
-!!!     goto 9999
 !!    end if
 !-----------------------------------------------------------------------------+
 !  main choice between various options                                        |
@@ -2626,7 +2606,6 @@
         if(ierror/=0) then
           call q_error('e','wrtvv','Problem in Q_XNL4V4')
           state_num = 9999
-          !goto 9999
         end if
 !------------------------------------------------------------------------------
 ! add parametric tail to transfer rate and diagonal term
@@ -3840,7 +3819,7 @@
 !------------------------------------------------------------------------------
 !
         call q_locpos(ka,kb,km,kw,loclen)
-        if(iq_err/=0) state_num = 9999!goto 9999
+        if(iq_err/=0) state_num = 9999
 !
 !  compute position of start and end point for tracing
 !  the locus
@@ -3886,7 +3865,7 @@
                 write(luq_tst,'(2f12.5)') x2_loc(iloc),y2_loc(iloc)
               end do
             end if
-            state_num = 9999 !goto 9999
+            state_num = 9999 
           end if
 !
 !  01/10/2001
@@ -4196,7 +4175,7 @@
       else
         call q_error('e','DISPER','Incorrect value for IQ_DISP')
         write(luq_err,'(a,i4)') 'IQ_DISP=',iq_disp
-        state_num = 9999 !goto 9999
+        state_num = 9999 
       end if
 !
 !
@@ -4215,7 +4194,7 @@
           if(iq_prt>=1) write(luq_prt,'(2a)')                          &
 	          'Q_CTRGRID: Rereading of bqfile skipped: ',lastquadfile
           igrid = 0
-          state_num = 9999!goto 9999
+          state_num = 9999
         end if
 !-------------------------------------------------------------------------------------------
         IF ( state_num == 0 ) THEN
@@ -4375,7 +4354,7 @@
 !------------------------------------------------------------------------------
           if(itask==1) then
             if(luq_bqf>0) call z_fclose(luq_bqf)
-            state_num = 9999 !goto 9999
+            state_num = 9999 
           end if
 !-----------------------------------------------------------------------------
 !  if lq_grid==true  a new grid has to be generated
@@ -4409,7 +4388,7 @@
 !
               if(iq_err /=0) then
                 lastquadfile = 'quad_err_.bqf'
-                state_num=9999!goto 9999
+                state_num=9999
               end if
 !
               IF ( state_num == 0 ) THEN
@@ -4465,7 +4444,7 @@
                 write(luq_err,'(a)')                                       &
 	              'BQF file probably generated with test option off'
                 igrid = 3
-                state_num=9999 !goto 9999
+                state_num=9999 
               end if
               IF ( state_num == 0 ) THEN
                 read(luq_bqf) quad_cple
@@ -5082,7 +5061,7 @@
         ifnd = 0
         call q_error('e','MEMORY','Incorrect addres')
         write(luq_err,'(a,2i4)') 'Q_GETLOCUS: iamax,amem:',iamax,amem
-        state_num = 9999!goto 9999
+        state_num = 9999
       end if
 !
 !-----------------------------------------------------------------------------
@@ -5098,7 +5077,7 @@
 !
 !  short-cut when number of NON-ZERO points on locus is ZERO [27/8/2003]
 !
-        if(nlocusx==0) state_num = 9999 !goto 9999
+        if(nlocusx==0) state_num = 9999 
 !
         IF ( state_num == 0 ) THEN
           r_ik2(1:nloc)   = quad_ik2(kmem,amem,1:nloc)
@@ -6122,7 +6101,7 @@
 !
           if(iter>=maxiter) then
             call q_error('e','Start kb','Too many iterations needed')
-            state_num = 9999  !goto 9999
+            state_num = 9999  
           end if
 !
 !   search root by Ridders method
@@ -6159,7 +6138,7 @@
 !
           if(iter>=maxiter) then
             call q_error('e','Start ka','Too many iterations needed')
-            state_num = 9999 !goto 9999
+            state_num = 9999 
           end if
 !
 !   search root by Ridder's method
@@ -6190,7 +6169,7 @@
 !
             if(iter>=maxiter) then
               call q_error('e','Start kb','Too many iterations needed')
-              state_num = 9999 !goto 9999
+              state_num = 9999 
             end if
 !
 !   search root by Ridders method
@@ -6278,7 +6257,7 @@
           if(itest>=2) write(luq_tst,'(a,i4)')                 &
 	   'Q_LOCPOS/Z_ROOT2/IERR_W/5=',ierr
           call q_error('e','ROOT2','beta')
-          state_num = 9999 !goto 9999
+          state_num = 9999 
         end if
 !
         IF ( state_num == 0 ) THEN
@@ -6533,7 +6512,7 @@
             call q_cmplocus(ka,kb,km,kw,crf1)
 !
             if(iq_err/=0) THEN 
-              state_num = 9999 ! goto 9999
+              state_num = 9999 
               EXIT
             ENDIF
 !------------------------------------------------------------------------------
@@ -6541,7 +6520,7 @@
 !
             call q_modify
             if(iq_err > 0) THEN
-              state_num = 9999 !goto 9999
+              state_num = 9999 
               EXIT
             ENDIF
 !------------------------------------------------------------------------------
@@ -6549,7 +6528,7 @@
 !
             call q_weight
             if(iq_err > 0) THEN
-              state_num = 9999 !goto 9999
+              state_num = 9999 
               EXIT
             ENDIF
 !------------------------------------------------------------------------------
@@ -7160,7 +7139,7 @@
           if(jerr > 0) then
             iq_err = iq_err + 1
             call q_error('e','INTER','Problem in interpolation process')
-            state_num = 9999 !goto 9999
+            state_num = 9999 
           end if
         end if
 !
@@ -7865,7 +7844,7 @@
         call q_error('e','IQUAD',                               &
 	    'No valid value of iquad has been given, default settings')
         write(luq_err,'(a,i4)') 'Q_SETCONFIG: Value of IQUAD:',iquad
-        state_num = 9999 !goto 9999
+        state_num = 9999
       end if
 !-------------------------------------------------------------------------------------------------
 ! Optional test output
@@ -8114,7 +8093,7 @@
 	           'Q_SEARCHGRID: grid accepted, read whole database'
 !
         call q_ctrgrid(2,igrid)
-        state_num = 9999 !goto 9999
+        state_num = 9999 
       end if
 !
       IF ( state_num == 0 ) THEN
@@ -8219,7 +8198,7 @@
         else
           call q_error('e','SEARCHGRID',                            &
 	             'No valid nearest grid could be found')
-          state_num = 9999 !goto 9999
+          state_num = 9999 
         end if
 !
         IF ( state_num == 0 ) THEN
@@ -8387,7 +8366,6 @@
 !
         if(iq_stack > mq_stack) then
           call q_error('e','STACKMAX',' ')
-          !state_num = 9999 !goto 9999
         else
           cstack(iq_stack) = mod_name(2:mod_len)
         end if
@@ -8401,11 +8379,9 @@
         else
           write(luq_err,'(a)') 'Module name:',mod_name
           call q_error('e','STACKNAME',' ')
-          !state_num = 9999 !goto 9999
         end if
       else
         call q_error('e','STACKCALL',' ')
-        !state_num = 9999 !goto 9999
       end if
 !
 !!\Z
@@ -8961,19 +8937,19 @@
       if(iq_test >=2) write(luq_tst,'(a,4i3)')                   &
         'Q_T13V4: ik1,ia1 ik3 ia3:',ik1,ia1,ik3,ia3
 !
-      if(ik1==ik3 .and. ia1==ia3) state_num = 9999!goto 9999  ! skip routine if k1=k3
+      if(ik1==ik3 .and. ia1==ia3) state_num = 9999  ! skip routine if k1=k3
 !
 !  obtain information requested locus based on a information
 !  about a precomputed locus, as stored in the database file
 !
       IF ( state_num == 0 ) THEN
         call q_getlocus(ik1,ia1,ik3,ia3,ifnd)
-        if(iq_err/=0) state_num = 9999 !goto 9999
+        if(iq_err/=0) state_num = 9999 
 !
         IF ( state_num == 0 ) THEN
           if(ifnd==0 .or. nlocusx==0) then
             t13 = 0.
-            state_num = 9999 !goto 9999
+            state_num = 9999 
           end if
 !
 !---------------------------------------------------------------------------------------
@@ -9033,7 +9009,7 @@
                 diagk3 = diagk3 + qd3*rterm
 !-----------------------------------------------------------------------------------
               end do
-              state_num = 9999 !goto 9999
+              state_num = 9999 
             end if
 !---------------------------------------------------------------------------------------
 !  Main loop over the locus
@@ -9757,18 +9733,18 @@
         call q_ctrgrid(2,igrid)
         if(iq_err /= 0) then
           ierror = 1
-          state_num = 9999 !goto 9999
+          state_num = 9999
         end if
 !
         if(igrid/=0 .and. state_num == 0) then
           call q_error('e','NOGRID','No proper grid exists')
           ierror = 2
-          state_num = 9999 !goto 9999
+          state_num = 9999 
         end if
 !
         if(iq_make ==3 .and. state_num == 0) then
           call q_error('e','MAKEGRID','Only computation of grid')
-          state_num = 9999 !goto 9999
+          state_num = 9999 
         end if
 !------------------------------------------------------------------------------
 !  set overall scale factor resulting from optional SEARCH for nearest grid
@@ -9791,10 +9767,10 @@
         if(igrid/=0) then
           call q_error('e','NOGRID','No proper grid exists')
           ierror = 3
-          state_num = 9999 !goto 9999
+          state_num = 9999 
         end if
 !
-        if(iq_err /=0 .and. state_num == 0) state_num = 9999 !goto 9999
+        if(iq_err /=0 .and. state_num == 0) state_num = 9999 
       end if
 !
 !------------------------------------------------------------------------------
@@ -9911,7 +9887,7 @@
 !
                   if(iq_err /= 0) then
                     ierror = 4
-                    state_num = 9999 !goto 9999
+                    state_num = 9999 
                     EXIT iloop
                   end if
 !

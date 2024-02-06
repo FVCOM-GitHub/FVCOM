@@ -371,8 +371,7 @@
    CASE(2) !External Mode Velocity Boundary Conditions                         |
 !==============================================================================|
 
-!JQIGOTO   DO I=1,N
-   ELOOP: DO I=1,N    !JQIGOTO
+   ELOOP: DO I=1,N    
 
 !
 !--2 SOLID BOUNDARY EDGES------------------------------------------------------|
@@ -403,8 +402,7 @@
                UNTMP=MAX(UNTMP,0.0_SP)
                UAF(I)=UNTMP*COS(ANGLEQ(J))-VNTMP*SIN(ANGLEQ(J))
                VAF(I)=UNTMP*SIN(ANGLEQ(J))+VNTMP*COS(ANGLEQ(J))
-!JQIGOTO               GOTO 21
-               CYCLE ELOOP    !JQIGOTO
+               CYCLE ELOOP   
              END IF 
            END DO
          ELSE IF(RIVER_INFLOW_LOCATION == 'edge') THEN
@@ -416,8 +414,7 @@
                UNTMP=MAX(UNTMP,0.0_SP)
                UAF(I)=UNTMP*COS(ANGLEQ(J))-VNTMP*SIN(ANGLEQ(J))
                VAF(I)=UNTMP*SIN(ANGLEQ(J))+VNTMP*COS(ANGLEQ(J))
-!JQIGOTO               GOTO 21
-               CYCLE ELOOP   !JQIGOTO
+               CYCLE ELOOP   
              END IF
            END DO
          END IF
@@ -450,10 +447,8 @@
        END IF
 #      endif
 
-!JQIGOTO21     CONTINUE
      END IF
-   END DO ELOOP    !JQIGOTO
-!JQIGOTO   END DO
+   END DO ELOOP    
 
 !!# if defined (THIN_DAM)
 !!    DO I=1,NT
@@ -484,8 +479,7 @@
    ! OR EDGE
 
    do i= 1, n
-!JQIGOTO     do k =1, kbm1
-     e3loop: do k =1, kbm1     !JQIGOTO
+     e3loop: do k =1, kbm1     
        if(isbce(i).eq.3) then
          uf(i,k)=0.0_SP
          vf(i,k)=0.0_SP
@@ -505,8 +499,7 @@
                  untmp=max(untmp,0.0_SP)
                  uf(i,k)=untmp*cos(angleq(j))-vntmp*sin(angleq(j))
                  vf(i,k)=untmp*sin(angleq(j))+vntmp*cos(angleq(j))
-!JQIGOTO                 goto 31
-                 cycle E3LOOP       !JQIGOTO
+                 cycle E3LOOP       
                end if
              end do
            else if(river_inflow_location.eq.'edge') then
@@ -518,8 +511,7 @@
                  untmp=max(untmp,0.0_SP)
                  uf(i,k)=untmp*cos(angleq(j))-vntmp*sin(angleq(j))
                  vf(i,k)=untmp*sin(angleq(j))+vntmp*cos(angleq(j))
-!JQIGOTO                 goto 31
-                 cycle E3LOOP       !JQIGOTO
+                 cycle E3LOOP       
                end if
              end do
            else
@@ -549,10 +541,8 @@
          end if
 #        endif
 
-!JQIGOTO31     continue
        end if
-     end do e3loop      !JQIGOTO
-!JQIGOTO     end do
+     end do e3loop      
    end do
 
 
@@ -597,8 +587,7 @@
 !   V(LISBCE_3(1:NISBCE_3),1:KBM1) = 0.  
 
    do i= 1, n  
-!JQIGOTO     do k =1, kbm1
-     e5loop: do k =1, kbm1      !JQIGOTO
+     e5loop: do k =1, kbm1      
        if(isbce(i).eq.3) then
          u(i,k)=0.0_SP
          v(i,k)=0.0_SP
@@ -618,8 +607,7 @@
                  untmp=max(untmp,0.0_SP)
                  u(i,k)=untmp*cos(angleq(j))-vntmp*sin(angleq(j))
                  v(i,k)=untmp*sin(angleq(j))+vntmp*cos(angleq(j))
-                 cycle e5loop      !JQIGOTO
-!JQIGOTO                 goto 51
+                 cycle e5loop      
                end if
              end do
            else if(river_inflow_location.eq.'edge') then
@@ -631,8 +619,7 @@
                  untmp=max(untmp,0.0_SP)
                  u(i,k)=untmp*cos(angleq(j))-vntmp*sin(angleq(j))
                  v(i,k)=untmp*sin(angleq(j))+vntmp*cos(angleq(j))
-                 cycle e5loop      !JQIGOTO
-!JQIGOTO                 goto 51
+                 cycle e5loop      
                end if
              end do
            else
@@ -662,10 +649,8 @@
          END IF
 #        endif
 
-!JQIGOTO51     continue
        end if
-     end do e5loop    !JQIGOTO
-!JQIGOTO     end do
+     end do e5loop    
    end do
 
 

@@ -856,8 +856,7 @@ CONTAINS
    DO J= 1,N_ASSIM_EL 
      X0 = EL0_OBS(J)%X
      Y0 = EL0_OBS(J)%Y
-!JQIGOTO     DO I=1,NGL
-     ELOOP: DO I=1,NGL      !JQIGOTO
+     ELOOP: DO I=1,NGL      
 #    if !defined (SPHERICAL)
        Rtmp = SQRT((XCG(I)-X0)*(XCG(I)-X0)+(YCG(I)-Y0)*(YCG(I)-Y0))
 #    else
@@ -877,17 +876,14 @@ CONTAINS
            S33=SQRT((XG(NVG(I,3))-X0)**2+(YG(NVG(I,3))-Y0)**2)
            intmp=minloc([s11,s22,s33])
            EL0_OBS(J)%innode=NVG(I,intmp(1))
-	   EXIT ELOOP     !JQIGOTO
-!JQIGOTO	   GOTO 300
+	   EXIT ELOOP    
 	 ELSE
 	   EL0_OBS(J)%N_CELL = 0
 	 ENDIF
        ELSE
 	 EL0_OBS(J)%N_CELL = -1
        ENDIF
-     END DO ELOOP      !JQIGOTO	
-!JQIGOTO     ENDDO	
-!JQIGOTO300  CONTINUE
+     END DO ELOOP      
      IF(EL0_OBS(J)%N_CELL <= 0) THEN
        IF(MSR) WRITE(IPT,*)'ERROR--EL OBS SITE:',J,' OUT OF DOMAN',&
 	                    EL0_OBS(J)%N_CELL 
@@ -1243,8 +1239,7 @@ IF(PAR)CALL MPI_BARRIER(MPI_FVCOM_GROUP,IERR)
    DO J= 1,N_ASSIM_CUR 
      X0 = CUR_OBS(J)%X
      Y0 = CUR_OBS(J)%Y
-!JQIGOTO     DO I=1,NGL
-     ELOOP: DO I=1,NGL     !JQIGOTO
+     ELOOP: DO I=1,NGL     
 #    if !defined (SPHERICAL)
        Rtmp = SQRT((XCG(I)-X0)*(XCG(I)-X0)+(YCG(I)-Y0)*(YCG(I)-Y0))
 #    else
@@ -1259,17 +1254,14 @@ IF(PAR)CALL MPI_BARRIER(MPI_FVCOM_GROUP,IERR)
 	       (XG(NVG(I,2))-X0)*(YG(NVG(I,1))-Y0)
 	 IF(S11 <= 0._SP .AND. S22 <= 0._SP .AND. S33 <= 0._SP) THEN
 	   CUR_OBS(J)%N_CELL = I
-	   EXIT ELOOP      !JQIGOTO
-!JQIGOTO	   GOTO 300
+	   EXIT ELOOP     
 	 ELSE
 	   CUR_OBS(J)%N_CELL = 0
 	 ENDIF
        ELSE
 	 CUR_OBS(J)%N_CELL = -1
        ENDIF
-     END DO ELOOP      !JQIGOTO	
-!JQIGOTO     ENDDO	
-!JQIGOTO300  CONTINUE
+     END DO ELOOP      
 !     IF(MSR) WRITE(200,*) j,X0,Y0,CUR_OBS(J)%N_CELL
      IF(CUR_OBS(J)%N_CELL <= 0) THEN
        IF(MSR) WRITE(IPT,*)'ERROR--CURRENT OBS SITE:',J,' OUT OF DOMAN',&
@@ -1621,8 +1613,7 @@ in:  DO WHILE(.TRUE.)
    DO J= 1,N_ASSIM_T 
      X0 = T0_OBS(J)%X
      Y0 = T0_OBS(J)%Y
-!JQIGOTO     DO I=1,NGL
-     ELOOP: DO I=1,NGL      !JQIGOTO
+     ELOOP: DO I=1,NGL      
 #    if !defined (SPHERICAL)
        Rtmp = SQRT((XCG(I)-X0)*(XCG(I)-X0)+(YCG(I)-Y0)*(YCG(I)-Y0))
 #    else
@@ -1642,17 +1633,14 @@ in:  DO WHILE(.TRUE.)
            S33=SQRT((XG(NVG(I,3))-X0)**2+(YG(NVG(I,3))-Y0)**2)
            intmp=minloc([s11,s22,s33])
            T0_OBS(J)%innode=NVG(I,intmp(1))
-	   EXIT ELOOP      !JQIGOTO
-!JQIGOTO	   GOTO 300
+	   EXIT ELOOP      
 	 ELSE
 	   T0_OBS(J)%N_CELL = 0
 	 ENDIF
        ELSE
 	 T0_OBS(J)%N_CELL = -1
        ENDIF
-     END DO ELOOP      !JQIGOTO	
-!JQIGOTO     ENDDO	
-!JQIGOTO300  CONTINUE
+     END DO ELOOP      
      IF(T0_OBS(J)%N_CELL <= 0) THEN
        IF(MSR) WRITE(IPT,*)'ERROR--T/S OBS SITE:',J,' OUT OF DOMAN',&
 	                    T0_OBS(J)%N_CELL 
@@ -1991,8 +1979,7 @@ in:  DO WHILE(.TRUE.)
    DO J= 1,N_ASSIM_S 
      X0 = S0_OBS(J)%X
      Y0 = S0_OBS(J)%Y
-!JQIGOTO     DO I=1,NGL
-     ELOOP: DO I=1,NGL      !JQIGOTO
+     ELOOP: DO I=1,NGL      
 #    if !defined (SPHERICAL)
        Rtmp = SQRT((XCG(I)-X0)*(XCG(I)-X0)+(YCG(I)-Y0)*(YCG(I)-Y0))
 #    else
@@ -2012,17 +1999,14 @@ in:  DO WHILE(.TRUE.)
            S33=SQRT((XG(NVG(I,3))-X0)**2+(YG(NVG(I,3))-Y0)**2)
            intmp=minloc([s11,s22,s33])
            S0_OBS(J)%innode=NVG(I,intmp(1))
-	   EXIT ELOOP      !JQIGOTO
-!JQIGOTO	   GOTO 300
+	   EXIT ELOOP      
 	 ELSE
 	   S0_OBS(J)%N_CELL = 0
 	 ENDIF
        ELSE
 	 S0_OBS(J)%N_CELL = -1
        ENDIF
-     END DO ELOOP      !JQIGOTO	
-!JQIGOTO     ENDDO	
-!JQIGOTO300  CONTINUE
+     END DO ELOOP      
      IF(S0_OBS(J)%N_CELL <= 0) THEN
        IF(MSR) WRITE(IPT,*)'ERROR--S OBS SITE:',J,' OUT OF DOMAN',&
 	                    S0_OBS(J)%N_CELL 

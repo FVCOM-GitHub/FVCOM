@@ -280,22 +280,6 @@
 !  --- append node number to OUTFIL and TSTFIL                         
 !      in case of parallel computing                                   
 
-!JQI   IF(PARLL)THEN                                                     
-!JQI     ILPOS = INDEX ( OUTFIL, ' ' )-1
-!JQI     IF(ILPOS > 0)THEN
-!JQI       WRITE(OUTFIL(ILPOS+1:ILPOS+4),180) INODE
-!JQI     ELSE
-!JQI       GOTO 920
-!JQI     END IF
-!JQI     ILPOS = INDEX ( TSTFIL, ' ' )-1
-!JQI     IF(ILPOS > 0)THEN
-!JQI       WRITE(TSTFIL(ILPOS+1:ILPOS+4),180) INODE
-!JQI     END IF
-!JQI180  FORMAT('-',I3.3)
-!JQI     CALL SWSYNC
-!JQI     IF(STPNOW()) RETURN
-!JQI   END IF
-
      IF(INIVEF < INIVER)THEN
 !
 !    write initialisation file

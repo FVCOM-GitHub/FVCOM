@@ -2281,8 +2281,7 @@ CONTAINS !------------------------------------------------------------------!
    DO J= 1,N_ASSIM_CUR 
      X0 = CUR_OBS(J)%X
      Y0 = CUR_OBS(J)%Y
-!JQIGOTO     DO I=1,NGL
-     INLOOP: DO I=1,NGL   !JQIGOTO
+     INLOOP: DO I=1,NGL  
 #    if !defined (SPHERICAL)
        Rtmp = SQRT((XCG(I)-X0)*(XCG(I)-X0)+(YCG(I)-Y0)*(YCG(I)-Y0))
 #    else
@@ -2314,17 +2313,14 @@ CONTAINS !------------------------------------------------------------------!
          S33 = X11_TMP*(YG(NVG(I,2))-Y0)-X22_TMP*(YG(NVG(I,1))-Y0)
          IF(S11 <= 0._SP .AND. S22 <= 0._SP .AND. S33<= 0._SP) THEN
            CUR_OBS(J)%N_CELL = I
-           EXIT INLOOP      !JQIGOTO
-!JQIGOTO           GOTO 300
+           EXIT INLOOP      
          ELSE
            CUR_OBS(J)%N_CELL = 0
          ENDIF
        ELSE
          CUR_OBS(J)%N_CELL = -1
        ENDIF
-     END DO INLOOP      !JQIGOTO
-!JQIGOTO     ENDDO
-!JQIGOTO300  CONTINUE
+     END DO INLOOP      
 !     IF(MSR) WRITE(200,*) j,X0,Y0,CUR_OBS(J)%N_CELL
      IF(CUR_OBS(J)%N_CELL <= 0) THEN
        IF(MSR) WRITE(IPT,*)'ERROR--CURRENT OBS SITE:',J,' OUT OF DOMAN',&
@@ -3190,8 +3186,7 @@ in:  DO WHILE(.TRUE.)
    DO J= 1,N_ASSIM_TS 
      X0 = TS_OBS(J)%X
      Y0 = TS_OBS(J)%Y
-!JQIGOTO     DO I=1,NGL
-     INLOOP: DO I=1,NGL   !JQIGOTO
+     INLOOP: DO I=1,NGL   
 #    if !defined (SPHERICAL)
        Rtmp = SQRT((XCG(I)-X0)*(XCG(I)-X0)+(YCG(I)-Y0)*(YCG(I)-Y0))
 #    else
@@ -3223,17 +3218,14 @@ in:  DO WHILE(.TRUE.)
          S33 = X11_TMP*(YG(NVG(I,2))-Y0)-X22_TMP*(YG(NVG(I,1))-Y0)
          IF(S11 <= 0._SP .AND. S22 <= 0._SP .AND. S33 <= 0._SP) THEN
            TS_OBS(J)%N_CELL = I
-           EXIT INLOOP      !JQIGOTO 
-!JQIGOTO           GOTO 300
+           EXIT INLOOP      
          ELSE
            TS_OBS(J)%N_CELL = 0
          ENDIF
        ELSE
          TS_OBS(J)%N_CELL = -1
        ENDIF
-     END DO INLOOP      !JQIGOTO
-!JQIGOTO     ENDDO
-!JQIGOTO300  CONTINUE
+     END DO INLOOP      
      IF(TS_OBS(J)%N_CELL <= 0) THEN
        IF(MSR) WRITE(IPT,*)'ERROR--T/S OBS SITE:',J,' OUT OF DOMAN',&
                             TS_OBS(J)%N_CELL 
@@ -5050,15 +5042,13 @@ IF(MSR)THEN
       IF  (inttime<SST_SAVE_INTERVAL*I+TEMP_TIME) THEN
            SST_SAVE_TIME=SST_SAVE_INTERVAL*I+TEMP_TIME
            SST_SAVE_INDEX=I
-	   RETURN     !JQIGOTO
-!JQIGOTO           GOTO 386
+	   RETURN     
       END IF
    END DO 
    PRINT *, "FAILED TO FIND THE RIGHT SST SAVE TIME INDEX , STOP"
    PRINT *, 'CURRERNT INTTIME IS: ', INTTIME
    CALL PSTOP
-   RETURN     !JQIGOTO
-!JQIGOTO386 RETURN
+   RETURN     
   ELSEIF (FLAG==1) THEN
     TEMP_TIME%MJD=Inttime%mjd
     TEMP_TIME%musod=0.0
@@ -5066,15 +5056,13 @@ IF(MSR)THEN
       IF  (inttime<=SST_SAVE_INTERVAL*I+TEMP_TIME+SST_SAVE_INTERVAL/2.0) THEN
            SST_SAVE_TIME=SST_SAVE_INTERVAL*I+TEMP_TIME
            SST_SAVE_INDEX=I
-	   RETURN     !JQIGOTO
-!JQIGOTO           GOTO 387
+	   RETURN     
       END IF
    END DO
    PRINT *, "FAILED TO FIND THE RIGHT SST SAVE TIME INDEX , STOP"
    PRINT *, 'CURRERNT INTTIME IS: ', INTTIME
    CALL PSTOP
-   RETURN     !JQIGOTO
-!JQIGOTO387 RETURN
+   RETURN     
   ELSE
      PRINT *, 'FLAG IN SET_SST_SAVE_TIME_INDEX CANNOT BE :',FLAG
      CALL PSTOP
@@ -5252,15 +5240,13 @@ USE EQS_OF_STATE
       IF  (inttime<SSH_SAVE_INTERVAL*I+TEMP_TIME) THEN
            SSH_SAVE_TIME=SSH_SAVE_INTERVAL*I+TEMP_TIME
            SSH_SAVE_INDEX=I
-           RETURN   !JQIGOTO
-!JQIGOTO           GOTO 386
+           RETURN   
       END IF
    END DO
    PRINT *, "FAILED TO FIND THE RIGHT SSH SAVE TIME INDEX , STOP"
    PRINT *, 'CURRERNT INTTIME IS: ', INTTIME
    CALL PSTOP
-   RETURN   !JQIGOTO
-!JQIGOTO386 RETURN
+   RETURN   
   ELSEIF (FLAG==1) THEN
         TEMP_TIME%MJD=Inttime%mjd
     TEMP_TIME%musod=0.0
@@ -5272,15 +5258,13 @@ USE EQS_OF_STATE
 
            SSH_SAVE_TIME=SSH_SAVE_INTERVAL*I+TEMP_TIME
            SSH_SAVE_INDEX=I
-           RETURN   !JQIGOTO
-!JQIGOTO           GOTO 387
+           RETURN   
       END IF
    END DO
    PRINT *, "FAILED TO FIND THE RIGHT SSH SAVE TIME INDEX , STOP"
    PRINT *, 'CURRERNT INTTIME IS: ', INTTIME
    CALL PSTOP
-   RETURN   !JQIGOTO
-!JQIGOTO387 RETURN
+   RETURN   
   ELSE
     PRINT *, 'FLAG IN SET_SSH_SAVE_TIME_INDEX CANNOT BE: ',FLAG
     CALL PSTOP
