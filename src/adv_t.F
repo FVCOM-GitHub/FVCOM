@@ -200,6 +200,7 @@ SUBROUTINE ADV_T
 !JQI                   +((1-RHEAT)/ZETA2)*EXP(ZDEP/ZETA2))*DT(I)
               RF(I,K)=-SWRAD(I)*((RHEAT/ZETA1)*EXP(ZDEP/ZETA1) &
                    +((1-RHEAT)/ZETA2)*EXP(ZDEP/ZETA2))*DT(I)*DZ(I,K)
+              RF(I,K)=RF(I,K)*HEAT_FCT(I)   ! lwang heat_adjust@20240221
 !CHEN              RF(I,K)=-SWRAD(I)*((RHEAT/(ZETA1*ZETA1))*EXP(ZDEP/ZETA1) &
 !CHEN                   +((1-RHEAT)/(ZETA2*ZETA2))*EXP(ZDEP/ZETA2))*DT(I)*DZ(I,K)
               !         END IF

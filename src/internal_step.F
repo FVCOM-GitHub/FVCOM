@@ -1198,6 +1198,19 @@ SUBROUTINE INTERNAL_STEP
   !    UPDATE TEMPERATURE IN NON-BAROTROPIC CASE                                 !
   !==============================================================================!
   IF(TEMPERATURE_ACTIVE)THEN
+
+!---> lwang heat_adjust@20240221
+    DO I=1,M
+      IF(D(I) < HEATING_LIMITATION_DEPTH)THEN
+        HEAT_FCT(I) = (exp(HEATING_LIMITATION_COEFFCIENT*D(I))-1.0_SP)/   &
+                      (exp(HEATING_LIMITATION_COEFFCIENT*HEATING_LIMITATION_DEPTH)-1.0_SP)
+      ELSE
+        HEAT_FCT(I) = 1.0_SP
+      ENDIF
+      IF (H(I) < HEATING_SHALLOW_DEPTH) HEAT_FCT(I) = HEAT_FCT(I) * (1.0_SP - HEATING_SHALLOW_REDUCTION)
+    ENDDO
+!<--- lwang
+
 # if !defined (SEMI_IMPLICIT)
   IF(.NOT. RK_3D_ON)THEN
 # endif 
@@ -1223,15 +1236,15 @@ SUBROUTINE INTERNAL_STEP
 #   endif
         !end !defined (ONE_D_MODEL)                                    !                          !
 
-     IF(CASENAME(1:3) == 'gom')THEN
-        CALL VDIF_TS_GOM(1,TF1)
-     ELSE  
+!     IF(CASENAME(1:3) == 'gom')THEN
+!        CALL VDIF_TS_GOM(1,TF1)
+!     ELSE  
 #   if !defined (ONE_D_MODEL)
         CALL VDIF_TS(1,TF1)                            !Vertical Diffusion        !
 #   else
         CALL VDIF_TS(1,T1)                            !Vertical Diffusion        !
 #   endif
-     END IF
+!     END IF
 
     
 #   if defined (MULTIPROCESSOR)
@@ -1254,11 +1267,11 @@ SUBROUTINE INTERNAL_STEP
      IF(SCALAR_POSITIVITY_CONTROL) CALL FCT_T            !Conservation Correction   !
      !#                                                   endif
 
-     IF(CASENAME(1:3) == 'gom')THEN
-        CALL VDIF_TS_GOM(1,TF1)
-     ELSE
+!     IF(CASENAME(1:3) == 'gom')THEN
+!        CALL VDIF_TS_GOM(1,TF1)
+!     ELSE
         CALL VDIF_TS(1,TF1)                            !Vertical Diffusion
-     END IF
+!     END IF
 
 #   if defined (MULTIPROCESSOR)
      IF(PAR)CALL AEXCHANGE(NC,MYID,NPROCS,TF1) !Interprocessor Exchange   !
@@ -1378,15 +1391,15 @@ SUBROUTINE INTERNAL_STEP
      !#                                                   endif
 #   endif
      !end !defined (ONE_D_MODEL)                                    !                          !
-     IF(CASENAME(1:3) == 'gom')THEN
-        CALL VDIF_TS_GOM(2,SF1)
-     ELSE  
+!     IF(CASENAME(1:3) == 'gom')THEN
+!        CALL VDIF_TS_GOM(2,SF1)
+!     ELSE  
 #   if !defined (ONE_D_MODEL)
         CALL VDIF_TS(2,SF1)                            !Vertical Diffusion        !
 #   else
         CALL VDIF_TS(2,S1)                            !Vertical Diffusion        !
 #   endif
-     END IF
+!     END IF
 
 #   if defined (MULTIPROCESSOR)
      IF(PAR)CALL AEXCHANGE(NC,MYID,NPROCS,SF1) !Interprocessor Exchange   !
@@ -1409,11 +1422,11 @@ SUBROUTINE INTERNAL_STEP
      IF(SCALAR_POSITIVITY_CONTROL) CALL FCT_S       !Conservation Correction   !
      !#                                                   endif
 
-     IF(CASENAME(1:3) == 'gom')THEN
-        CALL VDIF_TS_GOM(2,SF1)
-     ELSE
+!     IF(CASENAME(1:3) == 'gom')THEN
+!        CALL VDIF_TS_GOM(2,SF1)
+!     ELSE
         CALL VDIF_TS(2,SF1)                            !Vertical Diffusion
-     END IF
+!     END IF
 
 #   if defined (MULTIPROCESSOR)
      IF(PAR)CALL AEXCHANGE(NC,MYID,NPROCS,SF1) !Interprocessor Exchange   !
@@ -1704,23 +1717,11 @@ SUBROUTINE INTERNAL_STEP
 !==============================================================================!
 !     DATA ASSIMILATION FOR CURRENT FIELD                                      |
 !==============================================================================!
-!--->lwang intel23@20230711
-!    IF(CUR_NGASSIM .OR. (CUR_OIASSIM .AND. MOD(IINT,CUR_NSTEP_OI) == 0))THEN
-  IF (CUR_NGASSIM .AND. .NOT. CUR_OIASSIM) THEN
+  IF(CUR_NGASSIM .OR. (CUR_OIASSIM .AND. MOD(IINT,CUR_NSTEP_OI) == 0))THEN
     IF(ASSIM_FLAG==0 .AND. (.NOT. SST_ASSIM .AND. .NOT. SSTGRD_ASSIM .AND. .NOT. SSSGRD_ASSIM &
       .AND. .NOT. SSHGRD_ASSIM .AND. .NOT. TSGRD_ASSIM) )CALL CURRENT_ASSIMILATION
     IF(ASSIM_FLAG==1 .AND. (SST_ASSIM .OR. SSTGRD_ASSIM .OR. SSSGRD_ASSIM .OR. SSHGRD_ASSIM &
       .OR. TSGRD_ASSIM)) CALL CURRENT_ASSIMILATION
-  ELSEIF (.NOT. CUR_NGASSIM .AND. CUR_OIASSIM ) THEN
-    IF (MOD(IINT,CUR_NSTEP_OI) == 0) THEN
-!<---lwang            
-!JQI2023    IF(ASSIM_FLAG==0 .AND. (.NOT. SST_ASSIM .AND. .NOT. SSTGRD_ASSIM .AND. .NOT. SSHGRD_ASSIM .AND. .NOT. TSGRD_ASSIM) )CALL CURRENT_ASSIMILATION
-!JQI2023    IF(ASSIM_FLAG==1 .AND. (SST_ASSIM .OR. SSTGRD_ASSIM .OR. SSHGRD_ASSIM .OR. TSGRD_ASSIM)) CALL CURRENT_ASSIMILATION
-      IF(ASSIM_FLAG==0 .AND. (.NOT. SST_ASSIM .AND. .NOT. SSTGRD_ASSIM .AND. .NOT. SSSGRD_ASSIM &
-         .AND. .NOT. SSHGRD_ASSIM .AND. .NOT. TSGRD_ASSIM) )CALL CURRENT_ASSIMILATION
-      IF(ASSIM_FLAG==1 .AND. (SST_ASSIM .OR. SSTGRD_ASSIM .OR. SSSGRD_ASSIM .OR. SSHGRD_ASSIM &
-         .OR. TSGRD_ASSIM)) CALL CURRENT_ASSIMILATION
-    END IF
 #   if defined (GCN)
     CALL BCOND_GCN(5,0)
 #   else

@@ -166,8 +166,14 @@ SUBROUTINE VDIF_TS(NCON1,F)
         !       SWRADF(I)=SWRAD(I)
         !       SASURF(I)=0.0_SP
         !     END DO
-        WFSURF(1:M)=WFSURF(1:M)
-        SWRADF(1:M)=SWRAD(1:M)
+! jqi heat_adjust@20240221
+!        WFSURF(1:M)=WFSURF(1:M)
+!        SWRADF(1:M)=SWRAD(1:M)
+        DO I=1,M
+          WFSURF(I) = WFSURF(I) * HEAT_FCT(I)
+          SWRADF(I) = SWRAD(I) * HEAT_FCT(I)
+        END DO
+! jqi
         SASURF=0.0_SP
 
         DO K = 1, KB
@@ -178,6 +184,32 @@ SUBROUTINE VDIF_TS(NCON1,F)
               IF(ISWETN(I) == 1)THEN
 #    endif
                  ZDEP = Z(I,K)*D(I)
+
+                !---> lwang SHORTWAVE_SUITE@20240306
+                !       SPECIFIED PARAMETER FOR U.S. NORTHEAST CASE (JUNE 18, 2003)
+                IF (TRIM(HEATING_SHORTWAVE_SUITE) == 'USNE') THEN
+                  IF(D(I) < 100.0_SP) THEN
+                    RHEAT=0.78_SP
+                    ZETA1=1.4_SP
+                    ZETA2=6.3_SP
+                  ELSE IF(D(I) > 150.0_SP) THEN
+                    RHEAT=0.58_SP
+                    ZETA1=0.35_SP
+                    ZETA2=23.0_SP
+                  ELSE
+                    TMP1=(D(I)-100.0_SP)/(150.0_SP-100.0_SP)
+                    RHEAT=0.78_SP+(0.58_SP-0.78_SP)*TMP1
+                    ZETA1=1.4_SP+ (0.35_SP-1.4_SP )*TMP1
+                    ZETA2=6.3_SP+ (23.0_SP-6.3_SP )*TMP1
+                  END IF
+                ELSEIF (TRIM(HEATING_SHORTWAVE_SUITE) == 'NONE') THEN
+                  ! NOTHING TO DO
+                ELSE
+                  CALL FATAL_ERROR&
+                    &("UNKNOWN HEATING_SHORTWAVE_SUITE.")
+                END IF
+                !<--- lwang
+                 
                  RAD(I,K)=SWRADF(I)*(RHEAT*EXP(ZDEP/ZETA1)+(1-RHEAT)*EXP(ZDEP/ZETA2))
 !CHEN                 RAD(I,K)=SWRADF(I)*(RHEAT/ZETA1*EXP(ZDEP/ZETA1)+(1-RHEAT)/ZETA2*EXP(ZDEP/ZETA2))
 #    if defined (WET_DRY)
@@ -186,12 +218,22 @@ SUBROUTINE VDIF_TS(NCON1,F)
            END DO
         END DO
      ELSE IF(HEATING_TYPE == 'body')THEN
-        WFSURF(1:M)=WFSURF(1:M)
+!---> lwang heat_adjust@20240221
+        !WFSURF(1:M)=WFSURF(1:M)
+        DO I = 1, M
+          WFSURF(I)=WFSURF(I)*HEAT_FCT(I)
+        ENDDO
+!<--- lwang
         SWRADF = 0.0_SP
         SASURF = 0.0_SP
 	RAD    = 0.0_SP
      ELSE IF(HEATING_TYPE == 'surface')THEN
-        WFSURF(1:M)=WFSURF(1:M)
+!---> lwang heat_adjust@20240221
+        !WFSURF(1:M)=WFSURF(1:M)
+        DO I = 1, M
+          WFSURF(I)=WFSURF(I)*HEAT_FCT(I)
+        ENDDO
+!<--- lwang
         SWRADF = 0.0_SP
         SASURF = 0.0_SP
 	RAD    = 0.0_SP

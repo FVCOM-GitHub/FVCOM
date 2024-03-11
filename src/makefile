@@ -100,7 +100,7 @@ MAIN  =	fvcom.F		genmap.F	tge.F		longshore_flow.F\
 	adv_uv_edge_gcy.F  vdif_uv.F    extelpf_edge.F	wreal.F		\
 	viscofh.F	adv_q.F		fct_q2.F	fct_q2l.F	\
 	vdif_q.F	adv_t.F		adv_s.F		fct_t.F		\
-	vdif_ts.F	vdif_ts_gom.F	fct_s.F		bcond_ts.F	\
+	vdif_ts.F	fct_s.F		bcond_ts.F	\
 	adjust_ts.F	conv_over.F	visitsim.F	startup_type.F	\
 	edge_len.F	adcor.F		icing.F		rho_pmean.F	\
 	calc_vort.F	namelist.F	nh_set_nesting.F		\

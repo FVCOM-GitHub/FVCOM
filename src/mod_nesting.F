@@ -1825,14 +1825,14 @@ END SUBROUTINE GENMAP_NESTING
        CALL NC_READ_VAR(VAR,STKRNG=NESTING_DATA%RNG)
        VAR_S1=> VAR
 
-! # if defined (NH)  ! Lu Wang, HYW_OUT@20231121
+# if defined (NH)   
        VAR => FIND_VAR(NESTING_FILE,"hyw",FOUND)
        IF(.not. FOUND) CALL FATAL_ERROR &
             & ("IN NESTING FILE OBJECT NO 'hyw' FOUND?")
        CALL NC_CONNECT_PVAR(VAR, NESTING_DATA%HYW_BLK)
        CALL NC_READ_VAR(VAR,STKRNG=NESTING_DATA%RNG)
        VAR_HYW=> VAR
-! # endif ! Lu Wang, HYW_OUT@20231121
+# endif 
 
        IF(TRIM(NESTING_TYPE) == '3')THEN 
        
@@ -2112,7 +2112,7 @@ END SUBROUTINE GENMAP_NESTING
     NCF  => ADD(NCF,VAR)
 !<--- Siqi Li
 
-# if defined (NH)
+!# if defined (NH)
     ! HYW_BLK
     VAR  => NC_MAKE_PVAR(name='hyw',&
          & values=D%HYW_BLK, DIM1= Dim_node, DIM2= DIM_siglev, DIM3 = Dim_time)
@@ -2134,7 +2134,7 @@ END SUBROUTINE GENMAP_NESTING
     VAR  => ADD(VAR,ATT)
 
     NCF  => ADD(NCF,VAR)
-# endif
+!# endif
 
     IF(DBG_SET(DBG_SBR)) WRITE(IPT,*) "END NESTING_FILE_OBJECT"
 

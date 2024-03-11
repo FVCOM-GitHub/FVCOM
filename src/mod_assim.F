@@ -1101,6 +1101,14 @@ CONTAINS !------------------------------------------------------------------!
 
     END IF
 
+!---> Siqi Li, intel23@20240220 Check values of TS_NSTEP_OI and CUR_NSTEP_OI
+    IF (TS_OIASSIM .AND. TS_NSTEP_OI==0.) CALL FATAL_ERROR &
+            ('TS_NSTEP_OI CANNOT BE 0.0 WHEN TS_OIASSIM IS APPLIED.')
+    IF (.NOT. TS_OIASSIM) TS_NSTEP_OI = -1.0
+    IF (CUR_OIASSIM .AND. CUR_NSTEP_OI==0.) CALL FATAL_ERROR &
+            ('CUR_NSTEP_OI CANNOT BE 0.0 WHEN CUR_OIASSIM IS APPLIED.')
+    IF (.NOT. CUR_OIASSIM) CUR_NSTEP_OI = -1.0
+!<--- Siqi Li
 
     IF (DBG_SET(DBG_SBR)) WRITE(IPT,*) "END: SET_ASSIM_PARAM"
 
