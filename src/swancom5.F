@@ -1070,24 +1070,24 @@
       INTEGER, SAVE :: IENT=0
       CALL STRACE (IENT, 'ADDDIS')
 !
-      DO 100 ISC = 1, MSC
+      DO ISC = 1, MSC
         DSDD = DDIR * FRINTF * SPCSIG(ISC)**2
-        DO 90 IDC = 1, MDC
+        DO IDC = 1, MDC
           IF (ANYBIN(IDC,ISC)) THEN
             DISSXY(KCGRD(1)) = DISSXY(KCGRD(1)) + DSDD*(DISC0(IDC,ISC) +  &
 	                       DISC1(IDC,ISC) * AC2(IDC,ISC,KCGRD(1)))
             LEAKXY(KCGRD(1)) = LEAKXY(KCGRD(1)) + DSDD *                  &
 	                       LEAKC1(IDC,ISC) * AC2(IDC,ISC,KCGRD(1))
           ENDIF
-  90    CONTINUE
- 100  CONTINUE
+        ENDDO
+      ENDDO
       RETURN
       END SUBROUTINE ADDDIS
 !
 !****************************************************************
 !
    SUBROUTINE SPREDT (AC2     ,CAX     ,CAY     ,IDCMIN  ,IDCMAX  ,    &
-	              ISSTOP  ,RDX     ,RDY     )     
+	              ISSTOP  ,RDX     ,RDY     )
 !  (This subroutine has not been tested yet)
 !
 !****************************************************************

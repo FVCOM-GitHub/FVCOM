@@ -40,6 +40,9 @@
    USE MOD_NCTOOLS
    USE MOD_FORCE
    USE MOD_NESTING, ONLY : NESTING_ON_WAVE
+#  if defined (VEGETATION)
+   USE MOD_VEGETATION
+#  endif
    IMPLICIT NONE
 !
 !     SWAN (Simulating WAves Nearshore); a third generation wave model
@@ -82,6 +85,10 @@
 !
 
    INTEGER, PARAMETER :: MXINCL = 10                                   
+#  if defined (VEGETATION)
+   REAL              :: HH, CC, DD
+   INTEGER           :: NN
+#  endif
 
    INTEGER, SAVE     :: INCNUM(1:MXINCL) = 0                           
    INTEGER, SAVE     :: INCLEV = 1                                     
@@ -113,6 +120,16 @@
    TYPE(XYPT), TARGET  :: FRST                                         
    TYPE(XYPT), POINTER :: CURR, TMP                                    
 
+#  if defined (VEGETATION)
+   TYPE VEGPT
+     INTEGER              :: N
+     REAL                 :: H, D, C
+     TYPE(VEGPT), POINTER :: NEXTV
+   END TYPE VEGPT
+
+   TYPE(VEGPT), TARGET  :: FRSTV
+   TYPE(VEGPT), POINTER :: CURRV, TMPV
+#  endif
    LOGICAL :: KEYWIS                                                   
    LOGICAL :: EQREAL                                                   
 
@@ -146,7 +163,7 @@
                      SIGIM
    CHARACTER(LEN=20) WCAP		     
    CHARACTER(LEN=6)  UNIT
-   LOGICAL QUAD,AGROW,BRE,MDIAL,FRICL,OBST,TRI,REFL,RFD,SETUP,    &
+   LOGICAL QUAD,AGROW,BRE,MDIAL,FRICL,VEGE,OBST,TRI,REFL,RFD,SETUP,    &
            DIFFR,OFF,PROP,FLUXLIM,DIR,COM_STAT	
    LOGICAL INP_BOT,INP_CUR,INP_CUR_STAT,INP_CUR_SERI,INP_WI,INP_WI_STAT, &
            INP_WI_SERI,INP_FR,INP_FR_STAT,INP_FR_SERI,INP_WLEV,          &
@@ -1385,6 +1402,91 @@
      ENDIF
    ENDIF
 
+#  if defined (VEGETATION)
+!
+!   ------------------------------------------------------------------
+!   VEGEtation   < [height]  [diamtr]  [nstems]  [drag] >
+!   ------------------------------------------------------------------
+   VEGE = .FALSE.
+   CALL INLOGC('VEGETATION',VEGE,'UNC','F')
+   IF(VEGE)THEN
+        IVEG  = 1
+        ILMAX = NVEG
+!!$        ILMAX = 0
+!!$        FRSTV%H = 0.
+!!$        FRSTV%D = 0.
+!!$        FRSTV%N = 0
+!!$        FRSTV%C = 0.
+!!$        NULLIFY(FRSTV%NEXTV)
+!!$        CURRV => FRSTV
+!!$ 303    CALL INREAL ('HEIGHT',HH,'REP',-1.)
+!!$        IF ( HH.NE.-1. ) THEN
+!!$           IF ( HH.LT.0. ) THEN
+!!$              CALL MSGERR (2,'height is negative')
+!!$              HH = 0.
+!!$           END IF
+!!$           CALL INREAL ('DIAMTR',DD,'REQ', 0.)
+!!$           IF ( DD.LT.0. ) THEN
+!!$              CALL MSGERR (2,'stem diameter is negative')
+!!$              DD = 0.
+!!$           END IF
+!!$           CALL ININTG ('NSTEMS',NN,'REQ', 1 )
+!!$           IF ( NN.LE.0 ) THEN
+!!$              CALL MSGERR (2,'number of stems is negative or zero')
+!!$              NN = 1
+!!$           END IF
+!!$           CALL INREAL ('DRAG'  ,CC,'REQ', 0.)
+!!$           IF ( CC.LT.0. ) THEN
+!!$              CALL MSGERR (2,'drag coefficient is negative')
+!!$              CC = 0.
+!!$           END IF
+!!$           ILMAX = ILMAX+1
+!!$           ALLOCATE(TMPV)
+!!$           TMPV%H = HH
+!!$           TMPV%D = DD
+!!$           TMPV%N = NN
+!!$           TMPV%C = CC
+!!$           NULLIFY(TMPV%NEXTV)
+!!$           CURRV%NEXTV => TMPV
+!!$           CURRV => TMPV
+!!$           GO TO 303
+!!$        END IF
+!!$        IF (ILMAX.EQ.0) CALL MSGERR(2,'No vegetation parameters found')
+!!$        IF (.NOT.ALLOCATED(LAYH  )) ALLOCATE(LAYH  (ILMAX))
+!!$        IF (.NOT.ALLOCATED(VEGDIL)) ALLOCATE(VEGDIL(ILMAX))
+!!$        IF (.NOT.ALLOCATED(VEGNSL)) ALLOCATE(VEGNSL(ILMAX))
+!!$        IF (.NOT.ALLOCATED(VEGDRL)) ALLOCATE(VEGDRL(ILMAX))
+!!$        CURRV => FRSTV%NEXTV
+!!$        DO JJ = 1, ILMAX
+!!$           LAYH  (JJ) = CURRV%H
+!!$           VEGDIL(JJ) = CURRV%D
+!!$           VEGNSL(JJ) = REAL(CURRV%N)
+!!$           VEGDRL(JJ) = CURRV%C
+!!$           CURRV => CURRV%NEXTV
+!!$        END DO
+!!$        DEALLOCATE(TMPV)
+
+        IF (.NOT.ALLOCATED(LAYH  )) ALLOCATE(LAYH  (0:MT,ILMAX))
+        IF (.NOT.ALLOCATED(VEGDIL)) ALLOCATE(VEGDIL(0:MT,ILMAX))
+        IF (.NOT.ALLOCATED(VEGNSL)) ALLOCATE(VEGNSL(0:MT,ILMAX))
+        IF (.NOT.ALLOCATED(VEGDRL)) ALLOCATE(VEGDRL(0:MT,ILMAX))
+
+        DO I = 1, ILMAX
+            LAYH  (:,I) = veg%plant(:,I,phght)
+            VEGDIL(:,I) = veg%plant(:,I,pdiam)
+            VEGNSL(:,I) = veg%plant(:,I,pdens)
+            VEGDRL(:,I) = CD_VEG(I)
+        END DO
+!!$# if defined (MULTIPROCESSOR)
+!!$        IF(PAR)THEN
+!!$          CALL AEXCHANGE(NC,MYID,NPROCS,LAYH)  
+!!$          CALL AEXCHANGE(NC,MYID,NPROCS,VEGDIL)  
+!!$          CALL AEXCHANGE(NC,MYID,NPROCS,VEGNSL)  
+!!$          CALL AEXCHANGE(NC,MYID,NPROCS,VEGDRL)  
+!!$        END IF
+!!$# endif
+   ENDIF
+#  endif
 !
 ! ------------------------------------------------------------------
 !

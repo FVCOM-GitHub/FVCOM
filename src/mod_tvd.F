@@ -34,7 +34,8 @@ MODULE MOD_TVD
 !
    REAL(SP), ALLOCATABLE :: DELF(:)  
 
-   INTEGER(SP), ALLOCATABLE :: Anear_node(:), Bnear_node(:)
+!   REAL(SP), ALLOCATABLE :: Anear_node(:), Bnear_node(:)
+   INTEGER,  ALLOCATABLE :: Anear_node(:), Bnear_node(:)
    REAL(SP), ALLOCATABLE :: YUAdist(:), YUBdist(:), XUAdist(:), XUBdist(:)
 
 CONTAINS
@@ -49,8 +50,10 @@ CONTAINS
     REAL(SP) :: LX,LY,minA,minB
     INTEGER  :: I,I2,IA,IB
 
-    ALLOCATE(Anear_node(1:NCV))   ; Anear_node     = ZERO
-    ALLOCATE(Bnear_node(1:NCV))   ; Bnear_node     = ZERO
+!    ALLOCATE(Anear_node(1:NCV))   ; Anear_node = ZERO
+!    ALLOCATE(Bnear_node(1:NCV))   ; Bnear_node = ZERO
+    ALLOCATE(Anear_node(1:NCV))   ; Anear_node = 0
+    ALLOCATE(Bnear_node(1:NCV))   ; Bnear_node = 0
     ALLOCATE(XUAdist(1:NCV))      ; XUAdist    = ZERO
     ALLOCATE(YUAdist(1:NCV))      ; YUAdist    = ZERO
     ALLOCATE(XUBdist(1:NCV))      ; XUBdist    = ZERO
@@ -85,10 +88,12 @@ CONTAINS
          minB = MINVAL(dstB)
 
          DO I2=1,M
-           if (dstA(I2).EQ.minA) then
+!           if (dstA(I2).EQ.minA) then
+           if (abs(dstA(I2)-minA) < 1.0E-6) then
               Anear_node(I) = I2
            end if
-           if (dstB(I2).EQ.minB) then
+!           if (dstB(I2).EQ.minB) then
+           if (abs(dstB(I2)-minB) < 1.0E-6) then
               Bnear_node(I) = I2
            end if
          END DO

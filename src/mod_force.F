@@ -2057,7 +2057,9 @@ CONTAINS
 !--------------------------------------------------------------------
 # endif
 !--------------------------------------------------------------------
-
+!JQI 03202023
+          ANGLEQ(RCNT) = RIVERS(i)%ANG_POINT
+!JQI 03202023
        END IF
 
        ! NOW PUT THE RIVERS IN THE RIVER_FORCING TYPE
@@ -3479,12 +3481,17 @@ CONTAINS
        DO I=1,NUMQBC
           J=INODEQ(I)
           if (ISONB(J) /= 1) THEN
-             write(strng,'(I6)') ngid(j)
-             CALL FATAL_ERROR &
-                  & ("You seem to be trying to put a river in the middle of the domain",&
-                  & "The global node number you selected is: "//trim(adjustl(strng)),&
-                  &"but this is not a solid boundary node?")
-          END if
+!JQI 03202023
+          QAREA(I)=ART1(I)
+          ANGLEQ(I)=ANGLEQ(I)*3.1415926_SP/180.0_SP
+!             write(strng,'(I6)') ngid(j)
+!             CALL FATAL_ERROR &
+!                  & ("You seem to be trying to put a river in the middle of the domain",&
+!                  & "The global node number you selected is: "//trim(adjustl(strng)),&
+!                  &"but this is not a solid boundary node?")
+!          END if
+          ELSE
+!JQI 03202023
           I1=NBSN(J,2)
           I2=NBSN(J,1)
           I3=NBSN(J,NTSN(J)-1)
@@ -3518,6 +3525,10 @@ CONTAINS
           DXYTMP=SQRT(DX12**2+DY12**2)+SQRT(DX32**2+DY32**2)
           QAREA(I)=0.5_SP*DXYTMP*H(INODEQ(I))
           ANGLEQ(I)=(ATMP1-ATMP2)/2.+ATMP2
+	  
+!JQI 03202023
+	  END IF
+!JQI 03202023
        END DO
 
        !=====================================
@@ -5744,7 +5755,6 @@ CONTAINS
     
     DEALLOCATE(XLAT,XLON)
 # else
-!    WHERE (XLON<0.) XLON = XLON + 360._sp ! Siqi Li, XLON@20230817
     HEATX => XLON
     HEATY => XLAT
     
@@ -13918,7 +13928,8 @@ CALL FATAL_ERROR("TIME DEPENDANT WIND Not Set Up Yet")
 
     CALL NC_POINT_VAR(SEDIMENTS_WC_N,VNP_INT)
     CALL NC_POINT_VAR(SEDIMENTS_WC_P,VPP_INT) 
-    DO I=1,MT
+!Karsten Lettmann    DO I=1,MT
+    DO I=1,NT
       OFFLINE_WC(I)=VNP_INT(I)*VPP_INT(I)
     END DO  
 # endif
@@ -14121,7 +14132,8 @@ CALL FATAL_ERROR("TIME DEPENDANT WIND Not Set Up Yet")
 
     CALL NC_POINT_VAR(BIOLOGY_WC_N,VNP_INT)
     CALL NC_POINT_VAR(BIOLOGY_WC_P,VPP_INT) 
-    DO I=1,MT
+!Karsten Lettmann    DO I=1,MT
+    DO I=1,NT
       OFFLINE_WC(I)=VNP_INT(I)*VPP_INT(I)
     END DO  
 # endif

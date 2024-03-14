@@ -700,12 +700,20 @@
      ENDDO
 
      DO K=2, KBM1
+#    if defined (WAVE_CURRENT_INTERACTION) && (VORTEX_FORCE)
+       CONV_U(K) = (W(I,K)+W_STOKES_3D(I,K))*(U_TEMP(K)+U_TEMP(K-1))*0.5_SP    !Xia et al. (2020)
+#    else
        CONV_U(K) = W(I,K)*(U_TEMP(K)+U_TEMP(K-1))*0.5_SP
+#    endif
        SL_U = 2.0_SP*(U_TEMP(K)-U_TEMP(K+1))/(SL_H(K)+SL_H(K+1))
        SL_F = 2.0_SP*(U_TEMP(K-2)-U_TEMP(K-1))/(SL_H(K-2)+SL_H(K-1))
        DISS_U(K) = 0.5_SP*ABS(W(I,K))*(U_TEMP(K-1)-U_TEMP(K)-0.5_SP*LIMLED2(SL_U,SL_F,2.0_SP)*(SL_H(K-1)+SL_H(K)))
 
+#    if defined (WAVE_CURRENT_INTERACTION) && (VORTEX_FORCE)
+       CONV_V(K) = (W(I,K)+W_STOKES_3D(I,K))*(V_TEMP(K)+V_TEMP(K-1))*0.5_SP
+#    else
        CONV_V(K) = W(I,K)*(V_TEMP(K)+V_TEMP(K-1))*0.5_SP
+#    endif
        SL_U = 2.0_SP*(V_TEMP(K)-V_TEMP(K+1))/(SL_H(K)+SL_H(K+1))
        SL_F = 2.0_SP*(V_TEMP(K-2)-V_TEMP(K-1))/(SL_H(K-2)+SL_H(K-1))
        DISS_V(K) = 0.5_SP*ABS(W(I,K))*(V_TEMP(K-1)-V_TEMP(K)-0.5_SP*LIMLED2(SL_U,SL_F,2.0_SP)*(SL_H(K-1)+SL_H(K)))
@@ -728,6 +736,7 @@
        YFLUXV = CONV_V(K)-CONV_V(K+1)+DISS_V(K+1)-DISS_V(K)
 #      endif
 #      if !defined (NH) && !defined (LIMITER_VER_ADV)
+#      if !defined (WAVE_CURRENT_INTERACTION)
        IF(K == 1) THEN
          XFLUXV=-W(I,K+1)*(U(I,K)*DZ1(I,K+1)+U(I,K+1)*DZ1(I,K))/&
                  (DZ1(I,K)+DZ1(I,K+1))
@@ -748,6 +757,53 @@
                  W(I,K+1)*(V(I,K)*DZ1(I,K+1)+V(I,K+1)*DZ1(I,K))/&
                  (DZ1(I,K)+DZ1(I,K+1))
        END IF
+#      else
+!START CHANGE Xia et al. (2020)
+#      if  !defined (VORTEX_FORCE)
+       IF(K == 1) THEN
+         XFLUXV=-W(I,K+1)*(U(I,K)*DZ1(I,K+1)+U(I,K+1)*DZ1(I,K))/&
+                 (DZ1(I,K)+DZ1(I,K+1))
+         YFLUXV=-W(I,K+1)*(V(I,K)*DZ1(I,K+1)+V(I,K+1)*DZ1(I,K))/&
+                 (DZ1(I,K)+DZ1(I,K+1))
+       ELSE IF(K == KBM1) THEN
+         XFLUXV= W(I,K)*(U(I,K)*DZ1(I,K-1)+U(I,K-1)*DZ1(I,K))/&
+                 (DZ1(I,K)+DZ1(I,K-1))
+         YFLUXV= W(I,K)*(V(I,K)*DZ1(I,K-1)+V(I,K-1)*DZ1(I,K))/&
+                 (DZ1(I,K)+DZ1(I,K-1))
+      ELSE
+         XFLUXV= W(I,K)*(U(I,K)*DZ1(I,K-1)+U(I,K-1)*DZ1(I,K))/&
+                 (DZ1(I,K)+DZ1(I,K-1))-&
+                 W(I,K+1)*(U(I,K)*DZ1(I,K+1)+U(I,K+1)*DZ1(I,K))/&
+                 (DZ1(I,K)+DZ1(I,K+1))
+         YFLUXV= W(I,K)*(V(I,K)*DZ1(I,K-1)+V(I,K-1)*DZ1(I,K))/&
+                 (DZ1(I,K)+DZ1(I,K-1))-&
+                 W(I,K+1)*(V(I,K)*DZ1(I,K+1)+V(I,K+1)*DZ1(I,K))/&
+                 (DZ1(I,K)+DZ1(I,K+1))
+       END IF
+#      else
+       IF(K == 1) THEN
+         XFLUXV=-(W(I,K+1)+W_STOKES_3D(I,K+1))*(U(I,K)*DZ1(I,K+1)+U(I,K+1)*DZ1(I,K))/&
+                 (DZ1(I,K)+DZ1(I,K+1))
+         YFLUXV=-(W(I,K+1)+W_STOKES_3D(I,K+1))*(V(I,K)*DZ1(I,K+1)+V(I,K+1)*DZ1(I,K))/&
+                 (DZ1(I,K)+DZ1(I,K+1))
+       ELSE IF(K == KBM1) THEN
+         XFLUXV= (W(I,K)+W_STOKES_3D(I,K))*(U(I,K)*DZ1(I,K-1)+U(I,K-1)*DZ1(I,K))/&
+                 (DZ1(I,K)+DZ1(I,K-1))
+         YFLUXV= (W(I,K)+W_STOKES_3D(I,K))*(V(I,K)*DZ1(I,K-1)+V(I,K-1)*DZ1(I,K))/&
+                 (DZ1(I,K)+DZ1(I,K-1))
+       ELSE
+         XFLUXV= (W(I,K)+W_STOKES_3D(I,K))*(U(I,K)*DZ1(I,K-1)+U(I,K-1)*DZ1(I,K))/&
+                 (DZ1(I,K)+DZ1(I,K-1))-&
+                 (W(I,K+1)+W_STOKES_3D(I,K+1))*(U(I,K)*DZ1(I,K+1)+U(I,K+1)*DZ1(I,K))/&
+                 (DZ1(I,K)+DZ1(I,K+1))
+         YFLUXV= (W(I,K)+W_STOKES_3D(I,K))*(V(I,K)*DZ1(I,K-1)+V(I,K-1)*DZ1(I,K))/&
+                 (DZ1(I,K)+DZ1(I,K-1))-&
+                 (W(I,K+1)+W_STOKES_3D(I,K+1))*(V(I,K)*DZ1(I,K+1)+V(I,K+1)*DZ1(I,K))/&
+                 (DZ1(I,K)+DZ1(I,K+1))
+       END IF
+!END CHANGE Xia et al. (2020)
+#      endif
+#      endif
 #      endif
 #      if defined (SPHERICAL)
 !       XFLUX(I,K)=XFLUX(I,K)+XFLUXV/DZ(K)*ART(I)&
@@ -758,6 +814,7 @@
 !                 +DRHOY(I,K)+COR(I)*U(I,K)*DT1(I)*ART(I)&
 !                 +U(I,K)*U(I,K)/REARTH*TAN(YC(I)*DEG2RAD)*DT1(I)*ART(I)&
 !                 +0.5_SP*V(I,K)*(W(I,K+1)+W(I,K))/REARTH*DT1(I)*ART(I)
+#      if !defined (WAVE_CURRENT_INTERACTION) 
        XFLUX(I,K)=XFLUX(I,K)+XFLUXV*ART(I)&
                  +DRHOX(I,K)-COR(I)*V(I,K)*DT1(I)*DZ1(I,K)*ART(I)&
                  -U(I,K)*V(I,K)/REARTH*TAN(YC(I)*DEG2RAD)*DT1(I)*DZ1(I,K)*ART(I)&
@@ -767,7 +824,28 @@
                  +U(I,K)*U(I,K)/REARTH*TAN(YC(I)*DEG2RAD)*DT1(I)*DZ1(I,K)*ART(I)&
                  +0.5_SP*V(I,K)*(W(I,K+1)+W(I,K))/REARTH*DT1(I)*DZ1(I,K)*ART(I)
 #      else
-#      if !defined (NH)
+#      if !defined (VORTEX_FORCE)
+       XFLUX(I,K)=XFLUX(I,K)+XFLUXV*ART(I)&
+                 +DRHOX(I,K)-COR(I)*V(I,K)*DT1(I)*DZ1(I,K)*ART(I)&
+                 -U(I,K)*V(I,K)/REARTH*TAN(YC(I)*DEG2RAD)*DT1(I)*DZ1(I,K)*ART(I)&
+                 +0.5_SP*U(I,K)*(W(I,K+1)+W(I,K))/REARTH*DT1(I)*DZ1(I,K)*ART(I)
+       YFLUX(I,K)=YFLUX(I,K)+YFLUXV*ART(I)&
+                 +DRHOY(I,K)+COR(I)*U(I,K)*DT1(I)*DZ1(I,K)*ART(I)&
+                 +U(I,K)*U(I,K)/REARTH*TAN(YC(I)*DEG2RAD)*DT1(I)*DZ1(I,K)*ART(I)&
+                 +0.5_SP*V(I,K)*(W(I,K+1)+W(I,K))/REARTH*DT1(I)*DZ1(I,K)*ART(I)
+#      else
+       XFLUX(I,K)=XFLUX(I,K)+XFLUXV*ART(I)&
+                 +DRHOX(I,K)-COR(I)*V(I,K)*DT1(I)*DZ1(I,K)*ART(I)&
+                 -U(I,K)*V(I,K)/REARTH*TAN(YC(I)*DEG2RAD)*DT1(I)*DZ1(I,K)*ART(I)&
+                 +0.5_SP*U(I,K)*(W(I,K+1)+W(I,K)+W_STOKES_3D(I,K+1)+W_STOKES_3D(I,K))/REARTH*DT1(I)*DZ1(I,K)*ART(I)
+       YFLUX(I,K)=YFLUX(I,K)+YFLUXV*ART(I)&
+                 +DRHOY(I,K)+COR(I)*U(I,K)*DT1(I)*DZ1(I,K)*ART(I)&
+                 +U(I,K)*U(I,K)/REARTH*TAN(YC(I)*DEG2RAD)*DT1(I)*DZ1(I,K)*ART(I)&
+                 +0.5_SP*V(I,K)*(W(I,K+1)+W(I,K)+W_STOKES_3D(I,K+1)+W_STOKES_3D(I,K))/REARTH*DT1(I)*DZ1(I,K)*ART(I)
+#      endif
+#      endif
+#      else
+#      if !defined (NH)   
 !       XFLUX(I,K)=XFLUX(I,K)+XFLUXV/DZ(K)*ART(I)&
 !                 +DRHOX(I,K)-COR(I)*V(I,K)*DT1(I)*ART(I)
 !       YFLUX(I,K)=YFLUX(I,K)+YFLUXV/DZ(K)*ART(I)&
@@ -784,7 +862,7 @@
 #      endif
 #      endif
 
-#  if defined (WAVE_CURRENT_INTERACTION)
+#  if defined (WAVE_CURRENT_INTERACTION) || (FVCOM_COUPLED)
        XFLUX(I,K) = XFLUX(I,K) + WAVESTRX_3D(I,K)
        YFLUX(I,K) = YFLUX(I,K) + WAVESTRY_3D(I,K)
 #  endif   

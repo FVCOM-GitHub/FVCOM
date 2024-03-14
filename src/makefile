@@ -80,8 +80,8 @@ MODS  = mod_prec.F	sinter.F	mod_types.F	mod_time.F	\
 	mod_station_timeseries.F	mod_sparse_timeseries.F 	\
 	mod_boundschk.F mod_esmf_nesting.F	\
 	mod_cstms_vars.F	mod_flocmod.F	mod_sed_cstms.F		\
-	mod_fluid_mud.F mod_tvd.F mod_mld_rho.F mod_heatflux_sediment.F \
-	mod_vector_projection.F
+	mod_fluid_mud.F mod_tvd.F mod_mld_rho.F	mod_vegetation.F	\
+	mod_heatflux_sediment.F mod_vector_projection.F
 # lwang added mod_mld_rho.F
 MODS_W = mod_main_wave.F	swmod1.F	swmod2.F	swmod3.F\
 	mod_action_im.F mod_action_ex.F mod_wavesetup.F 		\
@@ -100,7 +100,7 @@ MAIN  =	fvcom.F		genmap.F	tge.F		longshore_flow.F\
 	adv_uv_edge_gcy.F  vdif_uv.F    extelpf_edge.F	wreal.F		\
 	viscofh.F	adv_q.F		fct_q2.F	fct_q2l.F	\
 	vdif_q.F	adv_t.F		adv_s.F		fct_t.F		\
-	vdif_ts.F	fct_s.F		bcond_ts.F	\
+	vdif_ts.F	vdif_ts_gom.F	fct_s.F		bcond_ts.F	\
 	adjust_ts.F	conv_over.F	visitsim.F	startup_type.F	\
 	edge_len.F	adcor.F		icing.F		rho_pmean.F	\
 	calc_vort.F	namelist.F	nh_set_nesting.F		\
@@ -113,7 +113,11 @@ MAIN_W = ocpmix.F	ocpcre.F	ocpids.F	\
 	swancom1.F	swancom2.F	swancom3.F	swancom4.F	\
 	swancom5.F	w3part.F
 
-COBJS = func_pointer.c partition.c
+#ifdef FLAG_411
+  COBJS = func_pointer.c partition.c
+#else
+#  COBJS = func_pointer.c
+#endif
 
 BIOGEN	= mod_bio_3D.F	mod_onedtide.F
 
@@ -178,9 +182,10 @@ tarfile:
 clean:
 		/bin/rm -f *.o *.mod *.f90 fvcom libfvcom.a
 
-clobber:	
-		make clean
-		/bin/rm -f fvcom libfvcom.so libfvcom.a postFVCOM_ncnest_reorder
+clobber: clean
+	 /bin/rm -f fvcom libfvcom.so libfvcom.a
+
+distclean: clobber
 
 allclean:
 		make clean

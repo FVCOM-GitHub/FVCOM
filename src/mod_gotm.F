@@ -33,6 +33,11 @@
 MODULE MOD_GOTM 
 #  if defined (GOTM)
    USE MOD_TYPES
+
+# if defined (VEGETATION)
+   USE MOD_VEGETATION
+# endif
+
    IMPLICIT NONE
    SAVE
 
@@ -198,6 +203,7 @@ MODULE MOD_GOTM
       UU_NODE_KBM1 = UU_NODE_KBM1/FLOAT(NTVE(I))
       VV_NODE_KBM1 = VV_NODE_KBM1/FLOAT(NTVE(I))
 
+      u_taub = 0.0_SP
       DO J=1,MaxItz0b
         z0b_gotm = 0.1*umol/max(umold,u_taub)+0.03*(cc_z0b(i)/.03)
         rr = kappa/(log((z0b_gotm+ztemp)/z0b_gotm)) 
@@ -222,6 +228,25 @@ MODULE MOD_GOTM
       tke1d(0:KBM1) = tke(I,KB:1:-1)   !Turbulent Kinetic Energy      [m^2/s^2]
       eps1d(0:KBM1) = teps(I,KB:1:-1)  !Turbulence Dissipation Rate   [m^2/s^3] 
       l1d(0:kbm1)   = l(i,kb:1:-1)
+
+# if defined (VEGETATION)
+      !
+      !  Add the effect of vegetation on tke and gls 
+      ! 
+      if(VEGETATION_MODEL.and.VEG_TURB)then
+        tke1d(0:KBM1) = tke1d(0:KBM1) +  VEG % tke_veg(i,KB:1:-1)
+        eps1d(0:KBM1) = eps1d(0:KBM1) +  VEG % gls_veg(i,KB:1:-1)
+      end if
+      !
+      !-----------------------------------------------------------------------
+      !  Add the effect of vegetation on horizontal viscosity.
+      !-----------------------------------------------------------------------
+      !
+      if(VEGETATION_MODEL.and.VEG_HMIXING)then
+          NUM(0:KBM1) = NUM(0:KBM1) + VEG % visc3d_r_veg(i,KB:1:-1)
+      end if
+
+# endif
 
       !Update Turbulence Model
       call do_turbulence(kbm1,time_step,depth,u_taus,u_taub,z0s_gotm,z0b_gotm,h,nn1D,ss1D) 

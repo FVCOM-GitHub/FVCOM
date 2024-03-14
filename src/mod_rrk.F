@@ -2119,11 +2119,11 @@ write(myid+2000,*) seof
    INTEGER ::  J,K
    INTEGER ::  IDUMMY
    INTEGER ::  TMP
+   INTEGER ::  ioerr
    CHARACTER(LEN=80) FILENAME
    CHARACTER(LEN=24) HEADINFO
    INTEGER STLOC(RRK_NOBSMAX)
    INTEGER LAY(RRK_NOBSMAX)
-   INTEGER :: IERR
 
    FILENAME = TRIM(INPUT_DIR)//"/"//trim(casename)//"_assim_rrkf.nml"
     
@@ -2133,13 +2133,13 @@ write(myid+2000,*) seof
    NLOC = 0
    IDUMMY = 0
    STLOC = ZERO
-    
-   DO WHILE ( .TRUE. )
-     READ(73,'(A24)',IOSTAT=IERR) HEADINFO
-     IF (IERR /=0) EXIT
-     IF (SWITCH /=1) THEN
-       IF(HEADINFO=='!===READ IN OBSERVATION') SWITCH = 1
-       CYCLE  
+
+   DO WHILE(.TRUE.)
+     READ(73,'(A24)',IOSTAT=ioerr) HEADINFO
+     IF(ioerr .ne. 0) EXIT
+     IF(SWITCH/=1) THEN
+       IF(HEADINFO=='!=== READ IN OBSERVATION') SWITCH = 1
+       CYCLE
      ENDIF
    
      IF(TRIM(HEADINFO)=='!EL') THEN

@@ -475,7 +475,8 @@ CONTAINS
 # else
     RIVER_VERTICAL_DISTRIBUTION = "FUNCTIONAL VERTICAL RIVER DISTROBUTION: SEE FVCOM MANUAL FOR HELP"
 # endif
-
+    SOURCE_POINT_DIRECTION = 0.0
+ 
     !--Parameters in NameList NML_OPEN_BOUNDARY
     OBC_ON = .FALSE.
     OBC_NODE_LIST_FILE = trim(casename)//"_obc.dat"
@@ -849,6 +850,9 @@ CONTAINS
           RIVERS(i)%FILE=RIVER_FILE
           RIVERS(i)%LOCATION=RIVER_GRID_LOCATION
           RIVERS(i)%DISTRIBUTION=RIVER_VERTICAL_DISTRIBUTION
+!JQI 03202023
+          RIVERS(i)%ANG_POINT=SOURCE_POINT_DIRECTION
+!JQI 03202023
        END DO
 
        IF(I .NE. RIVER_NUMBER) THEN
@@ -2432,13 +2436,7 @@ CONTAINS
        CALL NC_CONNECT_PVAR(VAR,G%LON)
        CALL NC_READ_VAR(VAR)
        CALL NC_DISCONNECT(VAR)
-!# if defined (SPHERICAL)
-!       ! Siqi Li, XLON@20230817
-!       DO I = 1, G%MT
-!         IF (G%LON(I)<0.0) G%LON(I) = G%LON(I) + 360._SP
-!       ENDDO
-!# endif
-
+       
        ! Latitude
        ALLOCATE(G%LAT(0:G%MT),stat=status)
        IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE G%LAT WHILE READING:"//TRIM(NCF%FNAME))
@@ -2464,13 +2462,7 @@ CONTAINS
        CALL NC_CONNECT_PVAR(VAR,G%LONC)
        CALL NC_READ_VAR(VAR)
        CALL NC_DISCONNECT(VAR)
-!# if defined (SPHERICAL)
-!       ! Siqi Li, XLON@20230817
-!       DO I = 1, G%NT
-!         IF (G%LONC(I)<0.0) G%LONC(I) = G%LONC(I) + 360._SP
-!       ENDDO
-!# endif
-
+       
        ! Latitude - element
        ALLOCATE(G%LATC(0:G%NT),stat=status)
        IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE G%LATC WHILE READING:"//TRIM(NCF%FNAME))
@@ -2574,6 +2566,7 @@ CONTAINS
     
     !==============================================================================|
     
+    
     ! FIND THE RESTART FILE OBJECT
     
     
@@ -2583,11 +2576,13 @@ CONTAINS
          & IN THE HOTSTART FILE OBJECT")
     
     MGL = DIM1%DIM
+    
     DIM1 => FIND_DIM(NC_START,"nele",FOUND)
     IF(.not. FOUND) CALL FATAL_ERROR("COULD NOT FIND DIMENSION NODE&
          & IN THE HOTSTART FILE OBJECT")
     
     NGL= DIM1%DIM
+    
     ! CHECK TO MAKE SURE DIMENSION THREE IS THERE
     DIM1 => FIND_DIM(NC_START,"three",FOUND)
     IF(.not. FOUND) CALL FATAL_ERROR("COULD NOT FIND DIMENSION NODE&
@@ -2598,6 +2593,7 @@ CONTAINS
          & IN THE HOTSTART FILE OBJECT")
     
     KB = DIM1%DIM
+
     DIM1 => FIND_DIM(NC_START,"siglay",FOUND)
     IF(.not. FOUND) CALL FATAL_ERROR("COULD NOT FIND DIMENSION SIGLEV&
          & IN THE HOTSTART FILE OBJECT")
@@ -2784,6 +2780,7 @@ CONTAINS
        CALL NC_CONNECT_AVAR(VAR, X_LCL)
        CALL NC_READ_VAR(VAR)
        CALL NC_DISCONNECT(VAR)
+    
        
        VAR => FIND_VAR(NC_START,'y',FOUND)
        IF(.not. FOUND) CALL FATAL_ERROR("COULD NOT FIND VARIABLE 'y'&
@@ -2800,10 +2797,7 @@ CONTAINS
        CALL NC_CONNECT_AVAR(VAR, X_LCL)
        CALL NC_READ_VAR(VAR)
        CALL NC_DISCONNECT(VAR)
-!# if defined (SPHERICAL)
-!       ! Siqi Li, XLON@20230817
-!       WHERE (X_LCL<0.0) X_LCL = X_LCL + 360.0
-!# endif           
+       
        
        VAR => FIND_VAR(NC_START,'lat',FOUND)
        IF(.not. FOUND) CALL FATAL_ERROR("COULD NOT FIND VARIABLE 'lat'&
@@ -3856,6 +3850,17 @@ CONTAINS
 
     ! FIND FIRST LINE of CONNECTIVITY ARRAY
     rewind GRIDUNIT
+!    DO WHILE(.TRUE.)
+!       READ(GRIDUNIT,*,IOSTAT=IOS)J,N1,N2,N3
+!       if (IOS == 0) then
+!          BackSpace GRIDUNIT
+!          exit
+!       elseif(IOS< 0) Then
+!         Call FATAL_ERROR('Improper formatting of GRID FILE:',&
+!              &'Reached end of file with out finding CONNECTIVITY data?',&
+!              &'FORMAT: CELL# NODE# NODE# NODE# (ALL INTEGERS)')
+!       end if
+!    END DO
 
     NHEADER = 0      !lwang intel23@20230710
     DO WHILE(.TRUE.)
@@ -3982,7 +3987,17 @@ CONTAINS
 !
    ! FIND FIRST LINE of )BC ARRAY
     rewind OBCUNIT
-
+!    DO WHILE(.TRUE.)
+!       READ(OBCUNIT,*,IOSTAT=IOS)N1,N2,N3
+!       if (IOS == 0) then
+!          BackSpace OBCUNIT
+!          exit
+!       elseif(IOS < 0) Then
+!         Call FATAL_ERROR('Improper formatting of OBC FILE:',&
+!              &'Reached end of file with out finding OBC data?',&
+!              &'FORMAT: OBCNODE# GLNODE# TYPE# (ALL INTEGERS)')
+!       end if
+!    END DO
     NHEADER = 0      !lwang intel23@20230710
     DO WHILE(.TRUE.)
        READ(OBCUNIT,*,IOSTAT=IOS,END=99)N1,N2,N3
@@ -4098,7 +4113,17 @@ CONTAINS
 !
    ! FIND FIRST LINE of )BC ARRAY
     rewind LSFUNIT
-
+!    DO WHILE(.TRUE.)
+!       READ(LSFUNIT,*,IOSTAT=IOS)N1,N2,R1,R2
+!       if (IOS == 0) then
+!          BackSpace LSFUNIT
+!          exit
+!       elseif(IOS < 0) THEN
+!         Call FATAL_ERROR('Improper formatting of LongShore Flow FILE:',&
+!              &'Reached end of file with out finding LSF data?',&
+!              &'FORMAT: LSFNODE# GLNODE# GEO WND (last two are real 0<=X<=1)')
+!       end if
+!    END DO
     NHEADER = 0      !lwang intel23@20230710
     DO WHILE(.TRUE.)
        READ(LSFUNIT,*,IOSTAT=IOS,END=99)N1,N2,N3,R1,R2
@@ -4268,6 +4293,17 @@ CONTAINS
 
    ! FIND FIRST LINE of CONNECTIVITY ARRAY
     rewind DEPTHUNIT
+!    DO WHILE(.TRUE.)
+!       READ(DEPTHUNIT,*,IOSTAT=IOS)X1,Y1,HDEP
+!       if (IOS == 0) then
+!          BackSpace DEPTHUNIT
+!          exit
+!       elseif(IOS < 0) Then
+!         Call FATAL_ERROR('Improper formatting of DEPTH FILE:',&
+!              &'Reached end of file with out finding DEPTH data?',&
+!              &'FORMAT: X Y H (ALL REALS)')
+!       end if
+!    END DO
 
     NHEADER = 0      !lwang intel23@20230710
     DO WHILE(.TRUE.)
@@ -4387,6 +4423,17 @@ CONTAINS
 
     ! FIND FIRST LINE of CORIOLIS DATA
     rewind CORIOLISUNIT
+!    DO WHILE(.TRUE.)
+!       READ(CORIOLISUNIT,*,IOSTAT=IOS)X1,Y1,C1
+!       if (IOS == 0) then
+!          BackSpace CORIOLISUNIT
+!          exit
+!       elseif(IOS < 0) Then
+!         Call FATAL_ERROR('Improper formatting of CORIOLIS FILE:',&
+!              &'Reached end of file with out finding CORIOLIS data?',&
+!              &'FORMAT: X Y COR (ALL REALS)')
+!       end if
+!    END DO
 
     NHEADER = 0      !lwang intel23@20230710
     DO WHILE(.TRUE.)
@@ -4510,6 +4557,17 @@ CONTAINS
 
    ! FIND FIRST LINE of )BC ARRAY
     rewind SPONGEUNIT
+!    DO WHILE(.TRUE.)
+!       READ(SPONGEUNIT,*,IOSTAT=IOS)N1,R1,R2
+!       if (IOS == 0) then
+!          BackSpace SPONGEUNIT
+!          exit
+!       elseif(IOS < 0) THEN
+!         Call FATAL_ERROR('Improper formatting of SPONGE FILE:',&
+!              &'Reached end of file with out finding sponge data?',&
+!              &'FORMAT: GLBNODE#  RADIUS SPGVAL (INT, REAL, REAL)')
+!       end if
+!    END DO
 
     NHEADER = 0      !lwang intel23@20230710
     DO WHILE(.TRUE.)
@@ -4878,7 +4936,7 @@ case default
     !
 !---> Siqi Li, updated on 2021-02-16
     integer :: decimal_x, decimal_y
-    real(kind=4) :: x0, y0
+    real(sp) :: x0, y0
 
     x0 = maxval(abs(x))
     y0 = maxval(abs(y))
@@ -4917,8 +4975,8 @@ case default
 
     implicit none
 
-    real, intent(in) :: num0
-    real :: num
+    real(sp), intent(in) :: num0
+    real(sp) :: num
 
     power10 = 0
 

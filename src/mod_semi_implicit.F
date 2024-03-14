@@ -1268,13 +1268,14 @@ END IF
   IMPLICIT NONE
 
   INTEGER  :: I,J,I1,J1,J2
+  LOGICAL  :: findflag
   REAL(SP) :: ALPHA1,UNTMP,VNTMP,UI,VI
 
   UA_N = 0.0_SP
   VA_N = 0.0_SP
 
-  ELOOP: DO I=1, N    
-
+  DO I=1, N
+    findflag=.false.
     IF(ISBCE(I) == 1) THEN
       ALPHA1=ALPHA(I)
       IF(NUMQBC > 0) THEN
@@ -1289,7 +1290,8 @@ END IF
                 UA_N(I) = UNTMP*COS(ANGLEQ(J))
                 VA_N(I) = UNTMP*SIN(ANGLEQ(J))
               ENDIF
-              CYCLE ELOOP   
+              findflag=.TRUE.
+              EXIT
             END IF
           END DO
         ELSE IF(RIVER_INFLOW_LOCATION == 'edge') THEN
@@ -1301,20 +1303,21 @@ END IF
                 UA_N(I) = UNTMP*COS(ANGLEQ(J))
                 VA_N(I) = UNTMP*SIN(ANGLEQ(J))
               ENDIF
-              CYCLE ELOOP    
+              findflag=.TRUE.
+              EXIT
             END IF
           END DO
         END IF
       END IF
-
-      UNTMP = UA(I)*COS(ALPHA1)+VA(I)*SIN(ALPHA1)
-      IF(UNTMP>0.0_SP) THEN
-        UA_N(I)= UNTMP*COS(ALPHA1)
-        VA_N(I)= UNTMP*SIN(ALPHA1)
+      IF(.not. findflag) THEN
+        UNTMP = UA(I)*COS(ALPHA1)+VA(I)*SIN(ALPHA1)
+        IF(UNTMP>0.0_SP) THEN
+          UA_N(I)= UNTMP*COS(ALPHA1)
+          VA_N(I)= UNTMP*SIN(ALPHA1)
+        ENDIF
       ENDIF
-
     END IF
-  END DO ELOOP    
+  END DO
 
   RETURN
   END SUBROUTINE UV2D_SBD
@@ -1330,14 +1333,15 @@ END IF
   IMPLICIT NONE
 
   INTEGER  :: I,J,K,I1,J1,J2
+  LOGICAL  :: findflag
   REAL(SP) :: ALPHA1,UNTMP,VNTMP,UI,VI
 
   U_N = 0.0_SP
   V_N = 0.0_SP
 
   DO I=1, N
-    INLOOP: DO K=1, KBM1      
-
+    DO K=1, KBM1
+      findflag=.FALSE.
       IF(ISBCE(I).EQ.1) THEN
         ALPHA1=ALPHA(I)
         IF(NUMQBC.GE.1) THEN
@@ -1352,7 +1356,8 @@ END IF
                   U_N(I,K) = UNTMP*COS(ANGLEQ(J))
                   V_N(I,K) = UNTMP*SIN(ANGLEQ(J))
                 ENDIF
-		CYCLE INLOOP     
+                findflag=.TRUE.
+                EXIT
               ENDIF
             ENDDO
           ELSE IF(RIVER_INFLOW_LOCATION .EQ. 'edge') THEN
@@ -1364,7 +1369,8 @@ END IF
                   U_N(I,K) = UNTMP*COS(ANGLEQ(J))
                   V_N(I,K) = UNTMP*SIN(ANGLEQ(J))
                 ENDIF
-		CYCLE INLOOP      
+                findflag=.TRUE.
+                EXIT
               ENDIF
             ENDDO
           ELSE
@@ -1373,23 +1379,24 @@ END IF
           ENDIF
         ENDIF
 
+        IF(.NOT.findflag) THEN
 #         if defined (THIN_DAM)
           IF(NBE_DAM(I) == 0.OR.K > KDAM1(I))THEN
 !          IF(NBE_DAM(I) == 0)THEN
 #         endif
 
-        UNTMP=U(I,K)*COS(ALPHA1)+V(I,K)*SIN(ALPHA1)
-        IF(UNTMP>0.0_SP) THEN
-          U_N(I,K) = UNTMP*COS(ALPHA1)
-          V_N(I,K) = UNTMP*SIN(ALPHA1)
-        ENDIF
+          UNTMP=U(I,K)*COS(ALPHA1)+V(I,K)*SIN(ALPHA1)
+          IF(UNTMP>0.0_SP) THEN
+            U_N(I,K) = UNTMP*COS(ALPHA1)
+            V_N(I,K) = UNTMP*SIN(ALPHA1)
+          ENDIF
 
 #         if defined (THIN_DAM)
           end if
 #         endif
-
+        ENDIF
       ENDIF
-    END DO INLOOP      
+    ENDDO
   ENDDO
 
   RETURN

@@ -792,6 +792,9 @@
    VARFR  = .FALSE.
    VARWLV = .FALSE.                                                    
    VARAST = .FALSE.       ! True means spatially variable air-sea t.d. 
+#  if defined (VEGETATION)
+   VARNPL = .FALSE.
+#  endif
    U10    = 0.
    WDIP   = 0.
    INRHOG = 0                                                          
@@ -1065,8 +1068,14 @@
    JHSIBC = 25                                                         
    JHS    = 26                                                         
    JURSEL = 27                                                         
-   JPBOT  = 28                                                         
-   MCMVAR = 28                                                         
+   JPBOT  = 28                           
+#  if defined (VEGETATION)                              
+   JNPLA2 = 29
+   JNPLA3 = 30
+   MCMVAR = 30      !28 before vegetation
+#  else
+   MCMVAR = 28
+#  endif                                                         
 !  subarray sequence number 1 is used only for unused subarrays        
    JFRC2 = 1                                                           
    JFRC3 = 1                                                           
@@ -1093,7 +1102,12 @@
    JP4S   = 6
    JP4D   = 7
    JPTRI  = 8
+#  if defined (VEGETATION)
+   JPVEGT = 9
+   MTSVAR = 9
+#  else
    MTSVAR = 8
+#  endif
 !
 !  ***** test output control *****
    ITEST  = 1                                                          
@@ -2319,8 +2333,7 @@
    ENDIF
    TIMR1 = TIMCO - DTW
 !
-   DO WHILE(.TRUE.)
-     IF(TIMCO <= IFLTIM(IGR1)) EXIT
+   DO WHILE(TIMCO > IFLTIM(IGR1))
      TIMR1 = IFLTIM(IGR1)
      IFLTIM(IGR1) = IFLTIM(IGR1) + IFLINT(IGR1)
      IF(IFLTIM(IGR1) > IFLEND(IGR1))THEN
@@ -2328,60 +2341,57 @@
        IF(IGR2 > 0) IFLTIM(IGR2) = IFLTIM(IGR1)
        EXIT
      ENDIF
-     IF(IFLNDS(IGR1) > 0)THEN                                         
+     IF(IFLNDS(IGR1) > 0)THEN
        IF(INODE == MASTER)THEN
-         CALL INAR2D( ARR, MXG(IGR1), MYG(IGR1),                       &
-                      IFLNDF(IGR1),                                    &
-  		    IFLNDS(IGR1), IFLIFM(IGR1), IFLFRM(IGR1),        &
-  		    IFLIDL(IGR1), IFLFAC(IGR1),                      &
-  		    IFLNHD(IGR1), IFLNHF(IGR1))
-         IF(STPNOW()) RETURN                                           
+         CALL INAR2D( ARR, MXG(IGR1), MYG(IGR1), IFLNDF(IGR1), &
+		          IFLNDS(IGR1), IFLIFM(IGR1), IFLFRM(IGR1),        &
+		          IFLIDL(IGR1), IFLFAC(IGR1),                      &
+		          IFLNHD(IGR1), IFLNHF(IGR1))
+         IF(STPNOW()) RETURN
        END IF
-  !JQI     CALL SWBROADC(IFLIDL(IGR1),1,SWINT)                              
+!JQI     CALL SWBROADC(IFLIDL(IGR1),1,SWINT)
        IF(IFLIDL(IGR1) < 0)THEN
-  !      end of file was encountered
+!      end of file was encountered
          IFLTIM(IGR1) = 1.E10
          IF(IGR2 > 0) IFLTIM(IGR2) = IFLTIM(IGR1)
          EXIT
        ELSE
-  !JQI       CALL SWBROADC(ARR,MXG(IGR1)*MYG(IGR1),SWREAL)                   
+!JQI       CALL SWBROADC(ARR,MXG(IGR1)*MYG(IGR1),SWREAL)
        ENDIF
-     ELSE                                                                
-       IF(ITEST >= 20)THEN                                            
+     ELSE
+       IF(ITEST >= 20)THEN
          CALL MSGERR (1,                                           &
-                     'no read of input field because unit nr=0')                   
+                   'no read of input field because unit nr=0')
          WRITE (PRINTF, 208) IGR1
 208      FORMAT (' field nr.', I2)
        ENDIF
-     ENDIF                                                               
+     ENDIF
      IF(IGR2 > 0)THEN
        IFLTIM(IGR2) = IFLTIM(IGR1)
-       IF(IFLNDS(IGR2) > 0)THEN                                       
-         IF(INODE == MASTER)THEN                                      
-           CALL INAR2D( ARR2, MXG(IGR2), MYG(IGR2),                   &
-  	              IFLNDF(IGR2),                                 &
-  		      IFLNDS(IGR2), IFLIFM(IGR2), IFLFRM(IGR2),     &
-  		      IFLIDL(IGR2), IFLFAC(IGR2), IFLNHD(IGR2), 0)
-           IF (STPNOW()) RETURN                                         
-         END IF
-  !JQI       CALL SWBROADC(ARR2,MXG(IGR2)*MYG(IGR2),SWREAL)                  
-       ENDIF                                                             
+       IF(IFLNDS(IGR2) > 0)THEN
+         IF(INODE == MASTER)THEN
+           CALL INAR2D( ARR2, MXG(IGR2), MYG(IGR2), IFLNDF(IGR2),  &
+		            IFLNDS(IGR2), IFLIFM(IGR2), IFLFRM(IGR2),          &
+		            IFLIDL(IGR2), IFLFAC(IGR2), IFLNHD(IGR2), 0)
+         IF (STPNOW()) RETURN
+       END IF
+!JQI       CALL SWBROADC(ARR2,MXG(IGR2)*MYG(IGR2),SWREAL)
      ENDIF
-  !  Interpolation over the computational grid
-     DO IG = 1, MCGRD
-       IF(IGR2 == 0)THEN
-  !JQI       COMPDA(INDX,JX3) = ARR
-       ELSE
-  !JQI       COMPDA(INDX,JX3) = ARR
-  !JQI       COMPDA(INDX,JY3) = ARR2
-       ENDIF
-     END DO
+   ENDIF
+!  Interpolation over the computational grid
+   DO IG = 1, MCGRD
+     IF(IGR2 == 0)THEN
+!JQI       COMPDA(INDX,JX3) = ARR
+     ELSE
+!JQI       COMPDA(INDX,JX3) = ARR
+!JQI       COMPDA(INDX,JY3) = ARR2
+     ENDIF
+   END DO
    ENDDO
-
 !
 !   Interpolation in time
 !
-400  W3 = (TIMCO-TIMR1) / (IFLTIM(IGR1)-TIMR1)
+     W3 = (TIMCO-TIMR1) / (IFLTIM(IGR1)-TIMR1)
      W1 = 1.-W3
      IF(ITEST >= 60) WRITE(PRTEST,402) IGR1,                          &
              TIMCO,IFLTIM(IGR1),W1,W3,JX1,JY1,JX2,JY2,JX3,JY3
@@ -2409,7 +2419,7 @@
          COMPDA(INDX,JY2) = VV
        ENDIF
      ENDIF
-   END DO	
+   END DO
 
    RETURN
 !
@@ -2493,37 +2503,36 @@
 !   print*,"TIMCO=",TIMCO,"IFLTIM=",IFLTIM(IGR1),"IFLEND=",IFLEND(IGR1)
 !   print*,"IFLINT=",IFLINT(IGR1), "DTW=",DTW
 
-  DO WHILE(.TRUE.)
-    IF(TIMCO <= IFLTIM(IGR1)) EXIT
-    TIMR1 = IFLTIM(IGR1)
-    IFLTIM(IGR1) = IFLTIM(IGR1) + IFLINT(IGR1)
-    IF(IFLTIM(IGR1) > IFLEND(IGR1))THEN
-      TIMR1 = IFLEND(IGR1)
-      IFLTIM(IGR1) = 1.E10
-      IF(IGR2 > 0) IFLTIM(IGR2) = IFLTIM(IGR1)
-      EXIT
-    ENDIF
+   DO WHILE(TIMCO > IFLTIM(IGR1))
+     TIMR1 = IFLTIM(IGR1)
+     IFLTIM(IGR1) = IFLTIM(IGR1) + IFLINT(IGR1)
+     IF(IFLTIM(IGR1) > IFLEND(IGR1))THEN
+       TIMR1 = IFLEND(IGR1)
+       IFLTIM(IGR1) = 1.E10
+       IF(IGR2 > 0) IFLTIM(IGR2) = IFLTIM(IGR1)
+       EXIT
+     ENDIF
 !JQI   DT_WI1 = INT(IFLTIM(IGR1)/IFLINT(IGR1))
 
-    IF(IGR2 > 0)THEN
-      IFLTIM(IGR2) = IFLTIM(IGR1)
+   IF(IGR2 > 0)THEN
+     IFLTIM(IGR2) = IFLTIM(IGR1)
 !JQI     DT_WI2 = INT(IFLTIM(IGR2)/IFLINT(IGR2))
-    ENDIF
+   ENDIF
 !  Interpolation over the computational grid
-    DO IG = 1, MT
-      IF(IGR2 == 0)THEN
+   DO IG = 1, MT
+     IF(IGR2 == 0)THEN
 !JQIJQI       COMPDA(IG,JX3) = ARR(IG,DT_WI1)
-      ELSE
+     ELSE
 !JQIJQI       COMPDA(IG,JX3) = ARR(IG,DT_WI1)
 !JQIJQI       COMPDA(IG,JY3) = ARR2(IG,DT_WI2)
-      ENDIF
-    END DO
-  ENDDO 
-   
+     ENDIF
+   END DO
+   ENDDO
+
 !
 !   Interpolation in time
 !
-400  W3 = (TIMCO-TIMR1) / (IFLTIM(IGR1)-TIMR1)
+     W3 = (TIMCO-TIMR1) / (IFLTIM(IGR1)-TIMR1)
      W1 = 1.-W3
      
 !     WaveTime = WaveTime + IMDTW
@@ -2678,39 +2687,6 @@
 !   print*,"TIMCO=",TIMCO,"IFLTIM=",IFLTIM(IGR1),"IFLEND=",IFLEND(IGR1)
 !   print*,"IFLINT=",IFLINT(IGR1), "DTW=",DTW
 
-!200 IF(TIMCO <= IFLTIM(IGR1)) GOTO 400
-!   TIMR1 = IFLTIM(IGR1)
-!   IFLTIM(IGR1) = IFLTIM(IGR1) + IFLINT(IGR1)
-!   IF(IFLTIM(IGR1) > IFLEND(IGR1))THEN
-!     TIMR1 = IFLEND(IGR1)
-!     IFLTIM(IGR1) = 1.E10
-!     IF(IGR2 > 0) IFLTIM(IGR2) = IFLTIM(IGR1)
-!     GOTO 400
-!   ENDIF
-!!JQI   DT_WI1 = INT(IFLTIM(IGR1)/IFLINT(IGR1))
-
-!   IF(IGR2 > 0)THEN
-!     IFLTIM(IGR2) = IFLTIM(IGR1)
-!!JQI     DT_WI2 = INT(IFLTIM(IGR2)/IFLINT(IGR2))
-!   ENDIF
-!!  Interpolation over the computational grid
-!   DO IG = 1, MT
-!     IF(IGR2 == 0)THEN
-!!JQIJQI       COMPDA(IG,JX3) = ARR(IG,DT_WI1)
-!     ELSE
-!!JQIJQI       COMPDA(IG,JX3) = ARR(IG,DT_WI1)
-!!JQIJQI       COMPDA(IG,JY3) = ARR2(IG,DT_WI2)
-!     ENDIF
-!   END DO
-   
-!   GOTO 200
-   
-!!
-!!   Interpolation in time
-!!
-!400  W3 = (TIMCO-TIMR1) / (IFLTIM(IGR1)-TIMR1)
-!     W1 = 1.-W3
-     
    DO WHILE(TIMCO > IFLTIM(IGR1))
      TIMR1 = IFLTIM(IGR1)
      IFLTIM(IGR1) = IFLTIM(IGR1) + IFLINT(IGR1)
@@ -3597,6 +3573,9 @@ END IF
   USE MOD_FORCE, ONLY : UPDATE_WIND2WAVE
   USE CONTROL, ONLY : WIND_ON
   USE ALL_VARS, ONLY : UUWIND,VVWIND
+# if defined (VEGETATION)
+  USE MOD_VEGETATION, ONLY : VEG,nveg,pdens
+# endif
       
   IMPLICIT NONE
 
@@ -3640,6 +3619,12 @@ END IF
     COMPDA(1,JASTD2) = 0.                                             
     COMPDA(1,JASTD3) = 0.                                             
   END IF
+# if defined (VEGETATION)
+  IF (VARNPL) THEN
+    COMPDA(1,JNPLA2) = 0.
+    COMPDA(1,JNPLA3) = 0.
+  ENDIF
+# endif
 
   IF(VARWI) CALL UPDATE_WIND2WAVE(WaveTime,UWWIND,VWWIND)
 
@@ -3948,6 +3933,17 @@ END IF
 !JQI             COMPDA(INDX,JASTD3) = ASTD                                   
     END IF
   END DO
+
+# if defined (VEGETATION)
+!
+!     ***** compute number of plants per square meter *****               40.55
+!
+          IF (VARNPL) THEN
+!JZGE        XNPL = SVALQI (XP, YP, 11, NPLAF, 1 ,IX ,IY)               
+             COMPDA(INDX,JNPLA2) = sum(VEG % plant(INDX,1:nveg,pdens))
+             COMPDA(INDX,JNPLA3) = sum(VEG % plant(INDX,1:nveg,pdens))
+          ENDIF
+# endif
 !
 !   *** initialise setup and saved depth ***                            
 !

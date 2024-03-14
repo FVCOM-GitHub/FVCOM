@@ -177,8 +177,6 @@
          END DO
        END IF
      END DO
-!    ELSE
-!     CALL FATAL_ERROR("THE PARAMETER TS_ADJUST_METHOD SHOULD BE 'average' or 'maximum'")
     END IF
 !JQI NOV2021
 

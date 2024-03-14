@@ -25,7 +25,7 @@
 ! $Name$
 ! $Revision$
 !/===========================================================================/
-!
+
 MODULE MOD_ASSIM
 # if defined (DATA_ASSIM)
 
@@ -2289,7 +2289,7 @@ CONTAINS !------------------------------------------------------------------!
    DO J= 1,N_ASSIM_CUR 
      X0 = CUR_OBS(J)%X
      Y0 = CUR_OBS(J)%Y
-     INLOOP: DO I=1,NGL  
+     DO I=1,NGL
 #    if !defined (SPHERICAL)
        Rtmp = SQRT((XCG(I)-X0)*(XCG(I)-X0)+(YCG(I)-Y0)*(YCG(I)-Y0))
 #    else
@@ -2321,14 +2321,14 @@ CONTAINS !------------------------------------------------------------------!
          S33 = X11_TMP*(YG(NVG(I,2))-Y0)-X22_TMP*(YG(NVG(I,1))-Y0)
          IF(S11 <= 0._SP .AND. S22 <= 0._SP .AND. S33<= 0._SP) THEN
            CUR_OBS(J)%N_CELL = I
-           EXIT INLOOP      
+           EXIT
          ELSE
            CUR_OBS(J)%N_CELL = 0
          ENDIF
        ELSE
          CUR_OBS(J)%N_CELL = -1
        ENDIF
-     END DO INLOOP      
+     ENDDO
 !     IF(MSR) WRITE(200,*) j,X0,Y0,CUR_OBS(J)%N_CELL
      IF(CUR_OBS(J)%N_CELL <= 0) THEN
        IF(MSR) WRITE(IPT,*)'ERROR--CURRENT OBS SITE:',J,' OUT OF DOMAN',&
@@ -3194,7 +3194,7 @@ in:  DO WHILE(.TRUE.)
    DO J= 1,N_ASSIM_TS 
      X0 = TS_OBS(J)%X
      Y0 = TS_OBS(J)%Y
-     INLOOP: DO I=1,NGL   
+     DO I=1,NGL
 #    if !defined (SPHERICAL)
        Rtmp = SQRT((XCG(I)-X0)*(XCG(I)-X0)+(YCG(I)-Y0)*(YCG(I)-Y0))
 #    else
@@ -3226,14 +3226,14 @@ in:  DO WHILE(.TRUE.)
          S33 = X11_TMP*(YG(NVG(I,2))-Y0)-X22_TMP*(YG(NVG(I,1))-Y0)
          IF(S11 <= 0._SP .AND. S22 <= 0._SP .AND. S33 <= 0._SP) THEN
            TS_OBS(J)%N_CELL = I
-           EXIT INLOOP      
+           EXIT
          ELSE
            TS_OBS(J)%N_CELL = 0
          ENDIF
        ELSE
          TS_OBS(J)%N_CELL = -1
        ENDIF
-     END DO INLOOP      
+     ENDDO
      IF(TS_OBS(J)%N_CELL <= 0) THEN
        IF(MSR) WRITE(IPT,*)'ERROR--T/S OBS SITE:',J,' OUT OF DOMAN',&
                             TS_OBS(J)%N_CELL 
@@ -5042,21 +5042,25 @@ IF(MSR)THEN
   SUBROUTINE SET_SST_SAVE_TIME_INDEX(FLAG)
    IMPLICIT NONE
    INTEGER I,FLAG
-    TYPE(TIME) :: TEMP_TIME
+   LOGICAL Fsstst
+   TYPE(TIME) :: TEMP_TIME
+
+   Fsstst=.FALSE.
   IF (FLAG==0) THEN
     TEMP_TIME%MJD=Inttime%mjd
     TEMP_TIME%musod=0.0
-   DO I=1,SSTGRD_N_PER_INTERVAL
+    DO I=1,SSTGRD_N_PER_INTERVAL
       IF  (inttime<SST_SAVE_INTERVAL*I+TEMP_TIME) THEN
            SST_SAVE_TIME=SST_SAVE_INTERVAL*I+TEMP_TIME
            SST_SAVE_INDEX=I
-	   RETURN     
+           Fsstst=.TRUE.
       END IF
-   END DO 
-   PRINT *, "FAILED TO FIND THE RIGHT SST SAVE TIME INDEX , STOP"
-   PRINT *, 'CURRERNT INTTIME IS: ', INTTIME
-   CALL PSTOP
-   RETURN     
+    END DO
+    IF(.not. Fsstst) THEN
+      PRINT *, "FAILED TO FIND THE RIGHT SST SAVE TIME INDEX , STOP"
+      PRINT *, 'CURRERNT INTTIME IS: ', INTTIME
+      CALL PSTOP
+    ENDIF
   ELSEIF (FLAG==1) THEN
     TEMP_TIME%MJD=Inttime%mjd
     TEMP_TIME%musod=0.0
@@ -5064,13 +5068,14 @@ IF(MSR)THEN
       IF  (inttime<=SST_SAVE_INTERVAL*I+TEMP_TIME+SST_SAVE_INTERVAL/2.0) THEN
            SST_SAVE_TIME=SST_SAVE_INTERVAL*I+TEMP_TIME
            SST_SAVE_INDEX=I
-	   RETURN     
+           Fsstst=.TRUE.
       END IF
-   END DO
-   PRINT *, "FAILED TO FIND THE RIGHT SST SAVE TIME INDEX , STOP"
-   PRINT *, 'CURRERNT INTTIME IS: ', INTTIME
-   CALL PSTOP
-   RETURN     
+    END DO
+    IF(.not. Fsstst) THEN
+      PRINT *, "FAILED TO FIND THE RIGHT SST SAVE TIME INDEX , STOP"
+      PRINT *, 'CURRERNT INTTIME IS: ', INTTIME
+      CALL PSTOP
+    ENDIF
   ELSE
      PRINT *, 'FLAG IN SET_SST_SAVE_TIME_INDEX CANNOT BE :',FLAG
      CALL PSTOP
@@ -5240,23 +5245,27 @@ USE EQS_OF_STATE
   SUBROUTINE SET_SSH_SAVE_TIME_INDEX(FLAG)
    IMPLICIT NONE
    INTEGER I,FLAG
-    TYPE(TIME) :: TEMP_TIME
+   TYPE(TIME) :: TEMP_TIME
+   LOGICAL Fsshst
+
+   Fsshst=.FALSE.
   IF (FLAG==0) THEN
     TEMP_TIME%MJD=Inttime%mjd
     TEMP_TIME%musod=0.0
-   DO I=1,SSHGRD_N_PER_INTERVAL
+    DO I=1,SSHGRD_N_PER_INTERVAL
       IF  (inttime<SSH_SAVE_INTERVAL*I+TEMP_TIME) THEN
            SSH_SAVE_TIME=SSH_SAVE_INTERVAL*I+TEMP_TIME
            SSH_SAVE_INDEX=I
-           RETURN   
+           Fsshst=.TRUE.
       END IF
-   END DO
-   PRINT *, "FAILED TO FIND THE RIGHT SSH SAVE TIME INDEX , STOP"
-   PRINT *, 'CURRERNT INTTIME IS: ', INTTIME
-   CALL PSTOP
-   RETURN   
+    END DO
+    IF(.not. Fsshst) THEN
+      PRINT *, "FAILED TO FIND THE RIGHT SSH SAVE TIME INDEX , STOP"
+      PRINT *, 'CURRERNT INTTIME IS: ', INTTIME
+      CALL PSTOP
+    ENDIF
   ELSEIF (FLAG==1) THEN
-        TEMP_TIME%MJD=Inttime%mjd
+    TEMP_TIME%MJD=Inttime%mjd
     TEMP_TIME%musod=0.0
    DO I=1,SSHGRD_N_PER_INTERVAL
 !qxu{for SSH assimilation by 04/01/2022
@@ -5266,13 +5275,14 @@ USE EQS_OF_STATE
 
            SSH_SAVE_TIME=SSH_SAVE_INTERVAL*I+TEMP_TIME
            SSH_SAVE_INDEX=I
-           RETURN   
+           Fsshst=.TRUE.
       END IF
-   END DO
-   PRINT *, "FAILED TO FIND THE RIGHT SSH SAVE TIME INDEX , STOP"
-   PRINT *, 'CURRERNT INTTIME IS: ', INTTIME
-   CALL PSTOP
-   RETURN   
+    END DO
+    IF(.not. Fsshst) THEN
+      PRINT *, "FAILED TO FIND THE RIGHT SSH SAVE TIME INDEX , STOP"
+      PRINT *, 'CURRERNT INTTIME IS: ', INTTIME
+      CALL PSTOP
+    ENDIF
   ELSE
     PRINT *, 'FLAG IN SET_SSH_SAVE_TIME_INDEX CANNOT BE: ',FLAG
     CALL PSTOP

@@ -1289,7 +1289,6 @@ LWRAD_WATTS(I) = flwitot(I,1)*aice(I,1) + flwtot(I,1)*(c1i-aice(i,jlo))
          enddo
       enddo
 
-150     continue
       call check_state
 
      call aggregate           ! aggregate state variables over categories

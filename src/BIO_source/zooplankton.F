@@ -81,7 +81,7 @@ SUBROUTINE ZOOPLANKTON
           END DO
         ENDDO
         CASE('RECTI_G')                                  !Armstrong et al., 1999
-        DO 40 I1=1,NNZ
+        DO I1=1,NNZ
           R_TOTAL=0.                                     ! Total food
           G_RATE(I1)=G_MAX(I1)*BIO_Z(K,I1)  &            ! T forcing and biomass
               *EXP(-A_TZ(I1)*ABS(TEMPP-T_OPTZ(I1)))  

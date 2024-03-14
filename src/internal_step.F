@@ -67,6 +67,9 @@ SUBROUTINE INTERNAL_STEP
   USE MOD_SED_CSTMS
 # endif
 # endif
+# if defined (VEGETATION)
+  USE MOD_VEGETATION
+# endif
 # if defined (DYE_RELEASE)
   USE MOD_DYE
 # endif
@@ -111,6 +114,9 @@ SUBROUTINE INTERNAL_STEP
 # if defined (SEDIMENT)
   REAL(DP) :: DPDAYS
   REAL(SP) :: SPDAYS
+# endif
+# if defined (WAVE_ONLY)
+  LOGICAL :: wa_on
 # endif
   integer :: i1,i2
 
@@ -251,8 +257,6 @@ SUBROUTINE INTERNAL_STEP
   END IF
 # endif
 
-
-  
 # if !defined (TWO_D_MODEL)
 
 # if !defined(SEMI_IMPLICIT) && !defined(NH)
@@ -369,7 +373,7 @@ SUBROUTINE INTERNAL_STEP
   END IF
 
 # endif
-!lwang
+
   IF(.NOT. BAROTROPIC)THEN                    !Barotropic Flow ?            !
      SELECT CASE(BAROCLINIC_PRESSURE_GRADIENT)
      CASE ("sigma levels")
@@ -396,6 +400,7 @@ SUBROUTINE INTERNAL_STEP
         DRY2D(I)=DRY2D(I)+DRHOY(I,K)  !*DZ1(I,K)
      END DO
   END DO
+
 # if defined (GCN)
   CALL ADVAVE_EDGE_GCN(ADVUA,ADVVA)           !Compute Ext Mode Adv/Diff
 # else
@@ -459,6 +464,7 @@ SUBROUTINE INTERNAL_STEP
 # if defined (MEAN_FLOW)
   CALL ZERO_OBC3
 # endif   
+
 # if defined (WAVE_CURRENT_INTERACTION)
 # if defined (DATA_ASSIM)
 !JQI2023  IF((ASSIM_FLAG == 0 .AND. (.NOT. SST_ASSIM .AND. .NOT. SSTGRD_ASSIM) .AND. .NOT. SSHGRD_ASSIM .AND. .NOT. TSGRD_ASSIM) .OR. &
@@ -476,7 +482,10 @@ SUBROUTINE INTERNAL_STEP
   Pwave_bot = WPER_BOT
   Ub_swan   = WUB_BOT
 # else
-  IF(IINT == 1 .OR. MOD(IINT,NINT(DTW/DTI)) == 0.0_SP)THEN
+  IF(IINT == 1)THEN
+    ITW = ITW + 1
+    CALL SWMAIN_LOOP
+  ELSE IF(MOD(IINT,NINT(DTW/DTI)) == 0.0_SP)THEN
     ITW = ITW + 1
     CALL SWMAIN_LOOP
   END IF
@@ -487,18 +496,26 @@ SUBROUTINE INTERNAL_STEP
 
 # if !defined (WAVE_ONLY)
 # if !defined (TWO_D_MODEL)
+# if !defined (VORTEX_FORCE)
   CALL RADIATION_STRESS_3D
+# else
+!Xia et al. (2020)
+  CALL VORTEX_FORMALISM_3D
+# endif
 # else
   CALL RADIATION_STRESS_2D
 # endif
 # endif
 # if defined (DATA_ASSIM)
   END IF
-# endif     
-  
 # endif
 
-# if !defined (WAVE_ONLY)      
+# endif
+
+# if defined (WAVE_ONLY)
+  wa_on = .false.
+  IF(wa_on) THEN
+# endif
 
 # if !defined(ONE_D_MODEL) && !defined (SEMI_IMPLICIT)
   !==============================================================================!
@@ -596,6 +613,7 @@ SUBROUTINE INTERNAL_STEP
   CALL BCOND_BKI_3D(2)      
   CALL FLUX_OBC3D
 # endif
+  
   !==============================================================================!
   !     CALCULATE INTERNAL VELOCITY FLUXES                                       |
   !==============================================================================!
@@ -803,6 +821,7 @@ SUBROUTINE INTERNAL_STEP
 #   endif
 
 #  else
+
     UC = U
     VC = V
     CALL UV3D_SBD
@@ -1015,6 +1034,7 @@ SUBROUTINE INTERNAL_STEP
 # if !defined (NH)
   CALL WREAL           ! Calculate True Vertical Velocity (W)               !
 # endif
+
 !  CALL REPORT("before VISCOF_H")
 
   !==============================================================================!
@@ -1047,6 +1067,17 @@ SUBROUTINE INTERNAL_STEP
      CALL ADVANCE_GOTM            !!Solve TKE/TEPS eqns for KH/KM/KQ
      
 #   else     
+
+#  if defined (VEGETATION)
+      if(VEGETATION_MODEL.and.VEG_TURB)then
+      !
+      !  Add the effect of vegetation on Q2 and Q2L
+      !      
+        Q2  = Q2  +  VEG % tke_veg
+        Q2L = Q2L +  VEG % tke_veg*L
+      end if
+#  endif
+
      !===================Original FVCOM MY-2.5/Galperin 1988 Model=============!
    IF(.NOT. RK_3D_ON)THEN  
 #    if defined (SEMI_IMPLICIT)     
@@ -1143,10 +1174,11 @@ SUBROUTINE INTERNAL_STEP
 #   endif
   CALL N2E3D(KM,KM1)
 
-# if defined (WAVE_CURRENT_INTERACTION)
+# if defined (WAVE_CURRENT_INTERACTION) && !defined (VORTEX_FORCE)
 !     U=U-U_STOKES_3D
 !     V=V-V_STOKES_3D
 # endif
+
 
 
 !==============================================================================!
@@ -1194,6 +1226,13 @@ SUBROUTINE INTERNAL_STEP
   IF(BIOLOGICAL_MODEL)CALL BIO_3D1D
                            
 #   endif
+
+# if defined (VEGETATION)
+  if(VEGETATION_MODEL)then
+     CALL UPDATE_VEGETATION
+  end if
+# endif
+
   !==============================================================================!
   !    UPDATE TEMPERATURE IN NON-BAROTROPIC CASE                                 !
   !==============================================================================!
@@ -1236,15 +1275,15 @@ SUBROUTINE INTERNAL_STEP
 #   endif
         !end !defined (ONE_D_MODEL)                                    !                          !
 
-!     IF(CASENAME(1:3) == 'gom')THEN
-!        CALL VDIF_TS_GOM(1,TF1)
-!     ELSE  
+     IF(CASENAME(1:3) == 'gom')THEN
+        CALL VDIF_TS_GOM(1,TF1)
+     ELSE  
 #   if !defined (ONE_D_MODEL)
         CALL VDIF_TS(1,TF1)                            !Vertical Diffusion        !
 #   else
         CALL VDIF_TS(1,T1)                            !Vertical Diffusion        !
 #   endif
-!     END IF
+     END IF
 
     
 #   if defined (MULTIPROCESSOR)
@@ -1267,11 +1306,11 @@ SUBROUTINE INTERNAL_STEP
      IF(SCALAR_POSITIVITY_CONTROL) CALL FCT_T            !Conservation Correction   !
      !#                                                   endif
 
-!     IF(CASENAME(1:3) == 'gom')THEN
-!        CALL VDIF_TS_GOM(1,TF1)
-!     ELSE
+     IF(CASENAME(1:3) == 'gom')THEN
+        CALL VDIF_TS_GOM(1,TF1)
+     ELSE
         CALL VDIF_TS(1,TF1)                            !Vertical Diffusion
-!     END IF
+     END IF
 
 #   if defined (MULTIPROCESSOR)
      IF(PAR)CALL AEXCHANGE(NC,MYID,NPROCS,TF1) !Interprocessor Exchange   !
@@ -1316,12 +1355,13 @@ SUBROUTINE INTERNAL_STEP
 !      IF(ASSIM_FLAG==1 .AND. SST_OIASSIM)CALL TEMP_OI
 !     END IF
 #    endif
+
 #    if defined (DATA_ASSIM)
 !---> Siqi, SST_improved
      IF(SST_ASSIM .OR. SSTGRD_ASSIM)THEN
 !    IF(ASSIM_FLAG==0) CALL SST_SAVE
-      IF(ASSIM_FLAG==1) CALL SSTGRD_NUDGE
-     END IF
+    IF(ASSIM_FLAG==1) CALL SSTGRD_NUDGE
+  END IF
 !<--- Siqi
 
      IF(TS_NGASSIM .OR. (TS_OIASSIM .AND. MOD(IINT,TS_NSTEP_OI) == 0))THEN
@@ -1362,6 +1402,7 @@ SUBROUTINE INTERNAL_STEP
 #    endif
 
   END IF                                         !                          !
+
   !==============================================================================!
   !    UPDATE SALINITY IN NON-BAROTROPIC CASE                                    !
   !==============================================================================!
@@ -1375,6 +1416,7 @@ SUBROUTINE INTERNAL_STEP
      TSC  = S1
      DO STAGE = 1, KSTAGE_TS
 #    endif
+
 #   if !defined (ONE_D_MODEL)
      CALL ADV_S                                     !Advection                 !
 
@@ -1391,15 +1433,16 @@ SUBROUTINE INTERNAL_STEP
      !#                                                   endif
 #   endif
      !end !defined (ONE_D_MODEL)                                    !                          !
-!     IF(CASENAME(1:3) == 'gom')THEN
-!        CALL VDIF_TS_GOM(2,SF1)
-!     ELSE  
+
+     IF(CASENAME(1:3) == 'gom')THEN
+        CALL VDIF_TS_GOM(2,SF1)
+     ELSE  
 #   if !defined (ONE_D_MODEL)
         CALL VDIF_TS(2,SF1)                            !Vertical Diffusion        !
 #   else
         CALL VDIF_TS(2,S1)                            !Vertical Diffusion        !
 #   endif
-!     END IF
+     END IF
 
 #   if defined (MULTIPROCESSOR)
      IF(PAR)CALL AEXCHANGE(NC,MYID,NPROCS,SF1) !Interprocessor Exchange   !
@@ -1422,11 +1465,11 @@ SUBROUTINE INTERNAL_STEP
      IF(SCALAR_POSITIVITY_CONTROL) CALL FCT_S       !Conservation Correction   !
      !#                                                   endif
 
-!     IF(CASENAME(1:3) == 'gom')THEN
-!        CALL VDIF_TS_GOM(2,SF1)
-!     ELSE
+     IF(CASENAME(1:3) == 'gom')THEN
+        CALL VDIF_TS_GOM(2,SF1)
+     ELSE
         CALL VDIF_TS(2,SF1)                            !Vertical Diffusion
-!     END IF
+     END IF
 
 #   if defined (MULTIPROCESSOR)
      IF(PAR)CALL AEXCHANGE(NC,MYID,NPROCS,SF1) !Interprocessor Exchange   !
@@ -1442,6 +1485,7 @@ SUBROUTINE INTERNAL_STEP
     DEALLOCATE(SB1)
   END IF
 # endif
+
      IF(NESTING_ON )THEN
        CALL SET_VAR(intTime,S1=SF1)
      END IF
@@ -1499,11 +1543,13 @@ SUBROUTINE INTERNAL_STEP
 #   endif
 
      CALL N2E3D(S1,S)                               !Shift to Elements         !
+
 #    if defined (SEMI_IMPLICIT)
      ENDDO
 #    endif
 
   END IF                      
+
   !==============================================================================!
 #   if defined (DYE_RELEASE)
   
@@ -1669,7 +1715,8 @@ SUBROUTINE INTERNAL_STEP
   
 !==============================================================================!
 # endif
-
+  
+  
   !==============================================================================!
   !     UPDATE THE DENSITY IN NON-BAROTROPIC CASE                                |
   !==============================================================================!
@@ -1689,6 +1736,7 @@ SUBROUTINE INTERNAL_STEP
   !==============================================================================!
   !     MIMIC CONVECTIVE OVERTURNING TO STABILIZE VERTICAL DENSITY PROFILE       |
   !==============================================================================!
+  
   IF(CONVECTIVE_OVERTURNING)THEN
      CALL CONV_OVER
      IF(.NOT.BAROTROPIC)THEN
@@ -1703,17 +1751,17 @@ SUBROUTINE INTERNAL_STEP
            CALL FATAL_ERROR("INVALID DENSITY FUNCTION SELECTED:",&
                 & "   "//TRIM(SEA_WATER_DENSITY_FUNCTION) )
         END SELECT
+        
      END IF
   END IF
 !==============================================================================!
 !==============================================================================!
-# endif    
-
+# endif     
   ! end if !defined (TWO_D_MODEL)
 !==============================================================================!
 !==============================================================================!
+  
 # if defined (DATA_ASSIM)
-! write(ipt,*) ">>>>>>>>>150", myid,cur_ngassim, cur_oiassim, iint, cur_nstep_oi
 !==============================================================================!
 !     DATA ASSIMILATION FOR CURRENT FIELD                                      |
 !==============================================================================!
@@ -1730,6 +1778,7 @@ SUBROUTINE INTERNAL_STEP
   END IF
 !==============================================================================!
 # endif
+  
 # if defined (DATA_ASSIM_OI)
 !==============================================================================!
 !     DATA ASSIMILATION FOR CURRENT FIELD (OI or NUDGING)                      |
@@ -1769,6 +1818,7 @@ SUBROUTINE INTERNAL_STEP
   ! Siqi Li, 20221005
   CALL UV_PROJECTION
 # endif
+
   !==============================================================================!
   !    PERFORM DATA EXCHANGE FOR ELEMENT BASED INFORMATION AT PROC BNDRIES       |
   !==============================================================================!
@@ -1792,6 +1842,7 @@ SUBROUTINE INTERNAL_STEP
      CALL AEXCHANGE(NC,MYID,NPROCS,VISCOFH)
   END IF
 #   endif
+
 !---> Siqi Li, @20210809  
   IF (NC_MLD) THEN
     IF (abs(NC_DAT%FTIME%NEXT_IO -IntTime)<0.1_SP*IMDTI) THEN
@@ -1802,6 +1853,7 @@ SUBROUTINE INTERNAL_STEP
     END IF
   END IF
 !<--- 
+
   !==============================================================================!
   !     PERFORM DATA EXCHANGE FOR WATER QUALITY VARIABLES                        |
   !==============================================================================!
@@ -1828,8 +1880,9 @@ SUBROUTINE INTERNAL_STEP
   ELTDT = ELT
 # endif
 
-# endif      
-
+# if defined (WAVE_ONLY)
+  END IF
+# endif
 
 !!$  CALL DUMP_PROBE_DATA 
 

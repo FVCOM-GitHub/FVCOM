@@ -265,34 +265,22 @@
    LENTXT = LEN (TEXT)
    IF = 1
    FOUND = .FALSE.
-
-   IFLOOP: DO WHILE(.TRUE.)                            
-     IF(IF <= LENTXT .AND. .NOT. FOUND)THEN            
-       IF(.NOT. (TEXT(IF:IF) ==  ' ' .OR.         &    
-          ICHAR(TEXT(IF:IF)) == ITABVL))THEN           
-         FOUND = .TRUE.                                
-       ELSE                                          
-         IF = IF + 1                                   
-       ENDIF                                           
-       CYCLE IFLOOP                                   
-     ENDIF                                              
-     EXIT IFLOOP                                       
-   END DO IFLOOP                                      
-   
+   DO WHILE(IF <= LENTXT .AND. .NOT. FOUND)
+     IF(.NOT. (TEXT(IF:IF) ==  ' ' .OR.                   &
+       ICHAR(TEXT(IF:IF)) == ITABVL))THEN
+       FOUND = .TRUE.
+     ELSE
+       IF = IF + 1
+     ENDIF
+   ENDDO
    IL = LENTXT + 1
    FOUND = .FALSE.
-
-   ILLOOP: DO WHILE(.TRUE.)                             
-     IF(IL > 1 .AND. .NOT. FOUND)THEN                   
-       IL = IL - 1                                      
-       IF(.NOT. (TEXT(IL:IL) ==  ' ' .OR.           &  
-          ICHAR(TEXT(IL:IL)) == ITABVL))THEN           
-         FOUND = .TRUE.                                
-       ENDIF                                            
-       CYCLE ILLOOP                                    
-     ENDIF                                             
-     EXIT ILLOOP                                        
-   END DO ILLOOP                                       
+   DO WHILE(IL > 1 .AND. .NOT. FOUND)
+     IL = IL - 1
+     IF(.NOT. (TEXT(IL:IL) ==  ' ' .OR. ICHAR(TEXT(IL:IL)) == ITABVL))THEN
+       FOUND = .TRUE.
+     ENDIF
+   ENDDO
 
    RETURN
    END SUBROUTINE TXPBLA
@@ -770,14 +758,6 @@
 !
 ! 13. Source text
 !
-!      IPOS = 1
-! 100  CONTINUE
-!      IF (IVAL/10**IPOS.GE.1.) THEN
-!         IPOS = IPOS + 1
-!         GO TO 100
-!      END IF
-!      ALLOCATE(CVAL(IPOS))
-
       IPOS = 1
       DO WHILE(IVAL/10**IPOS.GE.1.)
         IPOS = IPOS + 1
@@ -839,10 +819,10 @@
       TMP=X+FPF
       TMP=(X+HALF)*LOG(TMP)-TMP
       SER=ONE
-      DO 11 J=1,6
+      DO J=1,6
         X=X+ONE
         SER=SER+COF(J)/X
-11    CONTINUE
+      ENDDO
       GAMMLN=TMP+LOG(STP*SER)
       RETURN
       END FUNCTION GAMMLN
@@ -1050,24 +1030,23 @@
 !
 !     compute spectral shape using peak period PKPER                      
 !
-      FAC  = 1.                                                 
-      OUT: DO WHILE(.TRUE.)          
-      
-      FPK  = (1./PKPER)                                                             
-      FPK4 = FPK**4
-      IF(LSHAPE == 1)THEN
-        SALPHA = ((SPPARM(1) ** 2) * (FPK4)) * 5. / 16.
-      ELSE IF(LSHAPE == 2)THEN
+      FAC  = 1.
+      DO WHILE(.TRUE.)
+        FPK  = (1./PKPER)
+        FPK4 = FPK**4
+        IF(LSHAPE == 1)THEN
+          SALPHA = ((SPPARM(1) ** 2) * (FPK4)) * 5. / 16.
+        ELSE IF(LSHAPE == 2)THEN
 !       *** SALPHA = alpha*(grav**2)/(2.*pi)**4)
-        SALPHA = (SPPARM(1)**2 * FPK4) /                            &
+          SALPHA = (SPPARM(1)**2 * FPK4) /                            &
 	         ((0.06533*(PSHAPE(1)**0.8015)+0.13467)*16.)
-      ELSE IF(LSHAPE == 4)THEN
-        AUX1 = SPPARM(1)**2 / ( 16.* SQRT (PI2_W) * PSHAPE(2))
-        AUX3 = 2. * PSHAPE(2)**2
-      ENDIF
+        ELSE IF(LSHAPE == 4)THEN
+          AUX1 = SPPARM(1)**2 / ( 16.* SQRT (PI2_W) * PSHAPE(2))
+          AUX3 = 2. * PSHAPE(2)**2
+        ENDIF
 !
-      CTOTT = 0.
-      DO IS = 1, MSC                                                  
+        CTOTT = 0.
+        DO IS = 1, MSC
 !
         IF(LSHAPE == 1)THEN
 !         *** LSHAPE = 1 : Pierson and Moskowitz ***
@@ -1172,13 +1151,12 @@
   72    FORMAT (' SSHAPE iter=', I2, '  period values:', 3F7.2)
         IF(ABS(MPER-SPPARM(2)) > 0.01*SPPARM(2))THEN
 !         modification suggested by Mauro Sclavo
-          PKPER = (SPPARM(2) / MPER) * PKPER                              
-          CYCLE OUT                    
+            PKPER = (SPPARM(2) / MPER) * PKPER
+            CYCLE
+          ENDIF
         ENDIF
-      ENDIF
-      EXIT OUT                          
-      
-      END DO OUT                        
+        EXIT
+      ENDDO
 !
       IF (ITPER >= 10)THEN
         CALL MSGERR(3, 'No convergence calculating the spectrum')         
@@ -1726,24 +1704,19 @@
          EKTOT = FRINTF * EKTOT
          IF (MSC .GT. 3) THEN                                           
 !          contribution of tail to total energy density
-           PPTAIL = PWTAIL(1) - 1.                                     
-           CETAIL = 1. / (PPTAIL * (1. + PPTAIL * (FRINTH-1.)))        
-           PPTAIL = PWTAIL(1) - 1. - 2.                      
-!           PPTAIL = PWTAIL(1) - 1. - 2.*OUTPAR(3)                     
-          
-	   IFLOOP: DO WHILE(.TRUE.)                               
-             IF (PPTAIL.LE.0.) THEN                                
-               CALL MSGERR (2,'error tail computation')            
-               EXIT IFLOOP                                        
-             END IF                                                
-             CKTAIL = 1. / (PPTAIL * (1. + PPTAIL * (FRINTH-1.))) 
-             DO ID=1,MDC                                          
-               ETOT   = ETOT + CETAIL * SIG2 * AC2(ID,MSC,IG)      
-               EKTOT  = EKTOT + CKTAIL * SKK * AC2(ID,MSC,IG)         
-             END DO                                               
-	     EXIT IFLOOP                                         
-           END DO IFLOOP                                          
-
+           PPTAIL = PWTAIL(1) - 1.
+           CETAIL = 1. / (PPTAIL * (1. + PPTAIL * (FRINTH-1.)))
+           PPTAIL = PWTAIL(1) - 1. - 2.
+!           PPTAIL = PWTAIL(1) - 1. - 2.*OUTPAR(3)
+           IF (PPTAIL.LE.0.) THEN
+             CALL MSGERR (2,'error tail computation')
+           ELSE
+             CKTAIL = 1. / (PPTAIL * (1. + PPTAIL * (FRINTH-1.)))
+             DO ID=1,MDC
+               ETOT   = ETOT + CETAIL * SIG2 * AC2(ID,MSC,IG)
+               EKTOT  = EKTOT + CKTAIL * SKK * AC2(ID,MSC,IG)
+             END DO
+           ENDIF
          END IF
          IF (ETOT > 0.)THEN
 !           WLMEAN = PI2 * (ETOT / EKTOT) ** (1./OUTPAR(3))           

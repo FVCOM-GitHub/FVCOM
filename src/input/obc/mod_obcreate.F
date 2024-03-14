@@ -570,18 +570,15 @@ contains
     DO WHILE(.TRUE.)
        IF(IBCN_GL(1)==0) EXIT ! BREAK OUT IF THERE ARE NOT SUPPOSED
        ! TO BE ANY DATA POINTS
-       READ(ELVUNIT,*,IOSTAT=IOS,END=99) J,temp
+       READ(ELVUNIT,*,IOSTAT=IOS) J,temp
        if (IOS == 0) then
-          BackSpace ELVUNIT
-          exit
+         BackSpace ELVUNIT
+         exit
+       elseif(IOS < 0) THEN
+         Call FATAL_ERROR('Improper formatting of SPECTRAL DATA FILE:',&
+                     &'Reached end of file with out finding first line of data?',&
+                     &'FORMAT: NODE#,REFERENCE_HEIGHT (INT, FLOAT)')
        end if
-       
-       CYCLE
-       
-99     Call FATAL_ERROR('Improper formatting of SPECTRAL DATA FILE:',&
-            &'Reached end of file with out finding first line of data?',&
-            &'FORMAT: NODE#,REFERENCE_HEIGHT (INT, FLOAT)')
-       
     END DO
 
 
@@ -1004,7 +1001,7 @@ contains
     rewind ELVUNIT
     DO WHILE(.TRUE.)
        NCNT= NCNT+1
-       READ(ELVUNIT,FMT,IOSTAT=IOS,END=99) (tmp,J=1,CNT)
+       READ(ELVUNIT,FMT,IOSTAT=IOS) (tmp,J=1,CNT)
        if (IOS == 0) then
           BackSpace ELVUNIT
           ! TRY ADDING ONE MORE
@@ -1012,27 +1009,27 @@ contains
           write(FMT,'(I5)') CNT
           FMT= '('//trim(FMT)//'E14.5)'
 
-          READ(ELVUNIT,FMT,IOSTAT=IOS,END=99) (tmp,J=1,(CNT))
-          if (IOS /= 0) then
+          READ(ELVUNIT,FMT,IOSTAT=IOS) (tmp,J=1,(CNT))
+          IF (IOS < 0) then
+            Call FATAL_ERROR('Improper formatting of GRID FILE:',&
+                       &'Reached end of file with out finding CONNECTIVITY data?',&
+                       &'FORMAT: CELL# NODE# NODE# NODE# (ALL INTEGERS)')
+          elseif (IOS > 0) then
              BACKSPACE ELVUNIT
              exit
           else
              CALL FATAL_ERROR("THE DATA FILE DOES NOT APPEAR TO HAVE T&
                   &HE CORRECT NUMBER OF SPECIFIED NODES!")
           end if
-
+       elseif(IOS <0) then
+         Call FATAL_ERROR('Improper formatting of GRID FILE:',&
+                    &'Reached end of file with out finding CONNECTIVITY data?',&
+                    &'FORMAT: CELL# NODE# NODE# NODE# (ALL INTEGERS)')
        end if
-       
+
        IF (NCNT > 50) CALL FATAL_ERROR &
             &('The elj.dat file does not have the correct number of nodes specified,',&
             &'or there are more than 50 lines of header?')
-
-       CYCLE
-       
-99 Call FATAL_ERROR('Improper formatting of GRID FILE:',&
-           &'Reached end of file with out finding CONNECTIVITY data?',&
-           &'FORMAT: CELL# NODE# NODE# NODE# (ALL INTEGERS)')
-          
     END DO
 
     ! NOW COUNT THE NUMBER OF RECORDS
@@ -1318,6 +1315,7 @@ contains
     CHARACTER(LEN=6) :: STRNG,TEMP
     CHARACTER(LEN=80) ::    TSTRING,fmt
     CHARACTER(LEN=4) :: BFLAG
+    INTEGER          :: ioerror
 
     COMMENTS = "This data was transformed from an old FVCOM TS nudging file"
 
@@ -1336,7 +1334,8 @@ contains
 
     NCNT = 0     
     DO WHILE(.TRUE.)
-       READ(TSUNIT,*,END=10) FTEMP1
+       READ(TSUNIT,*,IOSTAT=ioerror) FTEMP1
+       IF(ioerror .lt. 0 ) EXIT
        READ(TSUNIT,*)
        DO J=1,IOBCN
           READ(TSUNIT,*)
@@ -1344,7 +1343,6 @@ contains
        ENDDO
        NCNT = NCNT + 1
     END DO
-10  CONTINUE
     REWIND(TSUNIT)
     
     IF(NCNT == 0)CALL FATAL_ERROR("NO DATA PROVIDED FOR TEMPERATURE AND SALINITY OBC")
@@ -1364,7 +1362,6 @@ contains
     ! FOR FOMAT STRING
     write(temp,'(I6)') KBM1
     DO J=1,NTIMES
-       
        READ(TSUNIT,*) TIMES(J)               !time(days)
        WRITE(IPT,*) "READ FILE TIME: ",TIMES(J),"(days)"
        MJDS(J) = DAYS2TIME(TIMES(J))
@@ -1391,10 +1388,6 @@ contains
        IF (ANY(NODES /= I_OBC_N)) CALL FATAL_ERROR("THE NODE NUMBER DOES NOT MATCH THE obc.dat FILE?")
        
     END DO
-
-   
-
-
   END SUBROUTINE READ_OLD_TS
 
 

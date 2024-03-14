@@ -169,7 +169,7 @@ contains
     endif
     do idx=1,len_sng
        ! Look for first abnormal character
-       if (sng(idx:idx) == ' ' .or. sng(idx:idx) == '=') exit      
+       if (sng(idx:idx) == ' ' .or. sng(idx:idx) == '=') EXIT
     end do                    ! end loop over characters
     ftn_opt_lng_get=idx-1-dsh_nbr
     ! Strings initialized to '' should have length 0
@@ -647,19 +647,26 @@ contains
     integer lng2
     integer idx1
     integer idx2
+    LOGICAL flag
     ! Initialize
     idx2=0 ! CEWI for lf95
     ! Main Code
     lng1=ftn_strlen(sng1) ! [nbr] Length of string
     lng2=ftn_strlen(sng2) ! [nbr] Length of string
-    outloop: do idx1=1,lng1    
+    do idx1=1,lng1
+       flag=.FALSE.
        if (sng1(idx1:idx1) == sng2(1:1)) then
           do idx2=2,lng2
-             if (sng1(idx1+idx2-1:idx1+idx2-1) /= sng2(idx2:idx2)) cycle outloop    
+             if (sng1(idx1+idx2-1:idx1+idx2-1) /= sng2(idx2:idx2)) then
+               flag=.TRUE.
+               EXIT
+             endif
           end do              ! end loop over characters
-          exit outloop    
+          if(.not.flag) THEN
+            EXIT
+          ENDIF
        endif                  ! endif
-    end do outloop       
+    end do                    ! end loop over characters
 
     if (idx2 == lng2+1) then
        ftn_strstr=idx1
@@ -733,7 +740,7 @@ contains
     lng=len(sng)
     do idx=lng,1,-1
        ! Look for last normal character
-       if (sng(idx:idx) /= ' '.and.sng(idx:idx) /= char(0)) exit   
+       if (sng(idx:idx) /= ' '.and.sng(idx:idx) /= char(0)) EXIT
     end do                    ! end loop over characters
     ftn_strlsc=idx
     return
@@ -757,7 +764,7 @@ contains
     lng=len(sng)
     do idx=1,lng
        ! Look for first abnormal character
-       if (sng(idx:idx) == char(0) .or. iachar(sng(idx:idx)) > 127) exit    
+       if (sng(idx:idx) == char(0) .or. iachar(sng(idx:idx)) > 127) EXIT
     end do                    ! end loop over characters
     ftn_strfic=idx ! [idx] First NUL or 8-bit character position
     return
@@ -868,6 +875,7 @@ contains
     integer lng1
     integer lng2
     integer lng_min
+    logical flag
     ! Main Code
     len1=len(sng1)
     len2=len(sng2)
@@ -883,6 +891,7 @@ contains
        call ftn_strprn(sng2) ! [fnc] Print character values of string
     endif                     ! endif
     lng_min=min(lng1,lng2)
+    flag=.FALSE.
     do idx=1,lng_min
        ! Prevent memory overruns
        ! Characters are equal, proceed to next character
@@ -895,24 +904,26 @@ contains
        endif               ! endif
        
        ! Characters were unequal, exit with appropriate value
-       return            ! Exit Branch     
+       flag=.TRUE.
+       EXIT
     end do
-    
-    if (lng1 == lng2) then
+
+    if(.not.flag) THEN
+      if (lng1 == lng2) then
        ! All significant values of both strings were equal in all positions
        ! Thus the strings are equal by our criterion
-       ftn_strcmp=0           ! [fnc] Compare sng1 to sng2: -1,0,1 iff sng1 <,=,> sng2
-    else
+        ftn_strcmp=0           ! [fnc] Compare sng1 to sng2: -1,0,1 iff sng1 <,=,> sng2
+      else
        ! All significant values of both strings were equal in all mutually legal positions
        ! However, one string has more significant characters than the other
        ! Thus return value depends on which string is longer
-       if (lng1 > lng2) then
+        if (lng1 > lng2) then
           ftn_strcmp=1        ! [fnc] Compare sng1 to sng2: -1,0,1 iff sng1 <,=,> sng2
-       else 
+        else
           ftn_strcmp=-1       ! [fnc] Compare sng1 to sng2: -1,0,1 iff sng1 <,=,> sng2
-       endif                  ! endif
-    endif ! endif lng1 == lng2
-    
+        endif                  ! endif
+      endif ! endif lng1 == lng2
+    ENDIF
     return
   end function ftn_strcmp
   

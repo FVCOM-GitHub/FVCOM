@@ -27,8 +27,10 @@
 !/===========================================================================/
 
 !==============================================================================!
-!  VERSION 4.4.6
+!  VERSION 5.1
 !==============================================================================!
+
+# if !defined (FVCOM_COUPLED)
 
 PROGRAM FVCOM
 
@@ -518,6 +520,10 @@ PROGRAM FVCOM
   USE MOD_PWP
 # endif
 
+# if defined (VEGETATION)
+  USE MOD_VEGETATION
+# endif
+
   USE MOD_STATION_TIMESERIES 
   USE MOD_SPARSE_TIMESERIES
 
@@ -632,6 +638,14 @@ PROGRAM FVCOM
 #  if defined (SEDIMENT)
    IF(SEDIMENT_MODEL) &
   &  CALL SETUP_SED(SEDIMENT_MODEL_FILE,IOBCN,IOBCN_GL,N_SED,N_SED_MAX,SED_NAMES)
+#  endif
+
+  !==============================================================================!
+  ! SETUP THE VEGETATION MODEL
+  ! ! 
+  !==============================================================================!
+#  if defined (VEGETATION)
+   IF(VEGETATION_MODEL)CALL SETUP_VEGETATION
 #  endif
 
    !SETUP TVD ADVECTION
@@ -877,7 +891,7 @@ PROGRAM FVCOM
         !==============================================================================!
 
 !for Eulerian velocity output
-# if defined (WAVE_CURRENT_INTERACTION)
+# if defined (WAVE_CURRENT_INTERACTION) && !defined (VORTEX_FORCE)
 !         U = U-U_STOKES_3D
 !         V = V-V_STOKES_3D
 !         UA=UA-U_STOKES_2D
@@ -886,7 +900,7 @@ PROGRAM FVCOM
 
         CALL ARCHIVE
 
-#  if defined (WAVE_CURRENT_INTERACTION)
+#  if defined (WAVE_CURRENT_INTERACTION) && !defined (VORTEX_FORCE)
 !Convert Eulerian velocity back to Lagrangian velocity to maintain consistent with Mellor's equation
 !         U = U+U_STOKES_3D
 !         V = V+V_STOKES_3D
@@ -1034,8 +1048,9 @@ PROGRAM FVCOM
 
            IINT = IINT + 1
            IntTime=IntTime + IMDTI
-!lwang
+
            CALL INTERNAL_STEP
+
            !==============================================================================!
            !    OUTPUT SCREEN REPORT/TIME SERIES DATA/OUTPUT FILES                        |
            !==============================================================================!
@@ -1050,7 +1065,7 @@ PROGRAM FVCOM
              ! do nothing
            ELSE
 !for Eulerian velocity output
-# if defined (WAVE_CURRENT_INTERACTION)
+# if defined (WAVE_CURRENT_INTERACTION) && !defined (VORTEX_FORCE)
 !         U = U-U_STOKES_3D
 !         V = V-V_STOKES_3D
 !         UA=UA-U_STOKES_2D
@@ -1058,7 +1073,8 @@ PROGRAM FVCOM
 # endif
 
              CALL ARCHIVE
-#  if defined (WAVE_CURRENT_INTERACTION)
+
+#  if defined (WAVE_CURRENT_INTERACTION) && !defined (VORTEX_FORCE)
 !Convert Eulerian velocity back to Lagrangian velocity to maintain consistent with Mellor's equation
 !         U = U+U_STOKES_3D
 !         V = V+V_STOKES_3D
@@ -2117,7 +2133,7 @@ PROGRAM FVCOM
         !==============================================================================!
 
 !for Eulerian velocity output
-# if defined (WAVE_CURRENT_INTERACTION)
+# if defined (WAVE_CURRENT_INTERACTION) && !defined (VORTEX_FORCE)
 !         U = U-U_STOKES_3D
 !         V = V-V_STOKES_3D
 !         UA=UA-U_STOKES_2D
@@ -2151,7 +2167,7 @@ IF (ENKF_memberCONTR ==1 ) THEN
     END IF
 
 
-#  if defined (WAVE_CURRENT_INTERACTION)
+#  if defined (WAVE_CURRENT_INTERACTION) && !defined (VORTEX_FORCE) 
 !Convert Eulerian velocity back to Lagrangian velocity to maintain consistent with Mellor's equation
 !         U = U+U_STOKES_3D
 !         V = V+V_STOKES_3D
@@ -2543,3 +2559,5 @@ IF (ENKF_memberCONTR ==1 ) THEN
   CALL PSHUTDOWN
 
 END PROGRAM FVCOM
+
+# endif

@@ -70,8 +70,12 @@ empty=
 dashI= $(empty) -I
 dashL= $(empty) -L
 # ### UNCOMMENT HERE!
-             LIBDIR       =  -L$(subst $(colon),$(dashL),$(LIBPATH))
-             INCDIR       =  -I$(subst $(colon),$(dashI),$(INCLUDEPATH))
+ifeq ($(origin LIBPATH), environment)
+  LIBDIR = -L$(subst $(colon),$(dashL),$(LIBPATH))
+endif
+ifeq ($(origin INCLUDEPATH), environment)
+  INCDIR = -I$(subst $(colon),$(dashI),$(INCLUDEPATH))
+endif
 
 ###########################################################################
 
@@ -97,7 +101,12 @@ dashL= $(empty) -L
 #            FLAG_USE_NETCDF4     = -DUSE_NETCDF4
 #            FLAG_USE_COMPRESSION = -DUSE_COMPRESSION
              IOLIBS       =  -lnetcdff -lnetcdf #-lhdf5_hl -lhdf5 -lz -lcurl -lm
+#             IOLIBS       =  -lnetcdf #-L/hosts/mao/usr/medm/install/netcdf/3.6.3/em64t/lib -lnetcdf
              IOINCS       =  #-I/hosts/mao/usr/medm/install/netcdf/3.6.3/em64t/include
+#             IOLIBS       =  -L/usr/local/install/netcdf/gcc_ifort/3.6.2/lib  -lnetcdf
+#             IOINCS       =  -I/usr/local/install/netcdf/gcc_ifort/3.6.2/include
+##             IOLIBS       = -L/usr/local/install/netcdf-4.4.1.1-with-fortran/lib -lnetcdff -lnetcdf
+##             IOINCS       = -I/usr/local/install/netcdf-4.4.1.1-with-fortran/include
 #--------------------------------------------------------------------------
 #     PETSC 
 #       PETSC IS REQUIRED IF ANY OF THE FOLLOWING FLAGS IS TURNED ON:
@@ -168,16 +177,16 @@ dashL= $(empty) -L
 #--------------------------------------------------------------------------
 
              FLAG_4 = -DMULTIPROCESSOR
-#         If using METIS 5 or above, uncomment FLAG_411 and read the file readme_metis in folder METIS_readme for detail
-	     FLAG_411 = -DMETIS_5
+#         If using METIS 5 or above, uncomment FLAG_411 and read the file readme_metis in folder METIS_source for detail
+#	     FLAG_411 = -DMETIS_5
 #        If FLAG_411 is defined, uncomment path below	     
-             PARLIB = 
-             PARTINCS = -I/usr/local/install/metis/5.1.0/intel/19/include
-             PARTLIBS = -L/usr/local/install/metis/5.1.0/intel/19/lib -lmetis
+#             PARLIB = 
+#             PARTINCS = -I/usr/local/install/metis/5.1.0/intel/19/include
+#             PARTLIBS = -L/usr/local/install/metis/5.1.0/intel/19/lib -lmetis
 #        If FLAG_411 is not defined, uncomment path below
-#             PARLIB = -lmetis  #-L/usr/local/lib -lmetis
-#             PARTINCS =
-#             PARTLIBS =
+             PARLIB = -lmetis  #-L/usr/local/lib -lmetis
+             PARTINCS =
+             PARTLIBS =
 
 #--------------------------------------------------------------------------
 #        WATER_QUALITY      INCLUDE EPA WATER QUALITY MOD
@@ -210,7 +219,6 @@ dashL= $(empty) -L
 #             PROJLIBS       = -lfproj4 -lproj -lm
 #             PROJINCS       =
 
-
 #--------------------------------------------------------------------------
 #        DATA_ASSIMILATION  INCLUDE NUDGING BASED DATA ASSIMILATION FOR
 #                           CURRENT/TEMP/SALINITY/SST
@@ -220,7 +228,7 @@ dashL= $(empty) -L
 #                           UNCOMMENT TO INCLUDE DATA ASSIMILATION 
 #--------------------------------------------------------------------------
 
-             FLAG_7 = -DDATA_ASSIM
+#             FLAG_7 = -DDATA_ASSIM
 #             OILIB  = -lmkl_lapack -lmkl_em64t -lguide -lpthread
 
 #             OILIB  = -L/usr/local/share/Intel-Compilers/mkl/lib/em64t -lmkl_lapack -lmkl_em64t -lguide -lpthread
@@ -248,7 +256,7 @@ dashL= $(empty) -L
 #  Semi-Implicit time stepping method
 #--------------------------------------------------------------------------
 
-             FLAG_9 = -DSEMI_IMPLICIT
+#             FLAG_9 = -DSEMI_IMPLICIT
 
 
 #---------------------------------------------------------------------------
@@ -296,7 +304,7 @@ dashL= $(empty) -L
 #       RIVER INPUT FILES!
 #--------------------------------------------------------------------------
 
-            FLAG_14 = -DRIVER_FLOAT
+#            FLAG_14 = -DRIVER_FLOAT
 
 #--------------------------------------------------------------------------
 #        The TVD (total variational diminishing) option for FVCOM was developed by 
@@ -426,7 +434,7 @@ dashL= $(empty) -L
 #         AIR_PRESSURE FROM SURFACE FORCING                           
 #--------------------------------------------------------------------------
 
-            FLAG_28 = -DAIR_PRESSURE  
+#            FLAG_28 = -DAIR_PRESSURE  
 
 #--------------------------------------------------------------------------
 # Visit online simulation mode
@@ -460,6 +468,7 @@ dashL= $(empty) -L
 #        WAVE-CURRENT INTERACTION
 #--------------------------------------------------------------------------
 #             FLAG_32 =  -DWAVE_CURRENT_INTERACTION
+#             FLAG_321 = -DVORTEX_FORCE
 #             FLAG_33 =  -DPLBC
 #           NOTE! THis option is for wave code          
 #             FLAG_34 =  -DEXPLICIT
@@ -493,6 +502,11 @@ dashL= $(empty) -L
 #             FLAG_42 = -DPARTITION_SPECIAL
 
 #--------------------------------------------------------------------------
+#        Vegetation Impact on FLows, Waves and Sediment (with FLAG_32 turned on)
+#--------------------------------------------------------------------------
+#             FLAG_45 = -DVEGETATION
+
+#--------------------------------------------------------------------------
 #        DEVELOPMENT FLAGS
 #            FOR BETA WORK ONLY 
 #--------------------------------------------------------------------------
@@ -509,6 +523,14 @@ dashL= $(empty) -L
 #--------------------------------------------------------------------------
 
 #             FLAG_80 = -DPIO
+
+#--------------------------------------------------------------------------
+#    NUOPC (The National Unified Operational Prediction Capability)
+#    This FLAG is only used for creating FVCOM library file 
+#    with command 'make libfvcom'.
+#--------------------------------------------------------------------------
+
+#             FLAG_81 = -DFVCOM_COUPLED
 
 #--------------------------------------------------------------------------
 #        SELECT COMPILER/PLATFORM SPECIFIC DEFINITIONS
@@ -647,8 +669,8 @@ dashL= $(empty) -L
    $(FLAG_31) $(FLAG_32) $(FLAG_33) $(FLAG_34) \
    $(FLAG_35) $(FLAG_36) $(FLAG_37) $(FLAG_38) \
    $(FLAG_39) $(FLAG_40) $(FLAG_41) $(FLAG_42) \
-   $(FLAG_43) $(FLAG_44) $(FLAG_80) $(FLAG_LAM) $(FLAG_411)\
-   $(FLAG_101) $(FLAG_102) $(FLAG_103) $(FLAG_104) $(FLAG_105)\
+   $(FLAG_43) $(FLAG_44) $(FLAG_45) $(FLAG_80) $(FLAG_81) $(FLAG_LAM) $(FLAG_411) \
+   $(FLAG_101) $(FLAG_102) $(FLAG_103) $(FLAG_104) $(FLAG_105) $(FLAG_321)\
    $(FLAG_211) $(FLAG_212) $(FLAG_213) $(FLAG_251) $(FLAG_261) $(FLAG_262)\
    $(FLAG_USE_NETCDF4) $(FLAG_USE_COMPRESSION)
 #--------------------------------------------------------------------------

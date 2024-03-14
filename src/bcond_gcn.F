@@ -102,11 +102,12 @@
 
    REAL(SP),POINTER :: eta_lcl(:), eta_gbl(:) ,elfgeo_gbl(:),elfgeo_lcl(:)
 
-   INTEGER  I,J,K,I1,I2,J1,J2,II,L1,L2,IERR
-   INTEGER  cdx,ndx,KDAM_TMP,K_RK
-   INTEGER K300_CD, K300_ND  ! Lu Wang, LSF@20230420
-   INTEGER NDX2              ! Siqi Li, LSF@20230420
-
+  INTEGER  I,J,K,I1,I2,J1,J2,II,L1,L2,IERR
+  INTEGER  cdx,ndx,KDAM_TMP,K_RK
+  INTEGER K300_CD, K300_nD  ! Lu Wang, LSF@20230420
+  INTEGER NDX2              ! Siqi Li, LSF@20230420
+  LOGICAL  finish
+  
 !!$!=================|DEBUG|============================
 !!$   LOGICAL, save :: INIT=.false.
 !!$   INTEGER, save :: icount
@@ -371,64 +372,65 @@
    CASE(2) !External Mode Velocity Boundary Conditions                         |
 !==============================================================================|
 
-   ELOOP: DO I=1,N    
+    DO I=1,N
 
 !
 !--2 SOLID BOUNDARY EDGES------------------------------------------------------|
 !
-     IF(ISBCE(I) == 3) THEN
-       UAF(I)=0.0_SP
-       VAF(I)=0.0_SP
-     END IF
+      IF(ISBCE(I) == 3) THEN
+        UAF(I)=0.0_SP
+        VAF(I)=0.0_SP
+      END IF
 
 !  GWC SPEED REPLACE ABOVE 4 LINES
-!   UAF(LISBCE_3(1:NISBCE_3)) = 0.  
-!   VAF(LISBCE_3(1:NISBCE_3)) = 0.  
+!   UAF(LISBCE_3(1:NISBCE_3)) = 0.
+!   VAF(LISBCE_3(1:NISBCE_3)) = 0.
 
 !
 !--1 SOLID BOUNDARY EDGE-------------------------------------------------------|
 !
-     IF(ISBCE(I) == 1) THEN
-       ALPHA1=ALPHA(I)
-       IF(NUMQBC > 0) THEN
-         IF(RIVER_INFLOW_LOCATION == 'node') THEN
-           DO J=1,NUMQBC
-             I1=INODEQ(J)
-             J1=NBVE(I1,1)
-             J2=NBVE(I1,NTVE(I1))
-             IF((I == J1).OR.(I == J2)) THEN
-               UNTMP=UAF(I)*COS(ANGLEQ(J))+VAF(I)*SIN(ANGLEQ(J))
-               VNTMP=-UAF(I)*SIN(ANGLEQ(J))+VAF(I)*COS(ANGLEQ(J))
-               UNTMP=MAX(UNTMP,0.0_SP)
-               UAF(I)=UNTMP*COS(ANGLEQ(J))-VNTMP*SIN(ANGLEQ(J))
-               VAF(I)=UNTMP*SIN(ANGLEQ(J))+VNTMP*COS(ANGLEQ(J))
-               CYCLE ELOOP   
-             END IF 
-           END DO
-         ELSE IF(RIVER_INFLOW_LOCATION == 'edge') THEN
-           DO J=1,NUMQBC
-             J1=ICELLQ(J)
-             IF(I == J1) THEN
-               UNTMP=UAF(I)*COS(ANGLEQ(J))+VAF(I)*SIN(ANGLEQ(J))
-               VNTMP=-UAF(I)*SIN(ANGLEQ(J))+VAF(I)*COS(ANGLEQ(J))
-               UNTMP=MAX(UNTMP,0.0_SP)
-               UAF(I)=UNTMP*COS(ANGLEQ(J))-VNTMP*SIN(ANGLEQ(J))
-               VAF(I)=UNTMP*SIN(ANGLEQ(J))+VNTMP*COS(ANGLEQ(J))
-               CYCLE ELOOP   
-             END IF
-           END DO
-         END IF
-            
-       END IF 
+      IF(ISBCE(I) == 1) THEN
+        ALPHA1=ALPHA(I)
+        finish=.false.
+        IF(NUMQBC > 0) THEN
+          IF(RIVER_INFLOW_LOCATION == 'node') THEN
+            DO J=1,NUMQBC
+              I1=INODEQ(J)
+              J1=NBVE(I1,1)
+              J2=NBVE(I1,NTVE(I1))
+              IF((I == J1).OR.(I == J2)) THEN
+                UNTMP=UAF(I)*COS(ANGLEQ(J))+VAF(I)*SIN(ANGLEQ(J))
+                VNTMP=-UAF(I)*SIN(ANGLEQ(J))+VAF(I)*COS(ANGLEQ(J))
+                UNTMP=MAX(UNTMP,0.0_SP)
+                UAF(I)=UNTMP*COS(ANGLEQ(J))-VNTMP*SIN(ANGLEQ(J))
+                VAF(I)=UNTMP*SIN(ANGLEQ(J))+VNTMP*COS(ANGLEQ(J))
+                finish=.true.
+              END IF
+            END DO
+          ELSE IF(RIVER_INFLOW_LOCATION == 'edge') THEN
+            DO J=1,NUMQBC
+              J1=ICELLQ(J)
+              IF(I == J1) THEN
+                UNTMP=UAF(I)*COS(ANGLEQ(J))+VAF(I)*SIN(ANGLEQ(J))
+                VNTMP=-UAF(I)*SIN(ANGLEQ(J))+VAF(I)*COS(ANGLEQ(J))
+                UNTMP=MAX(UNTMP,0.0_SP)
+                UAF(I)=UNTMP*COS(ANGLEQ(J))-VNTMP*SIN(ANGLEQ(J))
+                VAF(I)=UNTMP*SIN(ANGLEQ(J))+VNTMP*COS(ANGLEQ(J))
+                finish=.true.
+              END IF
+            END DO
+          END IF
+        END IF
 
-#      if defined (THIN_DAM)
-       IF(NBE_DAM(I) == 0)THEN
-#      endif
+        IF(.not. finish)THEN
+#if defined (THIN_DAM)
+        IF(NBE_DAM(I) == 0)THEN
+#endif
 
-         UI= UAF(I)*(SIN(ALPHA1))**2-VAF(I)*SIN(ALPHA1)*COS(ALPHA1)
-         VI=-UAF(I)*SIN(ALPHA1)*COS(ALPHA1)+VAF(I)*(COS(ALPHA1))**2
-         UAF(I)=UI
-         VAF(I)=VI
+          UI= UAF(I)*(SIN(ALPHA1))**2-VAF(I)*SIN(ALPHA1)*COS(ALPHA1)
+          VI=-UAF(I)*SIN(ALPHA1)*COS(ALPHA1)+VAF(I)*(COS(ALPHA1))**2
+          UAF(I)=UI
+          VAF(I)=VI
 
 !!#          if defined (WET_DRY)
 !!           UI= UAS(I)*(SIN(ALPHA1))**2-VAS(I)*SIN(ALPHA1)*COS(ALPHA1)
@@ -437,18 +439,18 @@
 !!           VAS(I)=VI
 !!#          endif
 
-#      if defined (THIN_DAM)
-       ELSE
-         UNTMP=-UAF(I)*COS(ALPHA1)-VAF(I)*SIN(ALPHA1)
-         VNTMP=UAF(I)*SIN(ALPHA1)-VAF(I)*COS(ALPHA1)
-         IF(KDAM1(I)<=KBM1/2)UNTMP=UNTMP*KDAM1(I)/KBM1
-         UAF(I)=-UNTMP*COS(ALPHA1)+VNTMP*SIN(ALPHA1)
-         VAF(I)=-UNTMP*SIN(ALPHA1)-VNTMP*COS(ALPHA1)
-       END IF
-#      endif
-
-     END IF
-   END DO ELOOP    
+#if defined (THIN_DAM)
+        ELSE
+          UNTMP=-UAF(I)*COS(ALPHA1)-VAF(I)*SIN(ALPHA1)
+          VNTMP=UAF(I)*SIN(ALPHA1)-VAF(I)*COS(ALPHA1)
+          IF(KDAM1(I)<=KBM1/2)UNTMP=UNTMP*KDAM1(I)/KBM1
+          UAF(I)=-UNTMP*COS(ALPHA1)+VNTMP*SIN(ALPHA1)
+          VAF(I)=-UNTMP*SIN(ALPHA1)-VNTMP*COS(ALPHA1)
+        END IF
+#endif
+        END IF
+      END IF
+    END DO
 
 !!# if defined (THIN_DAM)
 !!    DO I=1,NT
@@ -475,60 +477,61 @@
 
    ! Suggest move the kbm1 loop inside 'if((i.eq.j1).or.(i.eq.j2)) then'
 
-   ! THIS SHOULD BE SAFE FOR MORE THAN ONE RIVER AT THE SAME NODE
-   ! OR EDGE
+      ! THIS SHOULD BE SAFE FOR MORE THAN ONE RIVER AT THE SAME NODE
+      ! OR EDGE
+    DO i= 1, n
+      DO k =1, kbm1
+        IF(isbce(i).eq.3) then
+          uf(i,k)=0.0_SP
+          vf(i,k)=0.0_SP
+        END IF
 
-   do i= 1, n
-     e3loop: do k =1, kbm1     
-       if(isbce(i).eq.3) then
-         uf(i,k)=0.0_SP
-         vf(i,k)=0.0_SP
-       end if
+        IF(isbce(i).eq.1) then
+          finish=.false.
+          alpha1=alpha(i)
+          IF(numqbc.ge.1) then
+            IF(river_inflow_location.eq.'node') then
+              DO j=1,numqbc
+                i1=inodeq(j)
+                j1=nbve(i1,1)
+                j2=nbve(i1,ntve(i1))
+                IF((i.eq.j1).or.(i.eq.j2)) then
+                  untmp=uf(i,k)*cos(angleq(j))+vf(i,k)*sin(angleq(j))
+                  vntmp=-uf(i,k)*sin(angleq(j))+vf(i,k)*cos(angleq(j))
+                  untmp=max(untmp,0.0_SP)
+                  uf(i,k)=untmp*cos(angleq(j))-vntmp*sin(angleq(j))
+                  vf(i,k)=untmp*sin(angleq(j))+vntmp*cos(angleq(j))
+                  finish=.true.
+                END IF
+              END DO
+            ELSE IF(river_inflow_location.eq.'edge') then
+              DO j=1,numqbc
+                j1=icellq(j)
+                IF(i.eq.j1) then
+                  untmp=uf(i,k)*cos(angleq(j))+vf(i,k)*sin(angleq(j))
+                  vntmp=-uf(i,k)*sin(angleq(j))+vf(i,k)*cos(angleq(j))
+                  untmp=max(untmp,0.0_SP)
+                  uf(i,k)=untmp*cos(angleq(j))-vntmp*sin(angleq(j))
+                  vf(i,k)=untmp*sin(angleq(j))+vntmp*cos(angleq(j))
+                  finish=.true.
+                END IF
+              END DO
+            ELSE
+              print*, 'river_inflow_location not correct'
+              call pstop
+            END IF
+          END IF
 
-       if(isbce(i).eq.1) then
-         alpha1=alpha(i)
-         if(numqbc.ge.1) then
-           if(river_inflow_location.eq.'node') then
-             do j=1,numqbc
-               i1=inodeq(j)
-               j1=nbve(i1,1)
-               j2=nbve(i1,ntve(i1))
-               if((i.eq.j1).or.(i.eq.j2)) then
-                 untmp=uf(i,k)*cos(angleq(j))+vf(i,k)*sin(angleq(j))
-                 vntmp=-uf(i,k)*sin(angleq(j))+vf(i,k)*cos(angleq(j))
-                 untmp=max(untmp,0.0_SP)
-                 uf(i,k)=untmp*cos(angleq(j))-vntmp*sin(angleq(j))
-                 vf(i,k)=untmp*sin(angleq(j))+vntmp*cos(angleq(j))
-                 cycle E3LOOP       
-               end if
-             end do
-           else if(river_inflow_location.eq.'edge') then
-             do j=1,numqbc
-               j1=icellq(j)
-               if(i.eq.j1) then
-                 untmp=uf(i,k)*cos(angleq(j))+vf(i,k)*sin(angleq(j))
-                 vntmp=-uf(i,k)*sin(angleq(j))+vf(i,k)*cos(angleq(j))
-                 untmp=max(untmp,0.0_SP)
-                 uf(i,k)=untmp*cos(angleq(j))-vntmp*sin(angleq(j))
-                 vf(i,k)=untmp*sin(angleq(j))+vntmp*cos(angleq(j))
-                 cycle E3LOOP       
-               end if
-             end do
-           else
-             print*, 'river_inflow_location not correct'
-             call pstop
-           end if
-         end if
-
-#        if defined (THIN_DAM)
-         IF(NBE_DAM(I) == 0.OR.K > KDAM1(I))THEN
+          IF(.not. finish)THEN
+#if defined (THIN_DAM)
+          IF(NBE_DAM(I) == 0.OR.K > KDAM1(I))THEN
 !          IF(NBE_DAM(I) == 0)THEN
-#        endif
+#endif
 
-         ui= uf(i,k)*(sin(alpha1))**2-vf(i,k)*sin(alpha1)*cos(alpha1)
-         vi=-uf(i,k)*sin(alpha1)*cos(alpha1)+vf(i,k)*(cos(alpha1))**2
-         uf(i,k)=ui
-         vf(i,k)=vi
+            ui= uf(i,k)*(sin(alpha1))**2-vf(i,k)*sin(alpha1)*cos(alpha1)
+            vi=-uf(i,k)*sin(alpha1)*cos(alpha1)+vf(i,k)*(cos(alpha1))**2
+            uf(i,k)=ui
+            vf(i,k)=vi
 
 !!#         if defined (WET_DRY)
 !!          ui= us(i,k)*(sin(alpha1))**2-vs(i,k)*sin(alpha1)*cos(alpha1)
@@ -537,13 +540,13 @@
 !!          vs(i,k)=vi
 !!#         endif
 
-#        if defined (THIN_DAM)
-         end if
-#        endif
-
-       end if
-     end do e3loop      
-   end do
+#if defined (THIN_DAM)
+          END IF
+#endif
+          END IF
+        END IF
+      END DO
+    END DO
 
 
 
@@ -586,57 +589,59 @@
 !   U(LISBCE_3(1:NISBCE_3),1:KBM1) = 0.  
 !   V(LISBCE_3(1:NISBCE_3),1:KBM1) = 0.  
 
-   do i= 1, n  
-     e5loop: do k =1, kbm1      
-       if(isbce(i).eq.3) then
-         u(i,k)=0.0_SP
-         v(i,k)=0.0_SP
-       end if
+    DO i= 1, n
+      DO k =1, kbm1
+        IF(isbce(i).eq.3) then
+          u(i,k)=0.0_SP
+          v(i,k)=0.0_SP
+        END IF
 
-       if(isbce(i).eq.1) then
-         alpha1=alpha(i)
-         if(numqbc.ge.1) then
-           if(river_inflow_location.eq.'node') then
-             do j=1,numqbc
-               i1=inodeq(j)
-               j1=nbve(i1,1)
-               j2=nbve(i1,ntve(i1))
-               if((i.eq.j1).or.(i.eq.j2)) then
-                 untmp=u(i,k)*cos(angleq(j))+v(i,k)*sin(angleq(j))
-                 vntmp=-u(i,k)*sin(angleq(j))+v(i,k)*cos(angleq(j))
-                 untmp=max(untmp,0.0_SP)
-                 u(i,k)=untmp*cos(angleq(j))-vntmp*sin(angleq(j))
-                 v(i,k)=untmp*sin(angleq(j))+vntmp*cos(angleq(j))
-                 cycle e5loop      
-               end if
-             end do
-           else if(river_inflow_location.eq.'edge') then
-             do j=1,numqbc
-               j1=icellq(j)
-               if(i.eq.j1) then
-                 untmp=u(i,k)*cos(angleq(j))+v(i,k)*sin(angleq(j))
-                 vntmp=-u(i,k)*sin(angleq(j))+v(i,k)*cos(angleq(j))
-                 untmp=max(untmp,0.0_SP)
-                 u(i,k)=untmp*cos(angleq(j))-vntmp*sin(angleq(j))
-                 v(i,k)=untmp*sin(angleq(j))+vntmp*cos(angleq(j))
-                 cycle e5loop      
-               end if
-             end do
-           else
-             print*, 'river_inflow_location not correct'
-             call pstop
-           end if
-         end if
+        IF(isbce(i).eq.1) then
+          alpha1=alpha(i)
+          finish=.false.
+          IF(numqbc.ge.1) then
+            IF(river_inflow_location.eq.'node') then
+              DO j=1,numqbc
+                i1=inodeq(j)
+                j1=nbve(i1,1)
+                j2=nbve(i1,ntve(i1))
+                IF((i.eq.j1).or.(i.eq.j2)) then
+                  untmp=u(i,k)*cos(angleq(j))+v(i,k)*sin(angleq(j))
+                  vntmp=-u(i,k)*sin(angleq(j))+v(i,k)*cos(angleq(j))
+                  untmp=max(untmp,0.0_SP)
+                  u(i,k)=untmp*cos(angleq(j))-vntmp*sin(angleq(j))
+                  v(i,k)=untmp*sin(angleq(j))+vntmp*cos(angleq(j))
+                  finish=.true.
+                END IF
+              END DO
+            ELSE IF(river_inflow_location.eq.'edge') then
+              DO j=1,numqbc
+                j1=icellq(j)
+                IF(i.eq.j1) then
+                  untmp=u(i,k)*cos(angleq(j))+v(i,k)*sin(angleq(j))
+                  vntmp=-u(i,k)*sin(angleq(j))+v(i,k)*cos(angleq(j))
+                  untmp=max(untmp,0.0_SP)
+                  u(i,k)=untmp*cos(angleq(j))-vntmp*sin(angleq(j))
+                  v(i,k)=untmp*sin(angleq(j))+vntmp*cos(angleq(j))
+                  finish=.true.
+                END IF
+              END DO
+            else
+              print*, 'river_inflow_location not correct'
+              call pstop
+            END IF
+          END IF
 
-#        if defined (THIN_DAM)
-         IF(NBE_DAM(I) == 0.OR.K > KDAM1(I))THEN          
+          IF(.not. finish)THEN
+#         if defined (THIN_DAM)
+          IF(NBE_DAM(I) == 0.OR.K > KDAM1(I))THEN
 !          IF(NBE_DAM(I) == 0)THEN
-#        endif
+#         endif
 
-         ui= u(i,k)*(sin(alpha1))**2-v(i,k)*sin(alpha1)*cos(alpha1)
-         vi=-u(i,k)*sin(alpha1)*cos(alpha1)+v(i,k)*(cos(alpha1))**2
-         u(i,k)=ui
-         v(i,k)=vi
+            ui= u(i,k)*(sin(alpha1))**2-v(i,k)*sin(alpha1)*cos(alpha1)
+            vi=-u(i,k)*sin(alpha1)*cos(alpha1)+v(i,k)*(cos(alpha1))**2
+            u(i,k)=ui
+            v(i,k)=vi
 
 !!#         if defined (WET_DRY)
 !!          ui= us(i,k)*(sin(alpha1))**2-vs(i,k)*sin(alpha1)*cos(alpha1)
@@ -645,13 +650,13 @@
 !!          vs(i,k)=vi
 !!#         endif
 
-#        if defined (THIN_DAM)
-         END IF
-#        endif
-
-       end if
-     end do e5loop    
-   end do
+#         if defined (THIN_DAM)
+          END IF
+#         endif
+          ENDIF
+        END IF
+      END DO
+    END DO
 
 
 
@@ -787,8 +792,8 @@
 # endif
 
 # if defined (MULTIPROCESSOR)
-         IF(PAR) CALL AEXCHANGE(EC, MYID, NPROCS, TAU_WIND)
-         IF(PAR) CALL AEXCHANGE(EC, MYID, NPROCS, U_star)
+         IF(PAR) CALL AEXCHANGE(EC, MYID, NPROCS, TAU_WIND)   ! Siqi Li, 20230607
+         IF(PAR) CALL AEXCHANGE(EC, MYID, NPROCS, U_star)   ! Siqi Li, 20230607
          IF(PAR) CALL AEXCHANGE(EC, MYID, NPROCS, Cd)
 # endif
 
@@ -991,5 +996,3 @@
    
  END SUBROUTINE BCOND_GCN
 !==============================================================================|
-
-

@@ -141,7 +141,7 @@ CONTAINS
 !  FVCOM VERSION                                                               !
 !==============================================================================!
 
-   FVCOM_VERSION     = 'FVCOM_4.4.6'
+   FVCOM_VERSION     = 'FVCOM_5.1'
    FVCOM_WEBSITE     = 'http://fvcom.smast.umassd.edu, https://github.com/FVCOM-GitHub/FVCOM'
    INSTITUTION       = 'School for Marine Science and Technology'
 
@@ -236,7 +236,7 @@ CONTAINS
     CHARACTER(LEN=*), OPTIONAL   :: ER3
     CHARACTER(LEN=*), OPTIONAL   :: ER4
 
-    if(DBG_SET(dbg_log)) then   ! Siqi Li, FATAL_ERROR@20230928
+    if(DBG_SET(dbg_log)) then
        write(IPT,*) "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
        write(IPT,*) TRIM(PRG_NAME)//" Fatal Error!"
        write(IPT,*) ER1
@@ -245,7 +245,7 @@ CONTAINS
        IF(PRESENT(ER4)) WRITE(IPT,*) ER4
        write(IPT,*) "Stopping "//TRIM(PRG_NAME)
        write(IPT,*) "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
-    end if   ! Siqi Li, FATAL_ERROR@20230928
+    end if
     call pstop
   End Subroutine Fatal_Error
 
@@ -1943,7 +1943,7 @@ CONTAINS
      Do I=1,NT
         if(abs(yloc-yc(i))<1.0) &
         CALL ARC(xloc,yloc,XC(I),YC(I),radlist(i,1))
-        if(radlist(i,1)<1.0E-6) exit      
+        if(radlist(i,1)<1.0E-6) EXIT
      END Do
 # else
      radlist(1:nt,1) = abs(xc(1:nt)-xloc) + abs(yc(1:nt)-yloc)
@@ -2324,7 +2324,7 @@ WRITE(IPT,*)'          _____    _     _  _        _     _  _  _  _             '
 WRITE(IPT,*)'         |  ___)  | |   | || |      | |   | || ||_|| |            '
 WRITE(IPT,*)'         | |       \ \ / / | |_____ | |___| || |   | |            '
 WRITE(IPT,*)'         |_|        \___/   \______) \_____/ |_|   |_|            '
-WRITE(IPT,*)' -- Version 4.4.6 Release'
+WRITE(IPT,*)' -- Version 5.1 Release'
 WRITE(IPT,*)'!================================================================!'
 WRITE(IPT,*)'!                                                                !'
 WRITE(IPT,*)'!========DOMAIN DECOMPOSITION USING: METIS 4.0.1 ================!'
@@ -2665,7 +2665,7 @@ END SUBROUTINE GET_VALUE
    CHARACTER(LEN=800) :: TLINE
    CHARACTER(LEN=7  ) :: VARTYPE, ENDLINE
    CHARACTER(LEN=20 ), DIMENSION(200)  :: SET
-   INTEGER I,NVAL,J,NSET,NLINE,NREP,bgn,nd, LEL
+   INTEGER I,NVAL,J,NSET,NLINE,NREP,bgn,nd, LEL, IOS
    LOGICAL SETYES,ALLSET,CHECK,LOGVAL
 
 
@@ -2686,7 +2686,7 @@ END SUBROUTINE GET_VALUE
 
    NSET = 0
    NLINE = 0
-   DO WHILE(.TRUE.)
+   inputfile_loop: DO WHILE(.TRUE.)
 
       if(NLINE >200) then
          CALL Warning("Read 200 lines of header with out finding parameters! ")
@@ -2694,10 +2694,11 @@ END SUBROUTINE GET_VALUE
          return
       end if
 
-     TLINE(1:LEN(TLINE)) = ' ' 
+     TLINE(1:LEN(TLINE)) = ' '
      NREP  = 0
      NLINE = NLINE + 1
-     READ(UNIT,'(a)',END=20) INPLINE
+     READ(UNIT,'(a)',IOSTAT=IOS) INPLINE
+     IF(IOS < 0) EXIT inputfile_loop
      TLINE = TRIM(INPLINE)
 
 !----PROCESS LINE CONTINUATIONS------------------------------------------------!
@@ -2707,17 +2708,18 @@ END SUBROUTINE GET_VALUE
         IF(I > 1)THEN
 
            IF( INPLINE(I-LEL:I) == trim(endline))THEN
-              
+
               NREP = NREP + 1
-              READ(UNIT,'(a)',END=20) INPLINE
+              READ(UNIT,'(a)',IOSTAT=IOS) INPLINE
+              IF(IOS < 0) EXIT inputfile_loop
               NLINE = NLINE + 1
               bgn = LEN_TRIM(TLINE)+1
               nd = bgn +len_trim(INPLINE)
-              
+
               TLINE(bgn:nd) = TRIM(INPLINE)
            ELSE
               EXIT
-              
+
            END IF
         ELSE
            EXIT
@@ -2820,7 +2822,7 @@ END SUBROUTINE GET_VALUE
        END IF
      END IF  !!VARIABLE IS CORRECT
             
-   END DO !!LOOP OVER INPUT FILE
+   END DO inputfile_loop!!LOOP OVER INPUT FILE
 
 20   SCAN_FILE = -2
 
@@ -3131,7 +3133,7 @@ END SUBROUTINE GET_VALUE
    CHARACTER(LEN=400) :: TLINE
    CHARACTER(LEN=7  ) :: VARTYPE
    CHARACTER(LEN=20 ), DIMENSION(200)  :: SET
-   INTEGER I,NVAL,J,NSET,NLINE,NREP
+   INTEGER I,NVAL,J,NSET,NLINE,NREP,IOS
    LOGICAL SETYES,ALLSET,CHECK,LOGVAL
 
 
@@ -3153,15 +3155,16 @@ END SUBROUTINE GET_VALUE
 
    NSET = 0
    NLINE = 0
-   DO WHILE(.TRUE.)
-     TLINE(1:LEN(TLINE)) = ' ' 
+   inputfile_loop: DO WHILE(.TRUE.)
+     TLINE(1:LEN(TLINE)) = ' '
      NREP  = 0
      NLINE = NLINE + 1
-     READ(INPUTF,'(a)',END=20) INPLINE
+     READ(INPUTF,'(a)',IOSTAT=IOS) INPLINE
+     if(IOS<0)EXIT inputfile_loop
      TLINE(1:80) = INPLINE(1:80)
 
 !----PROCESS LINE CONTINUATIONS------------------------------------------------!
-     IN: DO WHILE(.TRUE.)     
+     DO WHILE(.TRUE.)
        I = LEN_TRIM(INPLINE)
        IF(I /= 0)THEN
 #        if defined (COMPAQ) || defined (INTEL) || defined (IRIX)
@@ -3170,16 +3173,15 @@ END SUBROUTINE GET_VALUE
          IF( INPLINE(I-1:I) == '\\\\')THEN
 #        endif
            NREP = NREP + 1
-           READ(INPUTF,'(a)',END=20) INPLINE
+           READ(INPUTF,'(a)',IOSTAT=IOS) INPLINE
+           if(IOS<0)EXIT inputfile_loop
            NLINE = NLINE + 1
            TLINE( NREP*80 + 1 : NREP*80 +80) = INPLINE(1:80)
-           CYCLE IN     
-         ELSE           
-	   EXIT IN     
+           CYCLE
          END IF
        END IF
-       EXIT IN
-     END DO IN          
+       EXIT
+     END DO
      IF(NREP > 4)CALL Fatal_Error("CANNOT HAVE > 4 LINE CONTINUATIONS")
 
 !----REMOVE LINE CONTINUATION CHARACTER \\-------------------------------------!
@@ -3270,7 +3272,7 @@ END SUBROUTINE GET_VALUE
        END IF
      END IF  !!VARIABLE IS CORRECT
             
-   END DO !!LOOP OVER INPUT FILE
+   END DO inputfile_loop!!LOOP OVER INPUT FILE
  20 CLOSE(INPUTF) 
    SCAN_FILE2 = -2
 
@@ -3327,7 +3329,7 @@ END SUBROUTINE GET_VALUE
    CHARACTER(LEN=400) :: TLINE
    CHARACTER(LEN=7  ) :: VARTYPE
    CHARACTER(LEN=20 ), DIMENSION(200)  :: SET
-   INTEGER I,NVAL,J,NSET,NLINE,NREP
+   INTEGER I,NVAL,J,NSET,NLINE,NREP,IOS
    LOGICAL SETYES,ALLSET,CHECK,LOGVAL
 
 
@@ -3349,15 +3351,16 @@ END SUBROUTINE GET_VALUE
 
    NSET = 0
    NLINE = 0
-   DO WHILE(.TRUE.)
-     TLINE(1:LEN(TLINE)) = ' ' 
+   inputfile_loop: DO WHILE(.TRUE.)
+     TLINE(1:LEN(TLINE)) = ' '
      NREP  = 0
      NLINE = NLINE + 1
-     READ(INPUTF,'(a)',END=20) INPLINE
+     READ(INPUTF,'(a)',IOSTAT=IOS) INPLINE
+     IF(IOS < 0) EXIT inputfile_loop
      TLINE(1:80) = INPLINE(1:80)
 
 !----PROCESS LINE CONTINUATIONS------------------------------------------------!
-     IN: DO WHILE(.TRUE.)     
+     DO WHILE(.TRUE.)
        I = LEN_TRIM(INPLINE)
        IF(I > 2)THEN
 #        if defined (COMPAQ) || defined (INTEL) || defined (IRIX)
@@ -3366,16 +3369,15 @@ END SUBROUTINE GET_VALUE
          IF( INPLINE(I-1:I) == '\\')THEN
 #        endif
            NREP = NREP + 1
-           READ(INPUTF,'(a)',END=20) INPLINE
+           READ(INPUTF,'(a)',IOSTAT=IOS) INPLINE
+           IF(IOS < 0) EXIT inputfile_loop
            NLINE = NLINE + 1
            TLINE( NREP*80 + 1 : NREP*80 +80) = INPLINE(1:80)
-           CYCLE IN     
-         ELSE           
-	   EXIT IN      
+           CYCLE
          END IF
        END IF
        EXIT
-     END DO IN           
+     ENDDO
      IF(NREP > 4)CALL Fatal_Error("CANNOT HAVE > 4 LINE CONTINUATIONS")
 
 !----REMOVE LINE CONTINUATION CHARACTER \\-------------------------------------!
@@ -3474,7 +3476,7 @@ END SUBROUTINE GET_VALUE
        END IF
      END IF  !!VARIABLE IS CORRECT
             
-   END DO !!LOOP OVER INPUT FILE
+   END DO inputfile_loop!!LOOP OVER INPUT FILE
  20 CLOSE(INPUTF) 
    SCAN_FILE3 = -2
 

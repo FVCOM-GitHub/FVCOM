@@ -95,7 +95,7 @@ contains
     REAL(SP), dimension(node), intent(out)   :: gamma     
     ! -----------------------------------------------------
     !
-    real, dimension(nz-1)  :: k
+    real(sp), dimension(nz-1)  :: k
     integer                :: i, j
     !
     do i=1, node
@@ -131,7 +131,7 @@ contains
     ! -----------------------------------------------------
     !
     integer :: i, j
-    real, parameter          :: missing_value=-99.
+    real(sp), parameter          :: missing_value=-99.
     !
     do j=1,n2
       if (h2(j)<h1(1)) then      ! If shallower than the first sigma layer
@@ -163,7 +163,7 @@ contains
     ! -----------------------------------------------------
     !
     integer                  :: i,j
-    real, parameter          :: missing_value=-99.
+    real(sp), parameter          :: missing_value=-99.
     !
     do i=1,node
       if (depth(i,nz)<nz) then
@@ -199,7 +199,7 @@ contains
     !
 !    real, parameter   :: gamma_min=0.04e-3 !0.005 Lu may22,2019
     integer           :: iz
-    real              :: h, vdif
+    real(sp)              :: h, vdif
     integer           :: i, j
     !
     do i=1, node
@@ -245,8 +245,6 @@ contains
         end if
 ! Lu
       end if
-
-!write(222,*) i, mld(i), vdif, depth(i,iz), gamma(i)
     end do
     !
   end subroutine calc_mld_density

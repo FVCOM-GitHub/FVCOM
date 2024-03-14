@@ -444,8 +444,10 @@ MODULE MOD_REPORT
         CLOSE(NANUNIT)
         WRITE(*,*) 'The Model stops because there are NaN values. Check NAN_S.dat files.'
       END IF
-      IF (ISNAN_EL .OR. ISNAN_U .OR. ISNAN_V .OR. ISNAN_UA .OR. ISNAN_VA .OR. &
-          ISNAN_T1 .OR. ISNAN_S1) CALL PSTOP
+
+     IF (ISNAN_EL .OR. ISNAN_U .OR. ISNAN_V .OR. ISNAN_UA .OR. ISNAN_VA .OR. &
+         ISNAN_T1 .OR. ISNAN_S1) CALL PSTOP
+
     END IF
 
     DEALLOCATE(GLB_UA)

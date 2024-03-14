@@ -54,6 +54,7 @@
 !  1. Updates
 !
 !     40.41, Oct. 04: taken from the include file OCPCOMM1.INC
+!     40.61, Sep. 06: NMOVAR increased by 1 (quantity DISVEG added)
 !
 !  2. Purpose
 !
@@ -682,6 +683,7 @@
 !  (51) [  'WATL']
 !  (52) [  'BOTL']
 !  (53) [   'TPS']
+!  (57) [  'Sveg']
 ! OVSNAM(NMOVAR)   short name of output quantity
 !  ( 1) [    'Xp']
 !  ( 2) [    'Yp']
@@ -731,6 +733,7 @@
 !  (51) ['Watlev']
 !  (52) ['Botlev']
 !  (53) ['TPsmoo']
+!  (57) [  'Sveg']
 ! OVLNAM(NMOVAR)   long name of output quantity
 !  ( 1) [                        'X user coordinate']
 !  ( 2) [                        'Y user coordinate']
@@ -780,6 +783,7 @@
 !  (51) [                              'Water level']
 !  (52) [                             'Bottom level']
 !  (53) [            'Relative peak period (smooth)']
+!  (57) [                   'Vegetation dissipation']
 ! OVUNIT(NMOVAR)   unit of of output quantity
 !  ( 1) [CALCULAT] =UL
 !  ( 2) [CALCULAT] =UL
@@ -923,6 +927,7 @@
 !  (51)  [  1]   Watlev
 !  (52)  [  1]   Botlev
 !  (53)  [  1]   TPSmoo
+!  (57)  [  1]   Sveg
 ! OVEXCV(NMOVAR)   exception value for output quantity
 !  ( 1)  [ -1.E10] Xp
 !  ( 2)  [ -1.E10] Yp
@@ -970,6 +975,7 @@
 !  (51)  [   -99.] Watlev
 !  (52)  [   -99.] Botlev
 !  (53)  [   -10.] TPSmoo
+!  (57)  [    -9.] Sveg
 ! OVLEXP(NMOVAR)   lower expected limit of output quantity
 !  ( 1)  [ -1.E10] Xp
 !  ( 2)  [ -1.E10] Yp
@@ -1017,6 +1023,7 @@
 !  (51)  [  -100.] Watlev
 !  (52)  [  -100.] Botlev
 !  (53)  [     0.] TPSmoo
+!  (57)  [     0.] Sveg
 ! OVLLIM(NMOVAR)   lower limit of validity of output quantity
 !  ( 1)  [ -1.E10] Xp
 !  ( 2)  [ -1.E10] Yp
@@ -1064,6 +1071,7 @@
 !  (51)  [  -1.E4] Watlev
 !  (52)  [  -1.E4] Botlev
 !  (53)  [     0.] TPSmoo
+!  (57)  [     0.] Sveg
 ! OVHEXP(NMOVAR)   upper expected limit of output quantity
 !  ( 1)  [  1.E10] Xp
 !  ( 2)  [  1.E10] Yp
@@ -1111,6 +1119,7 @@
 !  (51)  [   100.] Watlev
 !  (52)  [   100.] Botlev
 !  (53)  [   100.] TPSmoo
+!  (57)  [    0.1] Sveg
 ! OVULIM(NMOVAR)   upper limit of validity
 !  ( 1)  [  1.E10] Xp
 !  ( 2)  [  1.E10] Yp
@@ -1158,6 +1167,7 @@
 !  (51)  [   1.E4] Watlev
 !  (52)  [   1.E4] Botlev
 !  (53)  [  1000.] TPSmoo
+!  (57)  [  1000.] Sveg
 ! SINCQ  [       ] sin of ALCQ
 ! SINPQ  [       ] sin of ALPQ
 ! SPCPOW [      1] power in expression for computation of average frequency
@@ -1333,12 +1343,15 @@
 ! VARFR         [   FAL] friction coefficient is/is not variable over space
 ! VARWI         [   FAL] wind velocity is/is not variable over space
 ! VARWLV        [   FAL] water level is/is not variable over space
+! VARNPL        [   FAL] number of plants / m2 is/is not variable over space
 ! XPG(NUMGRD)   [    0.] x of origin
 ! XOFFS         [    0.] offset value in x
 !                        (from user coord. system to internal coord. system)
 ! YPG(NUMGRD)   [    0.] y of origin
 ! YOFFS         [    0.] offset value in y
 !                        (from user coord. system to internal coord. system)
+! JDSXV  [  1] vegetation dissipation within array COMPDA
+!              set by command TABLE/BLOCK
 !
    INTEGER ICOND
    INTEGER IGTYPE(NUMGRD),           LEDS(NUMGRD)
@@ -1354,6 +1367,9 @@
    LOGICAL CVLEFT,      LXOFFS,      VARFR
    LOGICAL VARWI,       VARWLV,      DYNDEP,    VARWI1
    LOGICAL VARAST
+# if defined (VEGETATION)
+   LOGICAL VARNPL
+# endif
 !
 !     *** variables for input files ***
 !
@@ -1468,6 +1484,7 @@
 !
 !     MBOT   [  10] dimension of array PBOT
 !     MDIFFR [  10] dimension of array PDIFFR                             40.21
+!     MDISP  [   7] dimension for dissipation arrays                      40.59 40.35 40.67
 !     MICMAX [  10] max. number of points in comput. stencil
 !     MNUMS  [  30] dimension of array PNUMS
 !     MQUAD  [  10] dimension of array PQUAD
@@ -1484,9 +1501,11 @@
    INTEGER             MTRIAD,      MWCAP,       MWIND
    INTEGER             MICMAX
    INTEGER             MDIFFR                                          
+   INTEGER             MDISP
 !
    PARAMETER           (MBOT   = 10)
    PARAMETER           (MDIFFR = 10)                                   
+   PARAMETER           (MDISP  =  7)
    PARAMETER           (MICMAX = 10)
    PARAMETER           (MNUMS  = 30)
    PARAMETER           (MQUAD  = 10)
@@ -1602,6 +1621,9 @@
    INTEGER             JWY2,        JWY3,        JZEL  ,      JPBOT
    INTEGER             MCMVAR,                   MTSVAR,      JURSEL
    INTEGER             MSWMATR
+# if defined (VEGETATION)
+   INTEGER             JPVEGT,      JNPLA2,      JNPLA3
+# endif
 !
 !     *** location and dimensions of computational grid ***
 !
@@ -1621,6 +1643,7 @@
 !                  (mesh in frequency space runs from sigma/FRINTH to sigma*FRINTH)
 ! FULCIR [  TRUE]  spectral directions cover the full/part of circle
 ! ICOMP  [     1]  unused
+! ILMAX  [CALCUL]  maximum number of layers to be used in vegetation model
 ! IXCGRD [      ]  IX of points of computational stencil
 ! IYCGRD [      ]  IY of points of computational stencil
 ! KCGRD  [      ]  grid address of points of computational stencil
@@ -1661,6 +1684,9 @@
    INTEGER             MDC,         MDC4MA,      MDC4MI,      MMCGR
    INTEGER             MSC,         MSC4MA,      MSC4MI,      MTC
    INTEGER             MXC,         MYC,         NX,          NY
+#  if defined (VEGETATION)
+   INTEGER             ILMAX
+#  endif
    INTEGER             NGRBND
    REAL                ALCP,        ALPC,        COSPC,       DDIR
    REAL                DX,          DXRP,        DY,          DYRP
@@ -1737,6 +1763,9 @@
 !                 =1; set by command FRIC JON  ..., Jonswap bottom friction model
 !                 =2; for command FRIC COLL ..., Collins bottom friction model
 !                 =3; for command FRIC MAD  ..., Madsen bottom friction model
+! IVEG   [     0] indicates vegetation dissipation term:
+!                 =0; no dissipation due to vegetation
+!                 =1; dissipation due to vegetation according to Dalrymple (1984)
 ! ICMAX  [     3] number of points in computational stencil
 ! ICOR   [      ] not used
 ! ICUR   [     0] indicates presence of currents:
@@ -2119,6 +2148,9 @@
    INTEGER             MXITST,      MXITNS,                   NCOR
    INTEGER             NSTATC,      NSTATM,      NUMOBS,      NCOMPT   
    INTEGER             IDIFFR                                          
+#  if defined (VEGETATION)
+   INTEGER             IVEG
+#  endif
    REAL                DEPMIN,      PBOT(MBOT),  PNUMS(MNUMS)
    REAL                PSETUP(MSETUP),           PSHAPE(MSHAPE)
    REAL                PSURF(MSURF),             PTRIAD(MTRIAD)

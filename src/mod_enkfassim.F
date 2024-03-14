@@ -519,7 +519,8 @@ END IF
 !CC-----------   By adding noises to true state       -------------CC
 
    DO I=1, NLOC
-      RNOBS = GASDEV(IDOBS)
+      !RNOBS = GASDEV(IDOBS)
+      CALL GASDEV(IDOBS,RNOBS)
       IF (ENKF_TEST) THEN
       OBSDATA(I) = OBSDATA(I) + DSQRT(WK(I,I))*RNOBS ! represents the observation noised, should open only in twin experiments
       END IF
@@ -531,7 +532,8 @@ END IF
 
    DO K=1, ENKF_NENS
       DO I=1, NLOC
-         RNOBS = GASDEV(IDOBS2)
+         !RNOBS = GASDEV(IDOBS2)
+         CALL GASDEV(IDOBS2,RNOBS)
          RPERT(K,I)= DSQRT(WK(I,I))*RNOBS
       ENDDO
    ENDDO
@@ -754,16 +756,17 @@ end if !(msr)
 !------------pengfei-----------------------------------
    SUBROUTINE GET_LOCALIZATION_REGION
    IMPLICIT NONE
-   INTEGER :: I,J,K,ITMP
+   INTEGER :: I,J,K,ITMP,ios
    STDIM_LOC=0
    MGL_OBS=0
    IF (EL_ASSIM .OR. T_ASSIM .OR. S_ASSIM) THEN
       OPEN(2000,FILE=trim(INPUT_DIR)//'local_node.dat',STATUS='OLD')
       DO WHILE(.TRUE.)
-         READ(2000,*,END=901) 
+         READ(2000,*,IOSTAT=IOS)
+         if (IOS < 0) EXIT
          MGL_OBS=MGL_OBS+1
       END DO
-901   ALLOCATE(MGL_OBS_INDEX(MGL_OBS))
+      ALLOCATE(MGL_OBS_INDEX(MGL_OBS))
       REWIND(2000)
       DO I=1,MGL_OBS
          READ(2000,*) MGL_OBS_INDEX(I)%node,MGL_OBS_INDEX(I)%NLAY_LOCAL
@@ -777,10 +780,11 @@ end if !(msr)
    NGL_OBS=0
    OPEN(2000,FILE=trim(INPUT_DIR)//'local_cell.dat',status='old')
       DO WHILE(.TRUE.)
-         READ(2000,*,END=902)
+         READ(2000,*,IOSTAT=IOS)
+         IF(IOS < 0) EXIT
          NGL_OBS=NGL_OBS+1
       END DO
-902   ALLOCATE(NGL_OBS_INDEX(NGL_OBS))
+      ALLOCATE(NGL_OBS_INDEX(NGL_OBS))
       REWIND(2000)
       DO I=1,NGL_OBS
          READ(2000,*) NGL_OBS_INDEX(I)%cell,NGL_OBS_INDEX(I)%NLAY_LOCAL
@@ -1650,7 +1654,7 @@ end if !(msr)
    CHARACTER(LEN=24) HEADINFO
    INTEGER STLTMP(ENKF_NOBSMAX)
    INTEGER LAY(ENKF_NOBSMAX)
-   INTEGER ierr
+   INTEGER :: ierror
 
    NUM     = 0 
    IDUMMY  = 0
@@ -1667,11 +1671,11 @@ end if !(msr)
    FILENAME = TRIM(INPUT_DIR)//"/"//trim(casename)//"_assim_enkf.nml"
     
    OPEN(INOOB,FILE=TRIM(FILENAME),FORM='FORMATTED')
-   
-   DO WHILE ( .TRUE. )
-     READ(INOOB,*,IOSTAT=ierr) HEADINFO
-     IF (IERR /=0) exit
-     IF (SWITCH /=1) THEN
+
+   DO WHILE(.TRUE.)
+     READ(INOOB,*,IOSTAT=ierror) HEADINFO
+     IF(ierror < 0) EXIT
+     IF(SWITCH/=1) THEN
        IF(HEADINFO=='!===READ') SWITCH = 1
        CYCLE  
      ENDIF
@@ -1804,7 +1808,7 @@ end if !(msr)
    CHARACTER(LEN=24) HEADINFO
    INTEGER STLTMP(ENKF_NOBSMAX)
    INTEGER LAY(ENKF_NOBSMAX)
-   INTEGER IERR
+   INTEGER :: ierror
 
    NUM     = 0 
    IDUMMY  = 0
@@ -1820,9 +1824,9 @@ end if !(msr)
     
    OPEN(INOOB,FILE=TRIM(FILENAME),FORM='FORMATTED')
    REWIND(INOOB)
-   DO WHILE ( .TRUE. )
-     READ(INOOB,*,IOSTAT=ierr) HEADINFO
-     IF (IERR /=0) exit
+   DO WHILE(.TRUE.)
+     READ(INOOB,*,IOSTAT=ierror) HEADINFO
+     IF(ierror < 0) EXIT
      IF(SWITCH/=1) THEN
        IF(HEADINFO=='!===READ') SWITCH = 1
        CYCLE
@@ -1917,14 +1921,14 @@ end if !(msr)
    INTEGER i,icol,irow,j,k,l,ll,indxc(NMAX),indxr(NMAX),ipiv(NMAX)
    REAL(DP) big,dum,pivinv
 
-   do 11 j=1,n
+   do j=1,n
       ipiv(j)=0
-11 continue
-   do 22 i=1,n
+   enddo
+   do i=1,n
       big=0.
-      do 13 j=1,n
+      do j=1,n
         if(ipiv(j).ne.1)then
-          do 12 k=1,n
+          do k=1,n
             if (ipiv(k).eq.0) then
               if (abs(a(j,k)).ge.big)then
                 big=abs(a(j,k))
@@ -1935,22 +1939,22 @@ end if !(msr)
             else if (ipiv(k).gt.1) then
               pause 'singular matrix in gaussj'
             endif
-12       continue
-       endif
-13   continue
-     
+          enddo
+        endif
+      enddo
+
      ipiv(icol)=ipiv(icol)+1
      if (irow.ne.icol) then
-       do 14 l=1,n
+       do l=1,n
          dum=a(irow,l)
          a(irow,l)=a(icol,l)
          a(icol,l)=dum
-14     continue
-       do 15 l=1,m
+       enddo
+       do l=1,m
          dum=b(irow,l)
          b(irow,l)=b(icol,l)
          b(icol,l)=dum
-15     continue
+       enddo
        endif
        indxr(i)=irow
        indxc(i)=icol
@@ -1958,105 +1962,106 @@ end if !(msr)
 
        pivinv=1./a(icol,icol)
        a(icol,icol)=1.
-       do 16 l=1,n
+       do l=1,n
          a(icol,l)=a(icol,l)*pivinv
-16     continue
-       do 17 l=1,m
+       enddo
+       do l=1,m
          b(icol,l)=b(icol,l)*pivinv
-17     continue
-       do 21 ll=1,n
+       enddo
+       do ll=1,n
          if(ll.ne.icol)then
            dum=a(ll,icol)
            a(ll,icol)=0.
-           do 18 l=1,n
+           do l=1,n
              a(ll,l)=a(ll,l)-a(icol,l)*dum
-18         continue
-           do 19 l=1,m
+           enddo
+           do l=1,m
              b(ll,l)=b(ll,l)-b(icol,l)*dum
-19         continue
+           enddo
          endif
-21     continue
-22  continue
-    do 24 l=n,1,-1
+       enddo
+     enddo
+     do l=n,1,-1
        if(indxr(l).ne.indxc(l))then
-
-         do 23 k=1,n
+         do k=1,n
            dum=a(k,indxr(l))
            a(k,indxr(l))=a(k,indxc(l))
            a(k,indxc(l))=dum
-23       continue
+         enddo
        endif
-24  continue
-    
+     enddo
+
     RETURN
     END SUBROUTINE GAUSSJ
 
-   FUNCTION GASDEV(IDUM)
-   IMPLICIT NONE
-   
-   INTEGER IDUM
-   REAL GASDEV
+   SUBROUTINE GASDEV(IDUM,OUT)
+     USE MOD_PREC
+     IMPLICIT NONE
+
+     INTEGER IDUM
+     REAL(DP) OUT
 !CU    USES ran2
 !      REAL ran2
-   INTEGER iset
-   REAL fac,gset,rsq,v1,v2,ran2
-   SAVE iset,gset
-   DATA iset/0/
+     INTEGER iset
+     REAL(DP) fac,gset,rsq,v1,v2
+     SAVE iset,gset
+     DATA iset/0/
 
-   if (iset.eq.0) then
-  rsq=2 
-  DO WHILE (rsq >=1. .or. rsq == 0.) 
-      v1=2.*ran2(idum)-1.
-      v2=2.*ran2(idum)-1.
-      rsq=v1**2+v2**2
-  END DO 
-         fac=sqrt(-2.*log(rsq)/rsq)
-         gset=v1*fac
-         gasdev=v2*fac
-         iset=1
-      else
-         gasdev=gset
-         iset=0
-      endif
-   RETURN
-   END FUNCTION GASDEV
+     if (iset.eq.0) then
+       DO WHILE(.TRUE.)
+1        CALL ran2(idum,v1)
+         CALL ran2(idum,v2)
+         rsq=v1**2+v2**2
+         if(.not. (rsq .ge. 1. .or. rsq .eq. 0.)) EXIT
+       ENDDO
+       fac=sqrt(-2.*log(rsq)/rsq)
+       gset=v1*fac
+       out=v2*fac
+       iset=1
+     else
+       out=gset
+       iset=0
+     endif
+     RETURN
+   END SUBROUTINE GASDEV
 
-   FUNCTION RAN2(IDUM)
-   IMPLICIT NONE
-   
-   INTEGER IDUM,IM1,IM2,IMM1,IA1,IA2,IQ1,IQ2,IR1,IR2,NTAB,NDIV
-   REAL ran2,AM,EPS,RNMX
-   PARAMETER (IM1=2147483563,IM2=2147483399,AM=1./IM1,IMM1=IM1-1,&
+   SUBROUTINE RAN2(IDUM, v)
+     USE MOD_PREC
+     IMPLICIT NONE
+
+     INTEGER IDUM,IM1,IM2,IMM1,IA1,IA2,IQ1,IQ2,IR1,IR2,NTAB,NDIV
+     REAL(DP) AM,EPS,RNMX,v
+     PARAMETER (IM1=2147483563,IM2=2147483399,AM=1./IM1,IMM1=IM1-1,&
               IA1=40014,IA2=40692,IQ1=53668,IQ2=52774,IR1=12211,IR2=3791,&
               NTAB=32,NDIV=1+IMM1/NTAB,EPS=1.2e-7,RNMX=1.-EPS)
-   INTEGER idum2,j,k,iv(NTAB),iy
-   SAVE iv,iy,idum2
-   DATA idum2/123456789/, iv/NTAB*0/, iy/0/
-   
-   if (idum.le.0) then
-      idum=max(-idum,1)
-      idum2=idum
-      do 11 j=NTAB+8,1,-1
+     INTEGER idum2,j,k,iv(NTAB),iy
+     SAVE iv,iy,idum2
+     DATA idum2/123456789/, iv/NTAB*0/, iy/0/
+
+     if (idum.le.0) then
+       idum=max(-idum,1)
+       idum2=idum
+       do j=NTAB+8,1,-1
          k=idum/IQ1
          idum=IA1*(idum-k*IQ1)-k*IR1
          if (idum.lt.0) idum=idum+IM1
          if (j.le.NTAB) iv(j)=idum
-11    continue
-      iy=iv(1)
-   endif
-   k=idum/IQ1
-   idum=IA1*(idum-k*IQ1)-k*IR1
-   if (idum.lt.0) idum=idum+IM1
-   k=idum2/IQ2
-   idum2=IA2*(idum2-k*IQ2)-k*IR2
-   if (idum2.lt.0) idum2=idum2+IM2
-   j=1+iy/NDIV
-   iy=iv(j)-idum2
-   iv(j)=idum
-   if(iy.lt.1)iy=iy+IMM1
-   ran2=min(AM*iy,RNMX)
-   return
-   END FUNCTION RAN2
+       enddo
+       iy=iv(1)
+     endif
+     k=idum/IQ1
+     idum=IA1*(idum-k*IQ1)-k*IR1
+     if (idum.lt.0) idum=idum+IM1
+     k=idum2/IQ2
+     idum2=IA2*(idum2-k*IQ2)-k*IR2
+     if (idum2.lt.0) idum2=idum2+IM2
+     j=1+iy/NDIV
+     iy=iv(j)-idum2
+     iv(j)=idum
+     if(iy.lt.1)iy=iy+IMM1
+     v=2.*min(AM*iy,RNMX)-1.
+     return
+   END SUBROUTINE RAN2
 !-----------------------
    SUBROUTINE FCT2ANL_NC(GLNAME)
 
@@ -2308,11 +2313,11 @@ end if !(msr)
       DO J=1,N
          IPIV(J)=0
       ENDDO
-      DO 22 I=1,N
+      DO I=1,N
          BIG=0.
-         DO 13 J=1,N
+         DO J=1,N
             IF(IPIV(J).NE.1)THEN
-              DO 12 K=1,N
+              DO K=1,N
                  IF (IPIV(K).EQ.0) THEN
                    IF (ABS(A(J,K)).GE.BIG)THEN
                      BIG=ABS(A(J,K))
@@ -2323,21 +2328,21 @@ end if !(msr)
                  ELSE IF (IPIV(K).GT.1) THEN
                    PAUSE 'SINGULAR MATRIX IN GAUSSJ'
                  ENDIF
-12            CONTINUE
+               ENDDO
             ENDIF
-13       CONTINUE
+          ENDDO
          IPIV(ICOL)=IPIV(ICOL)+1
          IF (IROW.NE.ICOL) THEN
-           DO 14 L=1,N
+           DO L=1,N
               DUM=A(IROW,L)
               A(IROW,L)=A(ICOL,L)
               A(ICOL,L)=DUM
-14         CONTINUE
-           DO 15 L=1,M
+            ENDDO
+           DO L=1,M
               DUM=B(IROW,L)
               B(IROW,L)=B(ICOL,L)
               B(ICOL,L)=DUM
-15         CONTINUE
+            ENDDO
          ENDIF
          INDXR(I)=IROW
          INDXC(I)=ICOL
@@ -2345,36 +2350,35 @@ end if !(msr)
 
          PIVINV=1./A(ICOL,ICOL)
          A(ICOL,ICOL)=1.
-         DO 16 L=1,N
+         DO L=1,N
             A(ICOL,L)=A(ICOL,L)*PIVINV
-16       CONTINUE
-         DO 17 L=1,M
+          ENDDO
+         DO L=1,M
             B(ICOL,L)=B(ICOL,L)*PIVINV
-17       CONTINUE
-         DO 21 LL=1,N
+          ENDDO
+         DO LL=1,N
             IF(LL.NE.ICOL)THEN
               DUM=A(LL,ICOL)
               A(LL,ICOL)=0.
-              DO 18 L=1,N
+              DO L=1,N
                  A(LL,L)=A(LL,L)-A(ICOL,L)*DUM
-18            CONTINUE
-              DO 19 L=1,M
+               ENDDO
+              DO L=1,M
                  B(LL,L)=B(LL,L)-B(ICOL,L)*DUM
-19            CONTINUE
+               ENDDO
             ENDIF
-21       CONTINUE
-22    CONTINUE
+          ENDDO
+        ENDDO
 
-      DO 24 L=N,1,-1
+        DO L=N,1,-1
          IF(INDXR(L).NE.INDXC(L))THEN
-
-           DO 23 K=1,N
+           DO K=1,N
               DUM=A(K,INDXR(L))
               A(K,INDXR(L))=A(K,INDXC(L))
               A(K,INDXC(L))=DUM
-23         CONTINUE
+            ENDDO
          ENDIF
-24    CONTINUE
+       ENDDO
 
       RETURN
       END SUBROUTINE GAUSSJ_2

@@ -2704,24 +2704,23 @@
 !  Transforms nondimensional Sqr(w)d/g into nondimensional kd using the
 !  dispersion relation and an iterative method
 
-   IF(D-10.<=0) THEN
-     IF(D-1.<0) THEN
-       X=SQRT(D)
-     ELSE
-       X=D
-     ENDIF
-     DO WHILE (.TRUE.)
-       COTHX=1.0/TANH(X)
-       XX=X-(X-D*COTHX)/(1.+D*(COTHX**2-1.))
-       E=1.-XX/X
-       X=XX
-       IF(ABS(E)-0.0005 < 0) EXIT
-     ENDDO
-   ELSE
-     XX=D
-   ENDIF 
-   
-   WAVE=XX
+    IF(D-10. .GT. 0) THEN
+      XX=D
+    ELSE
+      IF(D-1. .LT. 0) THEN
+        X=SQRT(D)
+      ELSE
+        X=D
+      ENDIF
+      DO WHILE(.TRUE.)
+        COTHX=1.0/TANH(X)
+        XX=X-(X-D*COTHX)/(1.+D*(COTHX**2-1.))
+        E=1.-XX/X
+        X=XX
+        IF(ABS(E)-0.0005 .LT. 0) EXIT
+      ENDDO
+    ENDIF
+    WAVE=XX
    RETURN
    END FUNCTION WAVE
 
@@ -2850,21 +2849,22 @@
    X2=W3
 !
 !     ---------------------------------------
-110 CALL FDW1(G,H,AKA,T1A,WA,X1,X2,X,EPS,M)
+   CALL FDW1(G,H,AKA,T1A,WA,X1,X2,X,EPS,M)
 !     ---------------------------------------
-   IF(M.NE.0) THEN 
+!
+   IF(M.NE.0) THEN
      W1=X
      AK1=WAVE(W1**2*H/G)/H
      AK2=SQRT(AKA*AKA+AK1*AK1-2.*AKA*AK1*COS(T1A))
      W2=SQRT(G*AK2*TANH(AK2*H))
-     IF(W1.GT.W2) THEN
-       IND = -999
-     ELSE 
+     IF(W1.LE.W2) THEN
        T2A=ATAN2(-AK1*SIN(T1A),AKA-AK1*COS(T1A))
+     ELSE
+       IND=-999
      ENDIF
    ELSE
      IND=-999
-   ENDIF     
+   ENDIF
    RETURN
    END SUBROUTINE FINDW1W2
 
@@ -2874,42 +2874,36 @@
    F1=FUNCW1(G,H,X1,AKA,T1A,WA)
    F2=FUNCW1(G,H,X2,AKA,T1A,WA)
    DO WHILE(.TRUE.)
-     IF(F1*F2 < 0) THEN
+     IF(F1*F2 .lt. 0) THEN
        M=M+1
        X=X2-((X2-X1)/(F2-F1)*F2)
-       IF((ABS(X-X2)/ABS(X))-EPS < 0) THEN
-         EXIT
-       ELSE
-         IF((ABS(X-X1)/ABS(X))-EPS < 0) THEN
-           EXIT
-         ELSE
+       IF((ABS(X-X2)/ABS(X))-EPS .ge. 0) THEN
+         IF((ABS(X-X1)/ABS(X))-EPS .ge. 0) THEN
            F=FUNCW1(G,H,X,AKA,T1A,WA)
            FM=F*F1
-           IF(FM <0) THEN
+           IF(FM .lt. 0) THEN
              X2=X
              F2=F
-           ELSEIF(FM ==0) THEN
-             EXIT
-           ELSE
+             CYCLE
+           ELSEIF(FM .gt. 0) THEN
              X1=X
              F1=F
+             CYCLE
            ENDIF
          ENDIF
        ENDIF
-     ELSEIF(F1*F2 == 0) THEN
+     ELSEIF(F1*F2 .EQ. 0) THEN
        M=M+1
-       IF(F1 == 0) THEN
+       IF(F1 .eq. 0) THEN
          X=X1
        ELSE
-         X=X2   
+         X=X2
        ENDIF
-       EXIT
      ELSE
        M=0
-       EXIT
      ENDIF
+     EXIT
    ENDDO
-   
    RETURN
    END SUBROUTINE FDW1
 

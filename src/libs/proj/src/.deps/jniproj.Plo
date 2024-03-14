@@ -1,2 +1,0 @@
-jniproj.lo: jniproj.c proj_config.h
-proj_config.h:

@@ -600,9 +600,9 @@ MODULE MOD_ETKF
    INTEGER  I, J, K, II, JJ, KK
    INTEGER  STDIM
    REAL(DP) DISTST, DELT
-   CHARACTER(LEN=80) TEXT    
-   
-   REAL(DP)  RNOBS, GASDEV
+   CHARACTER(LEN=80) TEXT
+
+   REAL(DP)  RNOBS
    REAL(DP)  RSCALE
    REAL(DP)  ETKF_CINF2
    CHARACTER(LEN=120) FNAM, GNAM
@@ -843,7 +843,7 @@ MODULE MOD_ETKF
 ! Perturb the observation with random errors of sqrt(R(i,i))
    IDUM = -31
    DO I=1, NLOC
-     RNOBS = GASDEV(IDUM)
+     CALL GASDEV(IDUM,RNOBS)
      OBSDATA(I) = OBSDATA(I) + DSQRT(WK(I,I))*RNOBS
    ENDDO
 
@@ -1598,15 +1598,14 @@ MODULE MOD_ETKF
    INTEGER ::  NUM 
    INTEGER  SWITCH
    SAVE     SWITCH
-   INTEGER ::  J,K,PNT
+   INTEGER ::  J,K,PNT,IOS
    INTEGER ::  IDUMMY
    INTEGER ::  TMP
    CHARACTER(LEN=24) HEADINFO
    INTEGER STLTMP(ETKF_NOBSMAX)
    INTEGER LAY(ETKF_NOBSMAX)
-   INTEGER IERR
-   
-   NUM     = 0 
+
+   NUM     = 0
    IDUMMY  = 0
    NLOC    = 0
    PNT     = 0
@@ -1618,12 +1617,14 @@ MODULE MOD_ETKF
 
    IF(ICYC == ETKF_START/DELTA_ASS) SWITCH  = 0 
 
-   DO WHILE ( .TRUE. )
-     READ(INOOB,*,IOSTAT=ierr) HEADINFO
-     IF (IERR /=0) EXIT
-     IF (SWITCH /=1) THEN
-       IF(HEADINFO=='!===READ') SWITCH = 1
-       CYCLE  
+   DO WHILE(.TRUE.)
+     READ(INOOB,*,IOSTAT=IOS) HEADINFO
+     IF(IOS < 0) EXIT
+     IF(SWITCH/=1) THEN
+       IF(HEADINFO=='!===READ') THEN
+         SWITCH = 1
+       ENDIF
+       CYCLE
      ENDIF
 
      IF(TRIM(HEADINFO)=='!STEP=') THEN
@@ -1884,57 +1885,58 @@ MODULE MOD_ETKF
    RETURN
    END FUNCTION DISTST
 
-   FUNCTION GASDEV(IDUM)
+   SUBROUTINE GASDEV(IDUM,OUT)
+   USE MOD_PREC
    IMPLICIT NONE
-   
    INTEGER IDUM
-   REAL GASDEV
 !CU    USES ran2
 !      REAL ran2
    INTEGER iset
-   REAL fac,gset,rsq,v1,v2,ran2
+   REAL(dp) fac,gset,rsq,v1,v2
+   REAL(dp) OUT
    SAVE iset,gset
    DATA iset/0/
 
    if (iset.eq.0) then
-  rsq=2 
-  DO WHILE (rsq >=1. .or. rsq == 0.) 
-     v1=2.*ran2(idum)-1.
-      v2=2.*ran2(idum)-1.
-      rsq=v1**2+v2**2
-  END DO  
-         fac=sqrt(-2.*log(rsq)/rsq)
-         gset=v1*fac
-         gasdev=v2*fac
-         iset=1
-      else
-         gasdev=gset
-         iset=0
-      endif
+     DO WHILE(.TRUE.)
+       CALL ran2(idum, v1)
+       CALL ran2(idum, v2)
+       rsq=v1**2+v2**2
+       if(.not.(rsq.ge.1..or.rsq.eq.0.))EXIT
+     END DO
+     fac=sqrt(-2.*log(rsq)/rsq)
+     gset=v1*fac
+     OUT=v2*fac
+     iset=1
+   else
+     OUT=gset
+     iset=0
+   endif
    RETURN
-   END FUNCTION GASDEV
+   END SUBROUTINE GASDEV
 
-   FUNCTION RAN2(IDUM)
+   SUBROUTINE RAN2(IDUM,V)
+   USE MOD_PREC
    IMPLICIT NONE
-   
+
    INTEGER IDUM,IM1,IM2,IMM1,IA1,IA2,IQ1,IQ2,IR1,IR2,NTAB,NDIV
-   REAL ran2,AM,EPS,RNMX
+   REAL(DP) AM,EPS,RNMX,V
    PARAMETER (IM1=2147483563,IM2=2147483399,AM=1./IM1,IMM1=IM1-1,&
               IA1=40014,IA2=40692,IQ1=53668,IQ2=52774,IR1=12211,IR2=3791,&
               NTAB=32,NDIV=1+IMM1/NTAB,EPS=1.2e-7,RNMX=1.-EPS)
    INTEGER idum2,j,k,iv(NTAB),iy
    SAVE iv,iy,idum2
    DATA idum2/123456789/, iv/NTAB*0/, iy/0/
-   
+
    if (idum.le.0) then
       idum=max(-idum,1)
       idum2=idum
-      do 11 j=NTAB+8,1,-1
+      do j=NTAB+8,1,-1
          k=idum/IQ1
          idum=IA1*(idum-k*IQ1)-k*IR1
          if (idum.lt.0) idum=idum+IM1
          if (j.le.NTAB) iv(j)=idum
-11    continue
+       enddo
       iy=iv(1)
    endif
    k=idum/IQ1
@@ -1947,9 +1949,9 @@ MODULE MOD_ETKF
    iy=iv(j)-idum2
    iv(j)=idum
    if(iy.lt.1)iy=iy+IMM1
-   ran2=min(AM*iy,RNMX)
+   V=2.*min(AM*iy,RNMX)-1.
    return
-   END FUNCTION RAN2
+   END SUBROUTINE RAN2
 
    SUBROUTINE PRINT_ERR(ERR,NDIM,TEXT,ERR2)
    USE MOD_PREC
@@ -2067,7 +2069,7 @@ MODULE MOD_ETKF
    TMP = 0.0_DP
    ISEED = -7111
    DO K=1, ETKF_NENS
-      RNBC(K) = GASDEV(ISEED)
+      CALL GASDEV(ISEED,RNBC(K))
       RNBC_AVG = RNBC_AVG + RNBC(K)
    ENDDO
    RNBC_AVG = RNBC_AVG/DBLE(ETKF_NENS)

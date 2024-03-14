@@ -1,5 +1,5 @@
-#  if defined (WAVE_CURRENT_INTERACTION)
 MODULE MOD_WAVE_CURRENT_INTERACTION
+#  if defined (WAVE_CURRENT_INTERACTION)
    USE MOD_PREC
    USE VARS_WAVE
 #  if defined(MULTIPROCESSOR)
@@ -20,6 +20,12 @@ MODULE MOD_WAVE_CURRENT_INTERACTION
    REAL(SP), ALLOCATABLE :: WAVESTRX_3D(:,:),WAVESTRY_3D(:,:)
    REAL(SP), ALLOCATABLE :: U_STOKES_2D(:),V_STOKES_2D(:)
    REAL(SP), ALLOCATABLE :: U_STOKES_3D(:,:),V_STOKES_3D(:,:)
+#  if defined (VORTEX_FORCE)
+   REAL(SP), ALLOCATABLE :: W_STOKES_3D(:,:) !Xia et al. (2020)
+   REAL(SP), ALLOCATABLE :: WW_STOKES_3D(:,:) !Xia et al. (2020)
+   REAL(SP), ALLOCATABLE :: W_STOKES_3D_TMP(:,:) !Xia et al. (2020)
+   REAL(SP), ALLOCATABLE :: WW_STOKES_3D_TMP(:,:) !Xia et al. (2020)
+#  endif
    REAL(SP), ALLOCATABLE :: U_STOKES_2D_TMP(:),V_STOKES_2D_TMP(:)
    REAL(SP), ALLOCATABLE :: U_STOKES_3D_TMP(:,:),V_STOKES_3D_TMP(:,:)
    REAL(SP), ALLOCATABLE :: TPZDIST(:,:)
@@ -32,10 +38,21 @@ MODULE MOD_WAVE_CURRENT_INTERACTION
    REAL(SP), ALLOCATABLE :: UNODE(:,:),VNODE(:,:)
 ! for roller
    REAL(SP), ALLOCATABLE :: GAMW(:),OROLLER(:),ROLLA(:)
+#  if defined (VORTEX_FORCE)
+   REAL(SP), ALLOCATABLE :: ROLLA_VF(:) !Xia et al. (2020)
+#  endif
 ! end
    REAL(SP), PARAMETER :: KDMAX = 3.0_SP ! Based on MELLOR(2015). For old code: KDMAX = 5.0_SP
    REAL(SP), PARAMETER :: WAVE_LENGTH_MIN = 0.01_SP
    REAL(SP), PARAMETER :: eps1 = 1E-14_SP
+
+#  if defined (VORTEX_FORCE)
+!  Start add
+   REAL(SP), ALLOCATABLE :: DISSIP_BREAK(:),DISSIP_WCAP(:),DISSIP_ROLLER(:)
+   REAL(SP), ALLOCATABLE :: XSTFLUX(:,:) !Xia et al. (2020)
+   REAL(SP), ALLOCATABLE :: DISSIP_FRIC(:)
+!  End add
+#  endif
 
 ! for bbl
 !   The Options MB_Z0BL and MB_Z0RIP should be activated concurrently.      **
@@ -125,13 +142,29 @@ MODULE MOD_WAVE_CURRENT_INTERACTION
    ALLOCATE(V_STOKES_2D(0:NT));      V_STOKES_2D = 0.0_SP
    ALLOCATE(U_STOKES_3D(0:NT,KB));   U_STOKES_3D = 0.0_SP
    ALLOCATE(V_STOKES_3D(0:NT,KB));   V_STOKES_3D = 0.0_SP
+#  if defined (VORTEX_FORCE)
+   ALLOCATE(W_STOKES_3D(0:NT,KB));   W_STOKES_3D = 0.0_SP !Xia et al. (2020)
+   ALLOCATE(WW_STOKES_3D(0:NT,KB));  WW_STOKES_3D = 0.0_SP !Xia et al. (2020)
+   ALLOCATE(XSTFLUX(0:MT,KBM1)); XSTFLUX = 0.0_SP !Xia et al. (2020)
+   ALLOCATE(DISSIP_BREAK(0:MT));     DISSIP_BREAK = 0.0_SP !Xia et al. (2020)
+   ALLOCATE(DISSIP_WCAP(0:MT));      DISSIP_WCAP = 0.0_SP  !Xia et al. (2020)
+   ALLOCATE(DISSIP_ROLLER(0:MT));    DISSIP_ROLLER = 0.0_SP !Xia et al. (2020)
+   ALLOCATE(DISSIP_FRIC(0:MT));      DISSIP_FRIC = 0.0_SP !Xia et al. (2020)
+#  endif
    ALLOCATE(U_STOKES_2D_TMP(0:MT));  U_STOKES_2D_TMP = 0.0_SP
    ALLOCATE(V_STOKES_2D_TMP(0:MT));  V_STOKES_2D_TMP = 0.0_SP
    ALLOCATE(U_STOKES_3D_TMP(0:MT,KB));   U_STOKES_3D_TMP = 0.0_SP
    ALLOCATE(V_STOKES_3D_TMP(0:MT,KB));   V_STOKES_3D_TMP = 0.0_SP
+#  if defined (VORTEX_FORCE)
+   ALLOCATE(W_STOKES_3D_TMP(0:MT,KB)); W_STOKES_3D_TMP = 0.0_SP !Xia et al. (2020)
+   ALLOCATE(WW_STOKES_3D_TMP(0:MT,KB)); WW_STOKES_3D_TMP = 0.0_SP !Xia et al. (2020)
+#  endif
    ALLOCATE(GAMW(0:MT));             GAMW        = 0.0_SP
    ALLOCATE(OROLLER(0:MT));          OROLLER     = 0.0_SP
    ALLOCATE(ROLLA(0:MT));            ROLLA      = 0.0_SP
+#  if defined (VORTEX_FORCE)
+   ALLOCATE(ROLLA_VF(0:MT));         ROLLA_VF   = 0.0_SP !Xia et al. (2020)
+#  endif
    ALLOCATE(TPZDIST(0:NT,KB));       TPZDIST     = 0.0_SP
    ALLOCATE(UW10(0:NT));             UW10        = 0.0_SP
    ALLOCATE(VW10(0:NT));             VW10        = 0.0_SP
@@ -264,10 +297,10 @@ MODULE MOD_WAVE_CURRENT_INTERACTION
      GAMW(I) = MIN(D(I)/(HSC1(I)+eps1),5.0_SP) 
      DO K=1,KBM1
         OROLLER(I)=OROLLER(I)+D(I)*DZ(I,K)*(1.0_SP-TANH((2.0_SP*ZZ(I,K)*GAMW(I))**4))
-     ENDDO
+     END DO
      OROLLER(I)=1.0_SP/(OROLLER(I)+eps1)
      ROLLA(I)=0.0424*HSC1(I)*QB1(I)*WLEN(I)
-   ENDDO
+   END DO
 #endif
    
 !----------INITIALIZE STRESS ARRAY ----------------------------------------------!
@@ -433,7 +466,7 @@ MODULE MOD_WAVE_CURRENT_INTERACTION
      DO K=1,KBM1
         WAVESTRX_2D(I) = WAVESTRX_2D(I)+WAVESTRX_3D(I,K)
         WAVESTRY_2D(I) = WAVESTRY_2D(I)+WAVESTRY_3D(I,K)
-     ENDDO
+     END DO
    END DO
 !#  else
 !   CALL RADIATION_STRESS_2D
@@ -1001,7 +1034,841 @@ END SUBROUTINE CAL_S
      
    RETURN
    END SUBROUTINE WAVE_STRESS
+
+#  if defined (VORTEX_FORCE)
 !==============================================================================|
+! Cite Xia, M., Mao, M., Niu, Q., 2020. Implementation and comparison of the recent
+! three-dimensional radiation stress theory and vortex-force formalism in an
+! unstructured-grid coastal circulation model. Estuar. Coast. Shelf Sci. 240, 106771.
+! https://doi.org/10.1016/j.ecss.2020.106771.
+!====================================================================================|  
+   SUBROUTINE VORTEX_FORMALISM_3D
+   USE MOD_NORTHPOLE
+    IMPLICIT NONE
+    REAL(SP), DIMENSION(0:MT) :: WAVE_NUMBER,WAVE_NUMBER_X,WAVE_NUMBER_Y,SIN_DIR,COS_DIR
+    REAL(SP), DIMENSION(0:MT) :: WAVE_ENERGY,KD,WAVE_C
+    REAL(SP), DIMENSION(0:MT) :: DSTP,ODSTP,WAVEAA,XIGMA,OXIGMA,ODISS,GAMR
+    REAL(SP), DIMENSION(0:MT) :: KWD,owd
+    REAL(SP), DIMENSION(0:MT) :: rukvf2d,rvkvf2d,rubrk2d,rvbrk2d,rurol2d,rvrol2d
+    REAL(SP), DIMENSION(0:MT,KB) :: BBXbrk,BBYbrk,BBXrol,BBYrol
+    REAL(SP), DIMENSION(0:NT,KB) :: BBXbrk_E,BBYbrk_E,BBXrol_E,BBYrol_E
+    REAL(SP), DIMENSION(0:MT,KB) :: BBXwbs,BBYwbs
+    REAL(SP), DIMENSION(0:NT,KB) :: BBXwbs_E,BBYwbs_E
+    REAL(SP), DIMENSION(0:MT,KB) :: BBXwss,BBYwss
+    REAL(SP), DIMENSION(0:NT,KB) :: BBXwss_E,BBYwss_E
+    REAL(SP), DIMENSION(0:NT,KB) :: DZ_E
+    REAL(SP), DIMENSION(0:NT) :: D_E
+    REAL(SP), DIMENSION(0:MT,KB) :: ku,kv,shear1,shear2
+    REAL(SP), DIMENSION(0:NT,KB) :: HASt_X,HASt_Y,HVF_X,HVF_Y,WVF_X,WVF_Y,BH_X,BH_Y,shear3,shear4
+    REAL(SP), DIMENSION(0:NT,KB) :: DIJ_X,DIJ_Y
+    REAL(SP), ALLOCATABLE :: bh(:),qsp(:)
+    REAL(SP) :: fac1,fac2,vi1,vi2,wec_alpha
+    REAL(SP) :: DDDX,DDDY,DEDX,DEDY,ETF1AA,WW1_STOKES_3D,WW2_STOKES_3D
+    REAL(SP), DIMENSION(0:MT) :: O_WAVE_NUMBER
+    REAL(SP), DIMENSION(0:MT) :: O_COSH,O_SINH,O_2SINH
+    REAL(SP), PARAMETER :: eps1 = 1E-14_SP
+    INTEGER :: I,K,IA,IB,J1,J2
+    INTEGER :: I1,J3 
+    INTEGER :: CNT,CC,JJ
+    REAL(SP) :: SIGMAT,EXFLUX
+    REAL(SP) :: CFF11,CFF12,CFF13,CFF14,CFF15,CFF16,CFF17,CFF18,CFF19, &
+    CFF20,CFF21,CFF22,CFF23,CFF24,CFF25,CFF26,CFF27,CFF28,CFF29,CFF30,CFF31,CFF32
+    REAL(SP) :: CFF2,UNODEIJ,VNODEIJ,DZIJ
+    ! for roller
+    REAL(SP) :: CFF1,CFF3,CFF4
+    REAL(SP) :: CFF40,CFF41,CFF42,CFF43
+    REAL(SP), PARAMETER :: GAMMAW = 0.31_SP
+    REAL(SP) :: USTIJ,VSTIJ
+    REAL(SP), PARAMETER :: sinb = 0.1_SP
+    REAL(SP), PARAMETER :: KWDmax = 200.0_SP
+    REAL(SP), PARAMETER :: awd = 1.0_SP
+    REAL(SP), PARAMETER :: ks = 0.045_SP
+    REAL(SP), ALLOCATABLE :: GAMW(:),OROLLER(:),ROLLA(:)
+    INTEGER :: FLAG_DISSIP
+    REAL(SP) :: XTMP,XTMP1,EXFLUXX,EXFLUXY,EXFLUXXA,EXFLUXXB,EXFLUXYA,EXFLUXYB,DIJ,U_STOKES_3DIJ,V_STOKES_3DIJ,W_STOKES_3DIJ,WW_STOKES_3DIJ,bhIJ,qspIJ
+
+   WAVE_NUMBER = 0.0_SP; WAVE_NUMBER_X = 0.0_SP; WAVE_NUMBER_Y = 0.0_SP;
+   O_WAVE_NUMBER = 0.0_SP;
+   O_COSH = 0.0_SP; O_SINH = 0.0_SP; O_2SINH = 0.0_SP;
+   HASt_X =0.0_SP; HASt_Y = 0.0_SP; HVF_X = 0.0_SP; HVF_Y = 0.0_SP
+   WVF_X = 0.0_SP; WVF_Y = 0.0_SP; DIJ_X =0.0_SP; DIJ_Y = 0.0_SP
+   BH_X = 0.0_SP; BH_Y = 0.0_SP
+! Compute total depth
+    DSTP = D
+  DO I=0,MT
+    ODSTP(I) = 1.0_SP/(DSTP(I)+eps1)
+  END DO
+
+! Compte wave amplitude (0.5*Hrsm), wave number, instrinsic frequency
+   DO I=1,MT
+   WAVE_NUMBER(I) = 2.0_SP*PI/MAX(WLEN(I),WAVE_LENGTH_MIN)
+   END DO
+
+   O_WAVE_NUMBER = 1.0_SP/WAVE_NUMBER
+   SIN_DIR = SIN(DIRDEG1*DEG2RAD)
+   COS_DIR = COS(DIRDEG1*DEG2RAD)
+   WAVE_NUMBER_X = WAVE_NUMBER*COS_DIR
+   WAVE_NUMBER_Y = WAVE_NUMBER*SIN_DIR
+   WAVE_ENERGY   = 0.0625_SP*GRAV_N*HSC1*HSC1
+
+   DO I=1,MT
+   CFF11 = 0.25_SP*SQRT(2.0_SP)*HSC1(I)
+   WAVEAA(I) = CFF11*CFF11
+   END DO
+
+# if defined (WET_DRY)
+  DO I = 1,MT
+      WAVEAA(I) = WAVEAA(I)*ISWETN(I)
+  END DO
+# endif
+
+  DO I=1,MT
+  XIGMA(I) = SQRT(GRAV_N(I)*WAVE_NUMBER(I)*TANH(WAVE_NUMBER(I)*DSTP(I)))
+  OXIGMA(I) = 1.0_SP/XIGMA(I)
+  END DO
+
+! Computer wave celerity and nonlinear water depth
+   DO I=1,MT
+    KD(I) = MIN(WAVE_NUMBER(I)*DSTP(I),KDMAX)
+  END DO
+
+  WHERE(KD <= KDMAX)
+  WAVE_C = SQRT(GRAV_N*O_WAVE_NUMBER*TANH(KD))
+    O_COSH  = 1.0_SP/COSH(KD)
+    O_SINH  = 1.0_SP/SINH(KD)
+    O_2SINH = 1.0_SP/SINH(2.0_SP*KD)
+   ELSEWHERE
+    WAVE_C = SQRT(GRAV_N*O_WAVE_NUMBER*TANH(KD))
+   END WHERE
+
+   ALLOCATE(GAMW(0:MT));             GAMW        = 0.0_SP
+   ALLOCATE(OROLLER(0:MT));          OROLLER     = 0.0_SP
+   ALLOCATE(ROLLA(0:MT));            ROLLA      = 0.0_SP
+
+#if defined(WAVE_ROLLER)
+   OROLLER = 0.0_SP;GAMW = 0.0_SP; ROLLA = 0.0_SP
+   DO I=1,MT
+     GAMW(I) = MIN(D(I)/(HSC1(I)+eps1),5.0_SP)
+     DO K=1,KBM1
+        OROLLER(I)=OROLLER(I)+D(I)*DZ(I,K)*(1.0_SP-TANH((2.0_SP*ZZ(I,K)*GAMW(I))**4))
+     ENDDO
+   OROLLER(I)=1.0_SP/(OROLLER(I)+eps1)
+   ROLLA(I)=0.0424*HSC1(I)*QB1(I)*WLEN(I)
+   ENDDO
+#endif
+
+! Compute metrics for vertical dissipation distribution
+  DO I=1,MT
+   ODISS(I) = 0.0_SP
+    GAMR(I) = MIN(0.707_SP*DSTP(I)/(1.25_SP*HSC1(I)+eps1),1.0_SP)
+  DO K=KBM1,1,-1
+     CFF12 = (ZZ(I,K)-Z(I,KB))*D(I)*ODSTP(I)*GAMR(I)
+     ODISS(I)=ODISS(I)+DZ(I,K)*D(I)*COSH(2.0_SP*PI*CFF12)
+  END DO
+  ODISS(I)=1.0_SP/(ODISS(I)+eps1)
+  END DO
+
+! ------------------------------------------------------------------
+! Compute Bernoulli's Head (BH), represented as the
+! symbol cursive K in Eqn. 5
+! -------------------------------------------------------------------
+  DO I=1,M
+    DO K=1,KBM1
+     UNODE(I,K) = 0.0_SP
+     VNODE(I,K) = 0.0_SP
+     CNT = 0
+     DO JJ=1,NTVE(I)
+        CNT =CNT + 1
+        CC = NBVE(I,JJ)
+        UNODE(I,K) = UNODE(I,K) + U(CC,K)
+        VNODE(I,K) = VNODE(I,K) + V(CC,K)
+     ENDDO
+     UNODE(I,K) = UNODE(I,K) / CNT
+     VNODE(I,K) = VNODE(I,K) / CNT
+    ENDDO
+   ENDDO
+!------------------------------------------------------------------------
+   ALLOCATE(bh(0:MT)); bh = 0.0_SP
+   ALLOCATE(qsp(0:MT)); qsp = 0.0_SP
+! Compute k*u and k*v at rho pts.
+ DO I=1,MT
+  DO K=KBM1,1,-1
+ ku(I,K) = UNODE(I,K)*WAVE_NUMBER_X(I)
+ kv(I,K) = VNODE(I,K)*WAVE_NUMBER_Y(I)
+ END DO
+  END DO
+
+! Compute gradients for shear d(k_x*u)/dz at cell faces
+ DO I=1,MT
+ DO K=KBM1,2,-1
+ CFF13 = 1.0_SP/(D(I)*(ZZ(I,K-1)-ZZ(I,K)))
+  shear1(I,K) = CFF13*((ku(I,K-1)-ku(I,K))+(kv(I,K-1)-kv(I,K)))
+ END DO
+   END DO
+
+! Applying boundary conditions
+ DO I=1,MT
+  shear1(I,KB)= shear1(I,KB-1)
+  shear1(I,1) = shear1(I,2)
+ END DO
+
+! Compute second derivative d(k_x*u)^2/dz^2
+ DO I=1,MT
+ DO K=KBM1,1,-1
+! CFF14 = 1.0_SP/(D(I)*(ZZ(I,K)-ZZ(I,K+1)))
+  CFF14 = 1.0_SP/(D(I)*(Z(I,K)-Z(I,K+1)))
+ shear2(I,K) = CFF14*(shear1(I,K)-shear1(I,K+1))
+ END DO
+ END DO
+
+! Perform integration on the shear2 term calculated above
+ DO I=1,MT
+ CFF15 = D(I)*DZ(I,KBM1)
+ fac2 = D(I)*(ZZ(I,1)-ZZ(I,KBM1))*ODSTP(I)
+ vi1 = CFF15*shear2(I,KBM1)*SINH(2.0_SP*KD(I)*fac2)  
+
+ DO K=KBM1-1,1,-1
+ CFF16 = D(I)*DZ(I,K)
+ fac2 = D(I)*(ZZ(I,1)-ZZ(I,K))*ODSTP(I)
+ vi1 = vi1+CFF16*shear2(I,K)*SINH(2.0_SP*KD(I)*fac2)
+ END DO
+! Calculate Bernoulli's Head at the surface
+ bh(I)=0.25_SP*vi1*XIGMA(I)*WAVEAA(I)*O_SINH(I)*O_SINH(I)/(WAVE_NUMBER(I))
+ END DO
+!---------------------------------------------------------------------------
+! Compute quasi-static components of pressure terms (i.e. Cursive P)
+! in Eqn. 9
+!---------------------------------------------------------------------------
+
+  DO I=1,MT
+ fac2 = D(I)*(ZZ(I,KBM1)-Z(I,KBM1+1))*ODSTP(I)
+ CFF17 = D(I)*DZ(I,KBM1)
+ vi2 = CFF17*shear2(I,KBM1)*COSH(2.0_SP*KD(I)*fac2)
+  DO K=KBM1-1,1,-1
+  fac2 = D(I)*(ZZ(I,K)-Z(I,KBM1+1))*ODSTP(I)
+  CFF18 = D(I)*DZ(I,K)
+  vi2 = vi2+CFF18*shear2(I,K)*COSH(2.0_SP*KD(I)*fac2)
+
+ END DO
+ CFF19 = 0.5_SP*WAVEAA(I)*OXIGMA(I)
+ CFF20 = TANH(KD(I))*O_2SINH(I)
+
+ qsp(I)=CFF19*CFF20*(-shear1(I,1)+COSH(2*KD(I))*shear1(I,KBM1+1)+ &
+         vi2)-2.0_SP*WAVE_NUMBER(I)*TANH(KD(I))*(ku(I,1)+kv(I,1))
+ qsp(I)=0.0_SP 
+ END DO
+
+! ---------------------------------------------------------------------
+! Compute Vertical Vortex Force terms, denoted as K in Eqn. 5
+! This next section needs to be re-writeen for piped J. 
+! ---------------------------------------------------------------------
+! Calculate Stokes velocity first
+   U_STOKES_3D_TMP = 0.0_SP; U_STOKES_3D = 0.0_SP; U_STOKES_2D = 0.0_SP
+   V_STOKES_3D_TMP = 0.0_SP; V_STOKES_3D = 0.0_SP; V_STOKES_2D = 0.0_SP
+   W_STOKES_3D = 0.0_SP; WW_STOKES_3D = 0.0_SP
+
+DO I=1,M
+     DO K=1,KBM1
+        FAC2 = 1.0_SP+ZZ(I,K)
+        IF (KD(I)<=1.0_SP) THEN ! Xia et al. (2020)
+# if defined (WAVE_ROLLER)
+        CFF2=2/WAVE_C(I)*COSH(2*KD(I)*FAC2)/SINH(2*KD(I))*(WAVE_ENERGY(I)+D(I)*GRAV_N(I)*ROLLA(I)/(WLEN(I)+eps1))
+# else
+        CFF2=2/WAVE_C(I)*COSH(2*KD(I)*FAC2)/SINH(2*KD(I))*WAVE_ENERGY(I)
+# endif
+        ELSE IF (KD(I)>=10.0_SP) THEN
+# if defined (WAVE_ROLLER)
+        CFF2=2/WAVE_C(I)*EXP(2.0_SP*ZZ(I,K)*KD(I))*(WAVE_ENERGY(I)+D(I)*GRAV_N(I)*ROLLA(I)/(WLEN(I)+eps1))
+# else
+        CFF2=2/WAVE_C(I)*EXP(2.0_SP*ZZ(I,K)*KD(I))*WAVE_ENERGY(I)
+# endif
+       ELSE
+# if defined (WAVE_ROLLER)
+        CFF2=((10.0_SP-KD(I))/9.0_SP)*(2/WAVE_C(I)*COSH(2*KD(I)*FAC2)/SINH(2*KD(I))*(WAVE_ENERGY(I)+D(I)*GRAV_N(I)*ROLLA(I)/(WLEN(I)+eps1))) + &
+             ((KD(I)-1.0_SP)/9.0_SP)*(2/WAVE_C(I)*EXP(2.0_SP*ZZ(I,K)*KD(I))*(WAVE_ENERGY(I)+D(I)*GRAV_N(I)*ROLLA(I)/(WLEN(I)+eps1)))
+# else
+        CFF2=((10.0_SP-KD(I))/9.0_SP)*(2/WAVE_C(I)*COSH(2*KD(I)*FAC2)/SINH(2*KD(I))*WAVE_ENERGY(I)) + &
+             ((KD(I)-1.0_SP)/9.0_SP)*(2/WAVE_C(I)*EXP(2.0_SP*ZZ(I,K)*KD(I))*WAVE_ENERGY(I))
+# endif
+       END IF
+        U_STOKES_3D_TMP(I,K)=CFF2*WAVE_NUMBER_X(I)
+        V_STOKES_3D_TMP(I,K)=CFF2*WAVE_NUMBER_Y(I)
+     END DO
+   END DO
+
+  DO I=1,NT
+     DO K=KBM1,1,-1
+       U_STOKES_3D(I,K)=(U_STOKES_3D_TMP(NV(I,1),K)+U_STOKES_3D_TMP(NV(I,2),K)+U_STOKES_3D_TMP(NV(I,3),K))/3.0_SP
+       V_STOKES_3D(I,K)=(V_STOKES_3D_TMP(NV(I,1),K)+V_STOKES_3D_TMP(NV(I,2),K)+V_STOKES_3D_TMP(NV(I,3),K))/3.0_SP
+
+#  if defined (WET_DRY)
+     U_STOKES_3D(I,K) = U_STOKES_3D(I,K)*ISWETC(I)
+     V_STOKES_3D(I,K) = V_STOKES_3D(I,K)*ISWETC(I)
+     IF(ISBCE(I) == 2)THEN
+       U_STOKES_3D(I,K) = 0.0_SP
+       V_STOKES_3D(I,K) = 0.0_SP
+     END IF
+#  endif
+
+       U_STOKES_2D(I)=U_STOKES_2D(I)+U_STOKES_3D(I,K)*DZ1(I,K)
+       V_STOKES_2D(I)=V_STOKES_2D(I)+V_STOKES_3D(I,K)*DZ1(I,K)
+     END DO
+   END DO
+
+# if defined(MULTIPROCESSOR)
+   IF(PAR)CALL NODE_MATCH(1,NBN,BN_MLT,BN_LOC,BNC,MT,KB,MYID,NPROCS,U_STOKES_3D_TMP,V_STOKES_3D_TMP) 
+   IF(PAR)CALL AEXCHANGE(NC,MYID,NPROCS,U_STOKES_3D_TMP,V_STOKES_3D_TMP)
+# endif
+
+  EXFLUXXA = 0.0_SP;
+  EXFLUXXB = 0.0_SP;
+  EXFLUXYA = 0.0_SP;
+  EXFLUXYB = 0.0_SP;
+  
+   DO I=1,NE
+     IA=IEC(I,1)
+     IB=IEC(I,2)
+     J1=IENODE(I,1)
+     J2=IENODE(I,2)
+
+#    if defined (WET_DRY)
+     IF(ISWETC(IA) == 1 .OR. ISWETC(IB) == 1)THEN
+#    endif 
+
+    DO K=KBM1,1,-1
+     U_STOKES_3DIJ=0.5_SP*(U_STOKES_3D_TMP(J1,K)+U_STOKES_3D_TMP(J2,K))
+     V_STOKES_3DIJ=0.5_SP*(V_STOKES_3D_TMP(J1,K)+V_STOKES_3D_TMP(J2,K))
+     UNODEIJ=0.5_SP*(UNODE(J1,K)+UNODE(J2,K))
+     VNODEIJ=0.5_SP*(VNODE(J1,K)+VNODE(J2,K))
+     DIJ=0.5_SP*(D(J1)*DZ(J1,K)+D(J2)*DZ(J2,K))
+     DZIJ=0.5_SP*(DZ(J1,K)+DZ(J2,K))
+#      if defined (SPHERICAL)
+       !for spherical coordinator and domain across 360^o          
+       XTMP  = VX(J2)*TPI-VX(J1)*TPI
+       XTMP1 = VX(J2)-VX(J1)
+       IF(XTMP1 >  180.0_SP)THEN
+         XTMP = -360.0_SP*TPI+XTMP
+       ELSE IF(XTMP1 < -180.0_SP)THEN
+         XTMP =  360.0_SP*TPI+XTMP
+       END IF
+      EXFLUXXA=DIJ*U_STOKES_3DIJ*DLTYC(I)-DIJ*V_STOKES_3DIJ*XTMP*COS(DEG2RAD*YC(IA))
+      EXFLUXXB=DIJ*U_STOKES_3DIJ*DLTYC(I)-DIJ*V_STOKES_3DIJ*XTMP*COS(DEG2RAD*YC(IB))
+      EXFLUXYA=DIJ*U_STOKES_3DIJ*DLTYC(I)-DIJ*V_STOKES_3DIJ*XTMP*COS(DEG2RAD*YC(IA))
+      EXFLUXYB=DIJ*U_STOKES_3DIJ*DLTYC(I)-DIJ*V_STOKES_3DIJ*XTMP*COS(DEG2RAD*YC(IB))
+
+#      else
+      EXFLUXXA=DIJ*U_STOKES_3DIJ*DLTYC(I)-DIJ*V_STOKES_3DIJ*DLTXC(I)
+      EXFLUXXB=DIJ*U_STOKES_3DIJ*DLTYC(I)-DIJ*V_STOKES_3DIJ*DLTXC(I)
+      EXFLUXYA=DIJ*U_STOKES_3DIJ*DLTYC(I)-DIJ*V_STOKES_3DIJ*DLTXC(I)
+      EXFLUXYB=DIJ*U_STOKES_3DIJ*DLTYC(I)-DIJ*V_STOKES_3DIJ*DLTXC(I)
+# endif
+      HASt_X(IA,K)=HASt_X(IA,K)-EXFLUXXA
+      HASt_X(IB,K)=HASt_X(IB,K)+EXFLUXXB
+      HASt_Y(IA,K)=HASt_Y(IA,K)-EXFLUXYA
+      HASt_Y(IB,K)=HASt_Y(IB,K)+EXFLUXYB
+ END DO
+
+#    if defined (WET_DRY)
+     END IF
+#    endif 
+   END DO
+
+      WAVESTRX_3D = 0.0_SP
+      WAVESTRY_3D = 0.0_SP
+
+  DO I=1,NT
+   DO K=KBM1,1,-1
+     WAVESTRX_3D(I,K) = WAVESTRX_3D(I,K) + HASt_X(I,K)*U(I,K)
+     WAVESTRY_3D(I,K) = WAVESTRY_3D(I,K) + HASt_Y(I,K)*V(I,K)
+  ENDDO
+ ENDDO
+
+#  if defined (WET_DRY)
+   DO I = 1,NT
+     WAVESTRX_3D(I,:) = WAVESTRX_3D(I,:)*ISWETC(I)
+     WAVESTRY_3D(I,:) = WAVESTRY_3D(I,:)*ISWETC(I)
+     IF(ISBCE(I) == 2)THEN
+       WAVESTRX_3D(I,:) = 0.0_SP
+       WAVESTRY_3D(I,:) = 0.0_SP
+     END IF
+   END DO
+#  endif
+!3D1
+!-----------------Calculate the omega stokes velocity-------------
+!-----------------------------------------INITIALIZE FLUX-----------------------------!
+ XSTFLUX = 0.0_SP
+!----------------------------------ACCUMULATE FLUX-------------------------------------!
+  DO I=1,NCV
+ I1=NTRG(I)
+ IA=NIEC(I,1)
+ IB=NIEC(I,2)
+
+ DO K=KBM1,1,-1
+
+ DIJ = DT1(I1)*DZ1(I1,K)
+ USTIJ = U_STOKES_3D(I1,K)
+ VSTIJ = V_STOKES_3D(I1,K)
+ EXFLUX = DIJ*(-USTIJ*DLTYE(I)+VSTIJ*DLTXE(I))
+
+# if defined (WET_DRY)
+ EXFLUX =  EXFLUX*ISWETCT(I1)*ISWETC(I1)
+# endif
+
+ XSTFLUX(IA,K)=XSTFLUX(IA,K)-EXFLUX
+ XSTFLUX(IB,K)=XSTFLUX(IB,K)+EXFLUX
+
+ ENDDO
+
+ ENDDO
+
+# if defined (SPHERICAL)
+ CALL VERTVL_EDGE_XY(XSTFLUX,0.0_SP)
+#  endif
+ !--------------------------NULIFY BOUNDARY FLUX-----------------------!
+# if !defined (MEAN_FLOW)
+ DO I=1,M
+  DO K=KBM1,1,-1
+   IF(ISONB(I) == 2) XSTFLUX(I,K)=0.0_SP
+  ENDDO
+ ENDDO
+# endif
+
+# if defined (ONE_D_MODEL)
+ XSTFLUX = 0.0_SP
+# endif
+
+!CLEAR OLD VALUES
+ W_STOKES_3D_TMP = 0.0_SP
+
+!---------------------CALCULATE STOKES OMEGA --------------------------!
+ DO I = 1,M
+# if defined (WET_DRY)
+ IF(ISWETNT(I)*ISWETN(I) == 1) THEN
+# endif
+
+ DO K = KBM1,1,-1
+ W_STOKES_3D_TMP(I,K+1) = W_STOKES_3D_TMP(I,K)+XSTFLUX(I,K)/ART1(I)
+ ENDDO
+
+# if defined (WET_DRY)
+ ELSE
+ DO K = KBM1,1,-1
+ W_STOKES_3D_TMP(I,K+1)=0.0_SP
+ ENDDO
+
+ ENDIF
+# endif
+ ENDDO
+
+ DO I=1,M
+ W_STOKES_3D_TMP(I,KBM1) = 0.0_SP
+ W_STOKES_3D_TMP(I,1) = 0.0_SP
+ END DO
+
+# if defined (MULTIPROCESSOR)
+ IF(PAR) CALL NODE_MATCH(1,NBN,BN_MLT,BN_LOC,BNC,MT,KB,MYID,NPROCS,W_STOKES_3D_TMP)
+ IF(PAR) CALL AEXCHANGE(NC,MYID,NPROCS,W_STOKES_3D_TMP)
+# endif
+!---------------------TRANSFER STOKES OMEGA TO FACE CENTER----------------------!
+ DO I = 1,N
+ DO K = KB,1,-1
+ W_STOKES_3D(I,K) = ONE_THIRD*(W_STOKES_3D_TMP(NV(I,1),K)+W_STOKES_3D_TMP(NV(I,2),K)+W_STOKES_3D_TMP(NV(I,3),K))
+ ENDDO
+ ENDDO
+
+# if defined (WET_DRY)
+ DO I = 1, N
+ DO K = KB,1,-1
+ W_STOKES_3D(I,K) = FLOAT(ISWETC(I))*W_STOKES_3D(I,K)
+ ENDDO
+ ENDDO
+# endif
+
+  DO I=1,NT 
+#  if defined (WET_DRY)
+    IF(ISWETC(I) == 1)THEN
+#  endif
+     J1=NV(I,1)
+     J2=NV(I,2)
+     J3=NV(I,3)
+     DDDX=AWX(I,1) * D(J1)+AWX(I,2) * D(J2)+AWX(I,3)*D(J3)
+     DDDY=AWY(I,1) * D(J1)+AWY(I,2) * D(J2)+AWY(I,3)*D(J3)
+     DEDX=AWX(I,1)*ELF(J1)+AWX(I,2)*ELF(J2)+AWX(I,3)*ELF(J3)
+     DEDY=AWY(I,1)*ELF(J1)+AWY(I,2)*ELF(J2)+AWY(I,3)*ELF(J3)
+     ETF1AA=ONE_THIRD*(EL(NV(I,1))+EL(NV(I,2))+EL(NV(I,3)))
+
+  DO K = KBM1,1,-1
+ WW1_STOKES_3D = 0.5_SP*(W_STOKES_3D(I,K)+W_STOKES_3D(I,K+1))+ &
+  U_STOKES_3D(I,K)*(ZZ1(I,K)*DDDX+DEDX)+ &
+  V_STOKES_3D(I,K)*(ZZ1(I,K)*DDDY+DEDY)
+ WW2_STOKES_3D = 0.0_SP
+ WW_STOKES_3D(I,K) = WW1_STOKES_3D+WW2_STOKES_3D
+ ENDDO
+
+#  if defined (WET_DRY)
+    ELSE
+     DO K=1,KBM1
+      WW_STOKES_3D(I,K)=0.0_SP !Xia et al. (2020)
+     END DO
+    END IF
+#  endif
+   END DO
+
+# if defined(MULTIPROCESSOR)
+   IF(PAR)CALL NODE_MATCH(1,NBN,BN_MLT,BN_LOC,BNC,MT,KB,MYID,NPROCS,UNODE,VNODE)
+   IF(PAR)CALL AEXCHANGE(NC,MYID,NPROCS,UNODE,VNODE)
+# endif
+
+    DO I=1,NE
+     IA=IEC(I,1)
+     IB=IEC(I,2)
+     J1=IENODE(I,1)
+     J2=IENODE(I,2)
+#    if defined (WET_DRY)
+     IF(ISWETC(IA) == 1 .OR. ISWETC(IB) == 1)THEN
+#    endif 
+
+    DO K=KBM1,1,-1
+
+    UNODEIJ=0.5_SP*(UNODE(J1,K)+UNODE(J2,K))
+    VNODEIJ=0.5_SP*(VNODE(J1,K)+VNODE(J2,K))
+    DIJ=0.5_SP*(D(J1)*DZ(J1,K)+D(J2)*DZ(J2,K))
+    DZIJ=0.5_SP*(DZ(J1,K)+DZ(J2,K))
+
+#    if defined (SPHERICAL)
+       !for spherical coordinator and domain across 360^o          
+       XTMP  = VX(J2)*TPI-VX(J1)*TPI
+       XTMP1 = VX(J2)-VX(J1)
+       IF(XTMP1 >  180.0_SP)THEN
+         XTMP = -360.0_SP*TPI+XTMP
+       ELSE IF(XTMP1 < -180.0_SP)THEN
+         XTMP =  360.0_SP*TPI+XTMP
+       END IF
+
+      EXFLUXXA=-(VNODEIJ*DLTYC(I)+UNODEIJ*XTMP*(COS(DEG2RAD*YC(IA))))*DZIJ
+      EXFLUXXB=-(VNODEIJ*DLTYC(I)+UNODEIJ*XTMP*(COS(DEG2RAD*YC(IB))))*DZIJ
+      EXFLUXYA= (VNODEIJ*DLTYC(I)+UNODEIJ*XTMP*(COS(DEG2RAD*YC(IA))))*DZIJ
+      EXFLUXYB= (VNODEIJ*DLTYC(I)+UNODEIJ*XTMP*(COS(DEG2RAD*YC(IB))))*DZIJ
+# else
+      EXFLUXXA=-(VNODEIJ*DLTYC(I)+UNODEIJ*DLTXC(I))*DZIJ
+      EXFLUXXB=-(VNODEIJ*DLTYC(I)+UNODEIJ*DLTXC(I))*DZIJ
+      EXFLUXYA= (VNODEIJ*DLTYC(I)+UNODEIJ*DLTXC(I))*DZIJ
+      EXFLUXYB= (VNODEIJ*DLTYC(I)+UNODEIJ*DLTXC(I))*DZIJ
+# endif       
+      HVF_X(IA,K)=HVF_X(IA,K)-EXFLUXXA
+      HVF_X(IB,K)=HVF_X(IB,K)+EXFLUXXB
+      HVF_Y(IA,K)=HVF_Y(IA,K)-EXFLUXYA
+      HVF_Y(IB,K)=HVF_Y(IB,K)+EXFLUXYB
+  END DO
+
+#    if defined (WET_DRY)
+     ENDIF
+#    endif 
+  END DO
+
+  CALL N2E3D(DZ,DZ_E)
+  CALL N2E2D(D,D_E)
+  DO I = 1, NT
+     DO K = KBM1,1,-1
+     WAVESTRX_3D(I,K) = WAVESTRX_3D(I,K) + HVF_X(I,K)*V_STOKES_3D(I,K)*D_E(I)
+     WAVESTRY_3D(I,K) = WAVESTRY_3D(I,K) + HVF_Y(I,K)*U_STOKES_3D(I,K)*D_E(I)
+  ENDDO
+ ENDDO
+!3D2
+!---------------------------------------------------
+!Compute non conservative wave acceleration terms here
+!----------------------------------------------------
+ DO I=1,MT
+  rubrk2d(I)=0.0_SP
+  rvbrk2d(I)=0.0_SP
+#if defined(WAVE_ROLLER)
+  rurol2d(I)=0.0_SP
+  rvrol2d(I)=0.0_SP
+#endif
+  END DO
+!NOTE:CALCULATE THE DISWCP AND DISBRK TERMS BASED ON ROMS wec_dissip.F
+!read in the flag of dissipation equations (FLAG_DISSIP)
+!FLAG_DISSIP=1:Thorton and Guza (1986)
+!FLAG_DISSIP=2:Church and Thorton (1993)
+!Default:FLAG_DISSIP=1:Thorton and Guza (1986)
+!NOTE:NEED TO CHECK, AS DISSIP_wWCAP = 0.0 IN THIS METHOD 
+
+! ININTH('FLAG_DISSIP',FLAG_DISSIP,'STA',1)
+
+ FLAG_DISSIP = 1
+  IF(FLAG_DISSIP<1 .OR. FLAG_DISSIP>2) CALL FATAL_ERROR ("FLAG_DISSIP should be defined as integer 1 or 2")
+  IF(FLAG_DISSIP==1) THEN
+! Calculate based on Thorton and Guza (1986)
+  fac1 = 3.0_SP*9.81_SP**SQRT(PI)/16.0_SP
+  DO I = 1, MT
+  CFF1=0.707_SP*HSC1(I)
+  SIGMAT = MIN(1.0_SP/(TPEAK(I)+eps1),1.0_SP)
+  CFF2 = 1.0_SP/((GAMMAW**4)*(DSTP(I)**5))
+  DISSIP_BREAK(I)=0.2621_SP*fac1*SIGMAT*(CFF1**7.0_SP)*CFF2
+  ENDDO
+ ELSEIF(FLAG_DISSIP==2) THEN
+! Calculate based on Church and Thorton (1993)
+ fac1 = 3.0_SP*SQRT(PI)/16.0_SP
+ DO I = 1, MT
+ CFF1 = 0.707_SP*HSC1(I) 
+ CFF2 = 1.0_SP/(GAMMAW*DSTP(I))
+ CFF3 = 1.0_SP+TANH(8.0_SP*((CFF1*CFF2)-1.0_SP))
+ CFF4 = 1.0_SP-(1.0_SP+(CFF1*CFF2)**2.0_SP)**(-2.5_SP)
+ SIGMAT = MIN(1.0_SP/(TPEAK(I)+eps1),1.0_SP)
+
+ DISSIP_BREAK(I) = (0.2621_SP/DSTP(I))*fac1*SIGMAT*(CFF1**3.0_SP)*CFF3*CFF4
+ DISSIP_WCAP(I) = 0.0_SP
+
+ ENDDO
+ ENDIF
+!NOTE:CALCULATE THE DISSIP_ROLLER BASED ON ROMS wec_roller.F
+# if defined(WAVE_ROLLER)
+
+ DO I = 1, MT
+  CFF1 = 0.0424_SP*HSC1(I)*QB1(I)
+  ROLLA_VF(I) = CFF1*WAVE_C(I)*WAVE_C(I)*OXIGMA(I)
+  DISSIP_ROLLER(I) = GRAV_N(I)*sinb*ROLLA_VF(I)*XIGMA(I)/WAVE_C(I)
+ ENDDO
+
+# endif
+
+ CALL INREAL('BRE_WEC_ALPHA',wec_alpha,'STA',0.0)
+ 
+ BBXbrk = 0.0_SP; BBYbrk = 0.0_SP
+ BBXrol = 0.0_SP; BBYrol = 0.0_SP 
+ DO I=1,MT 
+  DO K=KBM1,1,-1
+  fac2=D(I)*(ZZ(I,K)-Z(I,KBM1+1))*ODSTP(I)
+  CFF28 = fac2*GAMR(I)
+  CFF29 = COSH(2.0_SP*PI*CFF28)*ODISS(I)
+  CFF30 = DISSIP_WCAP(I)+DISSIP_BREAK(I)
+  CFF31 = ((1.0_SP-wec_alpha)*CFF30+wec_alpha*DISSIP_WCAP(I))*OXIGMA(I)
+  BBXbrk(I,K) = CFF29*CFF31*WAVE_NUMBER_X(I)
+  BBYbrk(I,K) = CFF29*CFF31*WAVE_NUMBER_Y(I)
+
+#  if defined(WAVE_ROLLER)
+ CFF32 = DISSIP_ROLLER(I)*OXIGMA(I)
+ BBXrol(I,K) = CFF29*CFF32*WAVE_NUMBER_X(I)
+ BBYrol(I,K) = CFF29*CFF32*WAVE_NUMBER_Y(I)
+#  endif
+   END DO 
+  END DO
+
+ BBXbrk = BBXbrk + BBXrol
+ BBYbrk = BBYbrk + BBYrol
+
+ CALL N2E3D(BBXbrk,BBXbrk_E)
+ CALL N2E3D(BBYbrk,BBYbrk_E)
+ CALL N2E3D(BBXrol,BBXrol_E)
+ CALL N2E3D(BBYrol,BBYrol_E)
+! Compute contribution to U-momentum  and V-momentum
+ DO I=1,NT
+ DO K=KBM1,1,-1
+  WAVESTRX_3D(I,K)=WAVESTRX_3D(I,K)-BBXbrk_E(I,K)*D_E(I)*DZ1(I,K)*ART(I)
+  WAVESTRY_3D(I,K)=WAVESTRY_3D(I,K)-BBYbrk_E(I,K)*D_E(I)*DZ1(I,K)*ART(I)
+ END DO 
+ END DO
+
+! Wave-induced bottom streaming based on Xu and Bowen (1994) and Uchiyama et al. (2010) using Type I f function
+! CFF40: wave orbital velocity CFF41: decay length
+! CFF43: wave friction factor
+ DO I=1,MT
+   CFF40=ABS(0.25_SP*SQRT(2.0_SP)*XIGMA(I)*HSC1(I)/SINH(KD(I)+eps1))
+   CFF41=awd*0.09_SP*ks*(CFF40/(ks*XIGMA(I)))**0.82_SP
+   KWD(I)=MAX(MIN(DSTP(I)/(CFF41+eps1),KWDmax),eps1)
+ 
+  owd(I) = 0.0_SP
+
+ DO K=KBM1,1,-1
+ CFF42=D(I)*(ZZ(I,K)-Z(I,KBM1+1))*ODSTP(I)
+ owd(I)=owd(I)+DZ(I,K)*D(I)*(1-TANH((KWD(I)*CFF42)**4.0_SP))
+ END DO
+
+ owd(I)=1.0_SP/(owd(I)+eps1)
+
+   CFF43=MIN(1.39_SP*(XIGMA(I)*(ks/30.0_SP)/CFF40)**0.52_SP,0.2_SP)
+   DISSIP_FRIC(I)=(0.5_SP/SQRT(PI))*CFF43*(CFF40**3.0_SP)
+ END DO
+
+ BBXwbs = 0.0_SP; BBYwbs = 0.0_SP
+
+ DO I=1,MT
+  DO K=KBM1,1,-1 
+  fac2=D(I)*(ZZ(I,1)-ZZ(I,K))*ODSTP(I)
+  CFF42=1-TANH((KWD(I)*fac2)**4.0_SP)
+
+  CFF43=DISSIP_FRIC(I)*OXIGMA(I)
+  BBXwbs(I,K)=CFF42*CFF43*WAVE_NUMBER_X(I)*owd(I)
+  BBYwbs(I,K)=CFF42*CFF43*WAVE_NUMBER_Y(I)*owd(I)
+  END DO
+ END DO 
+
+ CALL N2E3D(BBXwbs,BBXwbs_E)
+ CALL N2E3D(BBYwbs,BBYwbs_E)
+! Compute contribution to U-momentum  and V-momentum
+ DO I=1,NT
+ DO K=KBM1,1,-1
+  WAVESTRX_3D(I,K)=WAVESTRX_3D(I,K)-BBXwbs_E(I,K)*D_E(I)*DZ1(I,K)*ART(I)
+  WAVESTRY_3D(I,K)=WAVESTRY_3D(I,K)-BBYwbs_E(I,K)*D_E(I)*DZ1(I,K)*ART(I)
+ END DO
+ END DO
+
+! Wave-induced surface streaming effects based on Xu and Bowen (1994)
+
+ BBXwss = 0.0_SP; BBYwss = 0.0_SP
+
+ DO I=1,MT
+ BBXwss(I,1)=(0.25_SP/TANH(KD(I)+eps1))*KM(I,1)*(HSC1(I)**2.0_SP)*XIGMA(I)*WAVE_NUMBER(I)*WAVE_NUMBER_X(I)/(2.0_SP*DZ(I,1)*D(I))
+ BBYwss(I,1)=(0.25_SP/TANH(KD(I)+eps1))*KM(I,1)*(HSC1(I)**2.0_SP)*XIGMA(I)*WAVE_NUMBER(I)*WAVE_NUMBER_Y(I)/(2.0_SP*DZ(I,1)*D(I))
+ END DO
+
+ CALL N2E3D(BBXwss,BBXwss_E)
+ CALL N2E3D(BBYwss,BBYwss_E)
+
+ DO I=1,NT
+  WAVESTRX_3D(I,1)=WAVESTRX_3D(I,1)-BBXwbs_E(I,1)*D_E(I)*DZ1(I,1)*ART(I)
+  WAVESTRY_3D(I,1)=WAVESTRY_3D(I,1)-BBYwbs_E(I,1)*D_E(I)*DZ1(I,1)*ART(I)
+ END DO
+
+!3D3
+
+  DO I=1,NT
+  DO K=KBM1,1,-1
+    WAVESTRX_3D(I,K)=WAVESTRX_3D(I,K)-COR(I)*V_STOKES_3D(I,K)*D_E(I)*DZ1(I,K)*ART(I)
+    WAVESTRY_3D(I,K)=WAVESTRY_3D(I,K)+COR(I)*U_STOKES_3D(I,K)*D_E(I)*DZ1(I,K)*ART(I)
+  END DO
+ END DO
+
+!3D4
+
+ ! Compute  shear3 and shear4
+ DO I=1,NT
+ DO K=KBM1,2,-1
+  shear3(I,K) = (U(I,K-1)*W_STOKES_3D(I,K-1)-U(I,K)*W_STOKES_3D(I,K))/DZZ1(I,K-1)
+  shear4(I,K) = (V(I,K-1)*W_STOKES_3D(I,K-1)-V(I,K)*W_STOKES_3D(I,K))/DZZ1(I,K-1)
+ END DO
+   END DO
+
+! Applying boundary conditions
+ DO I=1,NT
+  shear3(I,KB)= shear3(I,KB-1)
+  shear3(I,1) = shear3(I,2)
+  shear4(I,KB)= shear4(I,KB-1)
+  shear4(I,1) = shear4(I,2)
+ END DO
+
+ DO I=1,NT
+ DO K=KBM1,1,-1
+ WAVESTRX_3D(I,K) = WAVESTRX_3D(I,K) + shear3(I,K)*DZ1(I,K)*ART(I)
+ WAVESTRY_3D(I,K) = WAVESTRY_3D(I,K) + shear4(I,K)*DZ1(I,K)*ART(I)
+ END DO
+ END DO
+
+! 3D5
+
+# if defined(MULTIPROCESSOR)
+   IF(PAR)CALL NODE_MATCH(1,NBN,BN_MLT,BN_LOC,BNC,MT,1,MYID,NPROCS,bh,qsp)
+   IF(PAR)CALL AEXCHANGE(NC,MYID,NPROCS,bh,qsp)   
+# endif
+
+ qsp = 0.0_SP
+
+    DO I=1,NE
+     IA=IEC(I,1)
+     IB=IEC(I,2)
+     J1=IENODE(I,1)
+     J2=IENODE(I,2)
+#    if defined (WET_DRY)
+     IF(ISWETC(IA) == 1 .OR. ISWETC(IB) == 1)THEN
+#    endif 
+
+    DO K=KBM1,1,-1
+
+     bhIJ=0.5_SP*(bh(J1)+bh(J2))
+     qspIJ=0.5_SP*(qsp(J1)+qsp(J2))
+     DIJ=0.5_SP*(D(J1)*DZ(J1,K)+D(J2)*DZ(J2,K))
+     DZIJ=0.5_SP*(DZ(J1,K)+DZ(J2,K)) 
+#      if defined (SPHERICAL)
+       !for spherical coordinator and domain across 360^o          
+       XTMP  = VX(J2)*TPI-VX(J1)*TPI
+       XTMP1 = VX(J2)-VX(J1)
+       IF(XTMP1 >  180.0_SP)THEN
+         XTMP = -360.0_SP*TPI+XTMP
+       ELSE IF(XTMP1 < -180.0_SP)THEN
+         XTMP =  360.0_SP*TPI+XTMP
+       END IF
+
+      EXFLUXXA=DZIJ*(bhIJ+qspIJ)*DLTYC(I)
+      EXFLUXXB=DZIJ*(bhIJ+qspIJ)*DLTYC(I)
+      EXFLUXYA=-DZIJ*(bhIJ+qspIJ)*XTMP*(COS(DEG2RAD*YC(IA)))
+      EXFLUXYB=-DZIJ*(bhIJ+qspIJ)*XTMP*(COS(DEG2RAD*YC(IB)))
+# else
+      EXFLUXXA=DZIJ*(bhIJ+qspIJ)*DLTYC(I)
+      EXFLUXXB=DZIJ*(bhIJ+qspIJ)*DLTYC(I)
+      EXFLUXYA=-DZIJ*(bhIJ+qspIJ)*DLTXC(I)
+      EXFLUXYB=-DZIJ*(bhIJ+qspIJ)*DLTXC(I)
+# endif
+      BH_X(IA,K)=BH_X(IA,K)-EXFLUXXA
+      BH_X(IB,K)=BH_X(IB,K)+EXFLUXXB                       
+      BH_Y(IA,K)=BH_Y(IA,K)-EXFLUXYA
+      BH_Y(IB,K)=BH_Y(IB,K)+EXFLUXYB
+  END DO
+#    if defined (WET_DRY)
+     ENDIF
+#    endif 
+  END DO
+
+ DO I=1,NT
+ DO K=KBM1,1,-1
+ WAVESTRX_3D(I,K)=WAVESTRX_3D(I,K)+BH_X(I,K)*D_E(I)
+ WAVESTRY_3D(I,K)=WAVESTRY_3D(I,K)+BH_Y(I,K)*D_E(I)
+ ENDDO
+ ENDDO
+ 
+! Applying boundary conditions
+ DO I=1,NT
+  WAVESTRX_3D(I,KB)= WAVESTRX_3D(I,KB-1)
+  WAVESTRX_3D(I,1) = WAVESTRX_3D(I,2)
+  WAVESTRY_3D(I,KB)= WAVESTRY_3D(I,KB-1)
+  WAVESTRY_3D(I,1) = WAVESTRY_3D(I,2) 
+END DO
+
+#  if defined (WET_DRY)
+   DO I = 1,NT
+     WAVESTRX_3D(I,:) = WAVESTRX_3D(I,:)*ISWETC(I)
+     WAVESTRY_3D(I,:) = WAVESTRY_3D(I,:)*ISWETC(I)
+     IF(ISBCE(I) == 2)THEN
+       WAVESTRX_3D(I,:) = 0.0_SP
+       WAVESTRY_3D(I,:) = 0.0_SP
+     END IF
+   END DO
+#  endif
+
+!#  if !defined (TWO_D_MODEL)
+   WAVESTRX_2D(:) = 0.0_SP; WAVESTRY_2D(:) = 0.0_SP
+   DO I = 1,NT
+     DO K=1,KBM1
+        WAVESTRX_2D(I) = WAVESTRX_2D(I)+WAVESTRX_3D(I,K)
+        WAVESTRY_2D(I) = WAVESTRY_2D(I)+WAVESTRY_3D(I,K)
+     END DO
+   END DO
+!#  else
+!   CALL RADIATION_STRESS_2D
+!#  endif
+   WAVESTRX_2D = WAVESTRX_2D*RAMP
+   WAVESTRY_2D = WAVESTRY_2D*RAMP  
+   WAVESTRX_3D = WAVESTRX_3D*RAMP
+   WAVESTRY_3D = WAVESTRY_3D*RAMP
+
+! 3D6
+#  if defined(MULTIPROCESSOR)
+   IF(PAR)CALL AEXCHANGE(EC,MYID,NPROCS,WAVESTRX_3D,WAVESTRY_3D)
+#  endif
+
+ RETURN
+ END SUBROUTINE VORTEX_FORMALISM_3D
+# endif
+! ------------------------------------------------------------------
 !
 !====================================================================================|  
    SUBROUTINE CURRENT2WAVE       
@@ -1026,13 +1893,11 @@ END SUBROUTINE CAL_S
         CC = NBVE(I,JJ)
         UNODE(I,K) = UNODE(I,K) + U(CC,K)
         VNODE(I,K) = VNODE(I,K) + V(CC,K)
-     ENDDO
+     END DO
      UNODE(I,K) = UNODE(I,K) / CNT
      VNODE(I,K) = VNODE(I,K) / CNT
-    ENDDO
-   ENDDO
-
-   
+    END DO
+   END DO
 !-------------------------------------------------------------------------------------|
  
    WAVE_NUMBER = 0.0_SP
@@ -1112,6 +1977,6 @@ END SUBROUTINE CAL_S
 !==============================================================================|
 !==============================================================================|
 
-END MODULE MOD_WAVE_CURRENT_INTERACTION
 #  endif   
+END MODULE MOD_WAVE_CURRENT_INTERACTION
  

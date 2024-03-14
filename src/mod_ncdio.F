@@ -96,6 +96,10 @@ MODULE MOD_NCDIO
 ! J. Ge for fluid mud layer
 #  endif
 
+# if defined (VEGETATION)
+  Use Mod_Vegetation
+# endif
+
 #  if defined (WAVE_CURRENT_INTERACTION)    
   USE TIMECOMM   !Jianzhong
   USE SWCOMM3
@@ -137,7 +141,11 @@ MODULE MOD_NCDIO
 # if defined (SEDIMENT)
   TYPE(NCDIM), POINTER :: DIM_bedlay
 # endif
-
+# if defined (VEGETATION)
+  TYPE(NCDIM), POINTER :: DIM_veg
+  TYPE(NCDIM), POINTER :: DIM_vegp
+  TYPE(NCDIM), POINTER :: DIM_VegStrLen
+# endif
   TYPE(NCDIM), POINTER :: DIM_time
   TYPE(NCDIM), POINTER :: DIM_DateStrLen
 
@@ -647,6 +655,13 @@ CONTAINS
 !!$          NCF => ADD(NCF,WQM_FILE_OBJECT() )
        END IF
 #   endif      
+
+# if defined (VEGETATION)
+       IF(VEGETATION_MODEL)THEN
+          NCF2 => VEG_FILE_OBJECT()
+          NCF => ADD(NCF,NCF2)
+       END IF
+# endif
        
 #   if defined (SEDIMENT) 
     IF(SEDIMENT_MODEL)THEN
@@ -1080,6 +1095,13 @@ CONTAINS
     END IF
 #   endif      
 
+# if defined (VEGETATION)
+    IF(VEGETATION_MODEL)THEN
+      NCF_TMP => VEG_FILE_OBJECT()
+      NC_AVG_DATA => ADD(NC_AVG_DATA,NCF_TMP)
+    END IF
+# endif 
+
 #   if defined (SEDIMENT)
     IF(SEDIMENT_MODEL)THEN
       NCF_TMP => SED_FILE_OBJECT()
@@ -1510,6 +1532,11 @@ CONTAINS
 !!$    NC_RST => ADD(NC_RST,WQM_FILE_OBJECT() )
 #   endif      
 
+# if defined (VEGETATION)
+    NC_RST2 => VEG_FILE_OBJECT()
+    NC_RST => ADD(NC_RST,NC_RST2)
+# endif
+
 #   if defined (SEDIMENT)
     IF(SEDIMENT_MODEL)THEN
       NC_RST2 => SED_FILE_OBJECT()
@@ -1648,7 +1675,9 @@ CONTAINS
 ! J. Ge for fluid mud layer
 
 # endif
-
+# if defined (VEGETATION)
+  Use Mod_Vegetation
+# endif
 !# if defined (WAVE_CURRENT_INTERACTION)
 !    USE SWCOMM3
 !    USE VARS_WAVE
@@ -1679,7 +1708,13 @@ CONTAINS
       DIM_bedlay    => NC_MAKE_RUNTIME_DIM(name='bedlay',len=nbed)
     ENDIF
 # endif
-    
+# if defined (VEGETATION)
+    IF(VEGETATION_MODEL)THEN
+      DIM_veg    => NC_MAKE_DIM(name='nveg',len=nveg)
+      DIM_vegp   => NC_MAKE_DIM(name='nvegp',len=nvegp)
+      DIM_VegStrLen => NC_MAKE_DIM(name='VegStrLen',len=VegStrLen)
+    ENDIF
+# endif        
     DIM_DateStrLen => NC_MAKE_DIM(name='DateStrLen',len=DateStrLen)
     DIM_time       => NC_MAKE_DIM(name='time',len=NF90_UNLIMITED)
 
@@ -1817,6 +1852,9 @@ CONTAINS
     TYPE(NCATT),  POINTER :: ATT
 
     character(len=100)    :: timestamp, temp, netcdf_convention
+# if defined (VEGETATION)
+    REAL(SP),SAVE, POINTER :: VEG_P(:,:,:)
+# endif
 
     IF(DBG_SET(DBG_SBR)) WRITE(IPT,*) "START GRID_FILE_OBJECT"
     
@@ -2454,6 +2492,52 @@ CONTAINS
     VAR  => ADD(VAR,ATT)
 
     NCF  => ADD(NCF,VAR)
+# endif
+
+# if defined (VEGETATION)
+    IF(VEGETATION_MODEL)THEN
+    VAR  => NC_MAKE_PVAR(name='vegetation_name',&
+         & values=VEG % vegname, DIM1= DIM_VegStrLen, DIM2= DIM_veg )
+    VAR%SCL_CHR => VAR%VEC_CHR(1)
+
+    ATT  => NC_MAKE_ATT(name='long_name',values='Vegetation type name')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='standard_name',values='Vegetation plant name')
+    VAR  => ADD(VAR,ATT)
+
+    NCF  => ADD(NCF,VAR)
+
+    VAR  => NC_MAKE_PVAR(name='vegetation_property_name',&
+         & values=VEG % paraname, DIM1= DIM_VegStrLen, DIM2= DIM_vegp )
+    VAR%SCL_CHR => VAR%VEC_CHR(1)
+
+    ATT  => NC_MAKE_ATT(name='long_name',values='Vegetation property name')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='standard_name',values='Vegetation property name')
+    VAR  => ADD(VAR,ATT)
+
+    NCF  => ADD(NCF,VAR)
+
+    VEG_P => VEG % plant
+    VAR  => NC_MAKE_PVAR(name='vegetation_properties',&
+         & values=VEG_P, DIM1= DIM_node, DIM2= DIM_veg, DIM3= DIM_vegp )
+
+    ATT  => NC_MAKE_ATT(name='info1',values='Vegetation properties, &
+         &including 1)palnt density; 2) plant height; 3) plant diamete&
+         &r; 4) plant thickness')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='info2',values='Vegetation properties, if veg_biomass is activated, &
+                        5) plant_biomass_above_ground; 6)plant_biomass_below_ground')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='standard_name',values='Vegetation properties')
+    VAR  => ADD(VAR,ATT)
+
+    NCF  => ADD(NCF,VAR)
+    END IF
 # endif
 
     IF(DBG_SET(DBG_SBR)) WRITE(IPT,*) "END GRID_FILE_OBJECT"
@@ -7514,6 +7598,16 @@ CONTAINS
        IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:V_STOKES_3D")
        V_STOKES_3D = 0.0_sp
 
+# if defined (VORTEX_FORCE)
+       allocate(W_STOKES_3D(NGL,KB),stat=status)
+       IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:W_STOKES_3D")
+       W_STOKES_3D = 0.0_sp
+
+       allocate(WW_STOKES_3D(NGL,KB),stat=status)
+       IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:WW_STOKES_3D")
+       WW_STOKES_3D = 0.0_sp
+# endif
+
        allocate(WAVESTRX_3D(NGL,KB),stat=status)
        IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:WAVESTRX_3D")
        WAVESTRX_3D = 0.0_sp
@@ -7576,6 +7670,84 @@ CONTAINS
     VAR  => ADD(VAR,ATT)
 
     NCF  => ADD(NCF,VAR)
+
+# if defined (VORTEX_FORCE)
+    ! W_STOKES_3D
+    VAR  => NC_MAKE_AVAR(name='w_stokes_3d',&
+         & values=W_STOKES_3D, DIM1= DIM_nele, DIM2= DIM_siglay, DIM3 = DIM_time)
+
+    ATT  => NC_MAKE_ATT(name='long_name',values='Omega Stokes Velocity')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='units',values='m/s')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='type',values='data')
+    VAR  => ADD(VAR,ATT)
+
+    NCF  => ADD(NCF,VAR)
+
+    ! WW_STOKES_3D
+    VAR  => NC_MAKE_AVAR(name='ww_stokes_3d',&
+         & values=WW_STOKES_3D, DIM1= DIM_nele, DIM2= DIM_siglay, DIM3 = DIM_time)
+
+    ATT  => NC_MAKE_ATT(name='long_name',values='Upward Stokes Velocity')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='units',values='m/s')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='type',values='data')
+    VAR  => ADD(VAR,ATT)
+
+    NCF  => ADD(NCF,VAR)
+
+
+    ! U_STOKES_2D
+    VAR  => NC_MAKE_AVAR(name='u_stokes_2d',&
+         & values=U_STOKES_2D, DIM1= DIM_nele, DIM2 = DIM_time)
+
+
+    ATT  => NC_MAKE_ATT(name='long_name',values='Eastward Stokes Velocity')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='units',values='m/s')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='type',values='data')
+    VAR  => ADD(VAR,ATT)
+
+    NCF  => ADD(NCF,VAR)
+
+
+
+    ! V_STOKES_2D
+    VAR  => NC_MAKE_AVAR(name='v_stokes_2d',&
+         & values=V_STOKES_2D, DIM1= DIM_nele, DIM2 = DIM_time)
+
+    ATT  => NC_MAKE_ATT(name='long_name',values='Northward Stokes Velocity')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='units',values='m/s')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+    VAR  => ADD(VAR,ATT)
+
+    ATT  => NC_MAKE_ATT(name='type',values='data')
+    VAR  => ADD(VAR,ATT)
+
+    NCF  => ADD(NCF,VAR)
+# endif
 
     ! U_STRESS_3D
     VAR  => NC_MAKE_AVAR(name='u_stress_3d',&
@@ -7928,6 +8100,310 @@ CONTAINS
 ! J. Ge for fluid mud layer
 
 
+# if defined (VEGETATION)
+  FUNCTION VEG_FILE_OBJECT() RESULT(NCF)
+    USE MOD_VEGETATION
+    IMPLICIT NONE
+   INTEGER :: status
+   LOGICAL, SAVE :: IOPROC_ALLOCATED1 = .FALSE.
+   LOGICAL, SAVE :: IOPROC_ALLOCATED2 = .FALSE.
+   LOGICAL, SAVE :: IOPROC_ALLOCATED3 = .FALSE.
+   TYPE(NCFILE), POINTER :: NCF
+   TYPE(NCVAR),  POINTER :: VAR
+   TYPE(NCATT),  POINTER :: ATT
+   INTEGER :: II,JJ, IERR, len
+   INTEGER :: DEST, SOURCE, TAGI,TAGC
+   INTEGER, PARAMETER :: TAG = 70077
+   INTEGER, PARAMETER :: TAG_I = 71077
+   INTEGER, PARAMETER :: TAG_C = 72077
+# if defined(MULTIPROCESSOR)
+   INTEGER :: STAT(MPI_STATUS_SIZE)
+# endif
+
+   REAL(SP),SAVE, POINTER :: VEG_3D(:,:)
+   REAL(SP),SAVE, POINTER :: VEG_2D(:)
+
+   IF(DBG_SET(DBG_SBR)) WRITE(IPT,*) "START VEG_FILE_OBJECT"
+  ! ALLOCATE THE NEW FILE OBJECT
+   NCF => NEW_FILE()
+
+
+  IF(IOPROC .AND. .NOT. IOPROC_ALLOCATED1) THEN
+
+     IOPROC_ALLOCATED1 = .true.
+
+     allocate(VEG % plant(MGL,NVEG,NVEGP),stat=status)
+     IF (STATUS /=0 ) CALL FATAL_ERROR("COULD NOT ALLOCATE MEMORY ON IO PROC FOR OUTPUT DATA:VEG % plant")
+     VEG % plant = 0.0_SP
+
+  END IF
+
+  VEG_3D => VEG % ru_veg
+
+  VAR  => NC_MAKE_PVAR(name='ru_veg',values=VEG_3D, DIM1= DIM_node, DIM2= DIM_siglay, DIM3= DIM_time)
+
+  ATT  => NC_MAKE_ATT(name='long_name',values='x-component momentum term due to vegetation')
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='units',values=trim('m/s-2'))
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+  VAR  => ADD(VAR,ATT)
+
+  NCF  => ADD(NCF,VAR)
+
+
+  VEG_3D => VEG % rv_veg
+
+  VAR  => NC_MAKE_PVAR(name='rv_veg',values=VEG_3D, DIM1= DIM_node, DIM2= DIM_siglay, DIM3= DIM_time)
+
+  ATT  => NC_MAKE_ATT(name='long_name',values='y-component momentum term due to vegetation')
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='units',values=trim('m/s-2'))
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+  VAR  => ADD(VAR,ATT)
+
+  NCF  => ADD(NCF,VAR)
+
+
+  VEG_2D => VEG % step2d_uveg
+
+  VAR  => NC_MAKE_PVAR(name='step2d_uveg',values=VEG_2D, DIM1= DIM_node,  DIM2= DIM_time)
+
+  ATT  => NC_MAKE_ATT(name='long_name',values='Momentum term for 2d x direction')
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='units',values=trim('m/s-2'))
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+  VAR  => ADD(VAR,ATT)
+
+  NCF  => ADD(NCF,VAR)
+
+  VEG_2D => VEG % step2d_vveg
+
+  VAR  => NC_MAKE_PVAR(name='step2d_vveg',values=VEG_2D, DIM1= DIM_node,  DIM2= DIM_time)
+
+  ATT  => NC_MAKE_ATT(name='long_name',values='Momentum term for 2d y direction')
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='units',values=trim('m/s-2'))
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+  VAR  => ADD(VAR,ATT)
+
+  NCF  => ADD(NCF,VAR)
+
+  if(VEG_FLEX)then
+     do ii=1,nveg
+        VEG_2D => VEG % bend(1:m,ii)
+
+        VAR  => NC_MAKE_PVAR(name='bend_'//trim(VEG % vegname(ii)),values=VEG_2D, DIM1= DIM_node,  DIM2= DIM_time)
+
+        ATT  => NC_MAKE_ATT(name='long_name',values='Blade bending angle for '//trim(VEG % vegname(ii)))
+        VAR  => ADD(VAR,ATT)
+
+        ATT  => NC_MAKE_ATT(name='units',values=trim('degree'))
+        VAR  => ADD(VAR,ATT)
+
+        ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+        VAR  => ADD(VAR,ATT)
+
+        NCF  => ADD(NCF,VAR)
+     end do
+  end if
+
+  VEG_3D => VEG % Lveg
+
+  VAR  => NC_MAKE_PVAR(name='Lveg',values=VEG_3D, DIM1= DIM_node, DIM2= DIM_siglay, DIM3= DIM_time)
+
+  ATT  => NC_MAKE_ATT(name='long_name',values='Effective blade length pecentage &
+       &(full or part) within the canopy layer ')
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='units',values=trim('(0-1)*100%'))
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+  VAR  => ADD(VAR,ATT)
+
+  NCF  => ADD(NCF,VAR)
+
+
+  if(VEG_TURB)then
+  VEG_3D => VEG % tke_veg
+
+  VAR  => NC_MAKE_PVAR(name='tke_veg',values=VEG_3D, DIM1= DIM_node, DIM2= DIM_siglay, DIM3= DIM_time)
+
+  ATT  => NC_MAKE_ATT(name='long_name',values='Turbulent kinetic energy from vegetation')
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='units',values=trim('m^2/s^2'))
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+  VAR  => ADD(VAR,ATT)
+
+  NCF  => ADD(NCF,VAR)
+
+  VEG_3D => VEG % gls_veg
+
+  VAR  => NC_MAKE_PVAR(name='gls_veg',values=VEG_3D, DIM1= DIM_node, DIM2= DIM_siglay, DIM3= DIM_time)
+
+  ATT  => NC_MAKE_ATT(name='long_name',values='Length scale change from vegetation')
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='units',values=trim('m'))
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+  VAR  => ADD(VAR,ATT)
+
+  NCF  => ADD(NCF,VAR)
+  end if
+
+  if(VEG_SWAN_COUPLING .and. VEG_STREAMING)then
+  VEG_2D => VEG % dissip_veg
+
+  VAR  => NC_MAKE_PVAR(name='dissip_veg',values=VEG_2D, DIM1= DIM_node, DIM2= DIM_time)
+
+  ATT  => NC_MAKE_ATT(name='long_name',values='Dissipation from the wave model due to vegetation')
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='units',values=trim('m'))
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+  VAR  => ADD(VAR,ATT)
+
+  NCF  => ADD(NCF,VAR)
+
+
+  VEG_3D => VEG % BWDXL_veg
+
+  VAR  => NC_MAKE_PVAR(name='BWDXL_veg',values=VEG_3D, DIM1= DIM_node, DIM2= DIM_siglay, DIM3= DIM_time)
+
+  ATT  => NC_MAKE_ATT(name='long_name',values='X-component Wave streaming effect due to vegetation')
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='units',values=trim('m'))
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+  VAR  => ADD(VAR,ATT)
+
+  NCF  => ADD(NCF,VAR)
+
+  VEG_3D => VEG % BWDYL_veg
+
+  VAR  => NC_MAKE_PVAR(name='BWDYL_veg',values=VEG_3D, DIM1= DIM_node, DIM2= DIM_siglay, DIM3= DIM_time)
+
+  ATT  => NC_MAKE_ATT(name='long_name',values='Y-component Wave streaming effect due to vegetation')
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='units',values=trim('m'))
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+  VAR  => ADD(VAR,ATT)
+
+  NCF  => ADD(NCF,VAR)
+
+  endif
+
+  if(VEG_HMIXING)then
+  VEG_2D => VEG % visc2d_r_veg
+
+  VAR  => NC_MAKE_PVAR(name='visc2d_r_veg',values=VEG_2D, DIM1= DIM_node, DIM2= DIM_time)
+
+  ATT  => NC_MAKE_ATT(name='long_name',values='Effect of viscosity change (2D) at vegetation interface')
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='units',values=trim('m'))
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+  VAR  => ADD(VAR,ATT)
+
+  NCF  => ADD(NCF,VAR)
+
+
+  VEG_3D => VEG % visc3d_r_veg
+
+  VAR  => NC_MAKE_PVAR(name='visc3d_r_veg',values=VEG_3D, DIM1= DIM_node, DIM2= DIM_siglay, DIM3= DIM_time)
+
+  ATT  => NC_MAKE_ATT(name='long_name',values='Effect of viscosity change (3D) at vegetation interface')
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='units',values=trim('m 2 s-1'))
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+  VAR  => ADD(VAR,ATT)
+
+  NCF  => ADD(NCF,VAR)
+  endif
+
+  if(MARSH_WAVE_THRUST)then
+
+  VEG_2D => VEG % mask_thrust
+
+  VAR  => NC_MAKE_PVAR(name='mask_thrust',values=VEG_2D, DIM1= DIM_node, DIM2= DIM_time)
+
+  ATT  => NC_MAKE_ATT(name='long_name',values='Tonellis masking for wave thrust on marshes')
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='units',values=trim('m'))
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+  VAR  => ADD(VAR,ATT)
+
+  NCF  => ADD(NCF,VAR)
+
+
+  VEG_2D => VEG % Thrust_max
+
+  VAR  => NC_MAKE_PVAR(name='Thrust_max',values=VEG_2D, DIM1= DIM_node, DIM2= DIM_time)
+
+  ATT  => NC_MAKE_ATT(name='long_name',values='Maximum thrust from wave to marshes')
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='units',values=trim('m'))
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+  VAR  => ADD(VAR,ATT)
+
+  NCF  => ADD(NCF,VAR)
+
+
+  VEG_2D => VEG % Thrust_tonelli
+
+  VAR  => NC_MAKE_PVAR(name='Thrust_tonelli',values=VEG_2D, DIM1= DIM_node, DIM2= DIM_time)
+
+  ATT  => NC_MAKE_ATT(name='long_name',values='Reduced thrust from tonelli masking')
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='units',values=trim('m'))
+  VAR  => ADD(VAR,ATT)
+
+  ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+  VAR  => ADD(VAR,ATT)
+
+  NCF  => ADD(NCF,VAR)
+
+  endif
+
+   IF(DBG_SET(DBG_SBR)) WRITE(IPT,*) "END FLUID_MUD_FILE_OBJECT"
+  End FUNCTION VEG_FILE_OBJECT
+# endif
 
 !=============================================================
 # if defined (SEDIMENT)

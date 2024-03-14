@@ -1308,6 +1308,8 @@ SUBROUTINE BIO_EXCHANGE
       REAL(SP), ALLOCATABLE,DIMENSION(:,:) :: TEMPB        !TEMPERAL FOR DATA INPUT
       REAL(SP), ALLOCATABLE,DIMENSION(:,:) :: DATA_3D      !3D OBSERVATION DATA
 
+      INTEGER ioerror
+
       ALLOCATE(BIO_ALL(0:MT,KB,NTT))    ; BIO_ALL     =  0.001_SP
       ALLOCATE(BIO_F(0:MT,KB,NTT))      ; BIO_F       =  0.001_SP
       ALLOCATE(BIO_MEAN(0:MT,KB,NTT))   ; BIO_MEAN    =  0.001_SP
@@ -1329,12 +1331,13 @@ SUBROUTINE BIO_EXCHANGE
           END DO
         END IF
         IF (TRIM(INI_TYPE).EQ.'LINEAR') THEN
-          N_DATA=0                                                 
-	  DO WHILE(.TRUE.)                                         
-            READ(1,*,IOSTAT=IOS)DEPTH_STD(N_DATA),DATA_BIO(N_DATA) 
-            IF(IOS < 0) exit                                      
-            N_DATA=N_DATA+1                                       
-          END DO                                                 
+          N_DATA=1
+          DO WHILE(.TRUE.)
+            READ(1,*,IOSTAT=ioerror)DEPTH_STD(N_DATA),DATA_BIO(N_DATA)
+            IF(ioerror .lt. 0) EXIT
+            N_DATA=N_DATA+1
+          ENDDO
+          N_DATA=N_DATA-1
           DO I=1,M
             DO K= 1,KBM1
               ZM(K) =ZZ(I,K)*(D(I)+EL(I))
@@ -1397,12 +1400,13 @@ SUBROUTINE BIO_EXCHANGE
           END DO
         END IF
         IF (TRIM(INI_TYPE).EQ.'LINEAR') THEN
-          N_DATA=0                                                 
-	  DO WHILE(.TRUE.)                                         
-            READ(1,*,IOSTAT=IOS)DEPTH_STD(N_DATA),DATA_BIO(N_DATA)
-            IF(IOS < 0) exit                                       
-            N_DATA=N_DATA+1                                        
-          END DO                                                   
+          N_DATA=1
+          DO WHILE(.TRUE.)
+            READ(1,*,IOSTAT=ioerror)DEPTH_STD(N_DATA),DATA_BIO(N_DATA)
+            IF(ioerror .lt. 0) EXIT
+            N_DATA=N_DATA+1
+          ENDDO
+          N_DATA=N_DATA-1
           DO I=1,M
             DO K= 1,KBM1
               ZM(K) =ZZ(I,K)*D(I)+EL(I)
@@ -1463,12 +1467,13 @@ SUBROUTINE BIO_EXCHANGE
           END DO
         END IF
         IF (TRIM(INI_TYPE).EQ.'LINEAR') THEN
-          N_DATA=0                                                
-	  DO WHILE(.TRUE.)                                        
-            READ(1,*,IOSTAT=IOS)DEPTH_STD(N_DATA),DATA_BIO(N_DATA) 
-            IF(IOS < 0) exit                                       
-            N_DATA=N_DATA+1                                        
-          END DO                                                  
+          N_DATA=1
+          DO WHILE(.TRUE.)
+            READ(1,*,IOSTAT=ioerror)DEPTH_STD(N_DATA),DATA_BIO(N_DATA)
+            IF(ioerror .lt. 0) EXIT
+            N_DATA=N_DATA+1
+          ENDDO
+          N_DATA=N_DATA-1
           DO I=1,M
             DO K= 1,KBM1
               ZM(K) =ZZ(I,K)*D(I)+EL(I)
@@ -1530,12 +1535,13 @@ SUBROUTINE BIO_EXCHANGE
           END DO
         END IF
         IF (TRIM(INI_TYPE).EQ.'LINEAR') THEN
-          N_DATA=0                                                 
-	  DO WHILE(.TRUE.)                                         
-            READ(1,*,IOSTAT=IOS)DEPTH_STD(N_DATA),DATA_BIO(N_DATA) 
-            IF(IOS < 0) exit                                       
-            N_DATA=N_DATA+1                                        
-          END DO                                                   
+          N_DATA=1
+          DO WHILE(.TRUE.)
+            READ(1,*,IOSTAT=ioerror)DEPTH_STD(N_DATA),DATA_BIO(N_DATA)
+            IF(ioerror .lt. 0) EXIT
+            N_DATA=N_DATA+1
+          ENDDO
+          N_DATA=N_DATA-1
           DO I=1,M
             DO K= 1,KBM1
               ZM(K) =ZZ(I,K)*D(I)+EL(I)
@@ -1597,12 +1603,13 @@ SUBROUTINE BIO_EXCHANGE
           END DO
         END IF
         IF (TRIM(INI_TYPE).EQ.'LINEAR') THEN
-          N_DATA=0                                                 
-	  DO WHILE(.TRUE.)                                         
-            READ(1,*,IOSTAT=IOS)DEPTH_STD(N_DATA),DATA_BIO(N_DATA) 
-            IF(IOS < 0) exit                                      
-            N_DATA=N_DATA+1                                        
-          END DO                                                   
+          N_DATA=1
+          DO WHILE(.TRUE.)
+            READ(1,*,IOSTAT=ioerror)DEPTH_STD(N_DATA),DATA_BIO(N_DATA)
+            IF(ioerror .lt. 0) EXIT
+            N_DATA=N_DATA+1
+          ENDDO
+          N_DATA=N_DATA-1
           DO I=1,M
             DO K= 1,KBM1
               ZM(K) =ZZ(I,K)*D(I)+EL(I)
@@ -1663,12 +1670,13 @@ SUBROUTINE BIO_EXCHANGE
           END DO
         END IF
         IF (TRIM(INI_TYPE).EQ.'LINEAR') THEN
-          N_DATA=0                                                 
-	  DO WHILE(.TRUE.)                                         
-            READ(1,*,IOSTAT=IOS)DEPTH_STD(N_DATA),DATA_BIO(N_DATA) 
-            IF(IOS < 0) exit                                      
-            N_DATA=N_DATA+1                                       
-          END DO                                                  
+          N_DATA=1
+          DO WHILE(.TRUE.)
+            READ(1,*,IOSTAT=ioerror)DEPTH_STD(N_DATA),DATA_BIO(N_DATA)
+            IF(ioerror .lt. 0) EXIT
+            N_DATA=N_DATA+1
+          ENDDO
+          N_DATA=N_DATA-1
           DO I=1,M
             DO K= 1,KBM1
               ZM(K) =ZZ(I,K)*D(I)+EL(I)

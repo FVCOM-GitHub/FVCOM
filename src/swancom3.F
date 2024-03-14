@@ -278,16 +278,16 @@
 !  *** minimum FPM is equal : 2 * pi * 0.13 * grav / pwind(12) ***
 !  *** is equal 8 rad/s = 1.27 Hz                              ***
 !
-   ISFPM = MSC                                                         
-   FACINT = 0.                                                         
-   IN: DO IS = 1, MSC     
-     SIG = SPCSIG(IS)                                                  
+   ISFPM = MSC
+   FACINT = 0.
+   DO IS = 1, MSC
+     SIG = SPCSIG(IS)
      IF(FRINTH * SIG > (0.7 * FPM))THEN
        ISFPM =  IS
        FACINT = (FRINTH - 0.7*FPM/SIG) / (FRINTH - 1./FRINTH)
-       EXIT IN             
+       EXIT
      END IF
-   END DO IN
+   ENDDO
 !
 !  *** calculate the energy in the wind sea part of the spectrum ***
 !  *** from ISFPM.                                               ***
@@ -801,7 +801,7 @@
      GAMHF =  XKAPPA * GRAV_W / UFRIC
      SIGMAX = SPCSIG(MSC)                                              
      SIGHF1 = SIGMAX
-     OUT: DO J=1, 50              
+     DO J=1, 50
        SIGHF2 = XIS * SIGHF1
        DS     = SIGHF2 - SIGHF1
        ZCNHF1 = ALOG ( ZE * SIGHF1**2 / GRAV_W )
@@ -844,11 +844,12 @@
 !        *** if coeffcient BETA = 0. for a frequency over ***
 !        *** all directions is zero skip loop             ***
 !
-         IF(AUX == 0.) EXIT OUT        
+         IF(AUX == 0.) EXIT
+!
        ENDDO
-
+       IF(AUX == 0.) EXIT
        SIGHF1 = SIGHF2
-     END DO OUT
+     ENDDO
 
      TAUTOT = RHOA * UFRIC2
 !    *** wave stress ***
@@ -863,7 +864,7 @@
      TAUW   = RHOA * UFRIC2 * DD * SQRT ( TAUWX**2 + TAUWY**2 )
      TAUW   = MIN ( TAUW , 0.999 * TAUTOT )
 
-     IN: DO II = 1, 20
+     DO II = 1, 20
 !      *** start iteration process ***
        FA = SQRT ( 1. - TAUW / TAUTOT )
        FB = ZTEN * RHOA * GRAV_W / ALPHA
@@ -884,10 +885,11 @@
 !
        TAUNEW = TAUTOT - FCEN / DCEN
 !
-       IF(TAUNEW <= TAUW) TAUNEW = .5 * (TAUTOT + TAUW)           
-       IF(ABS( TAUNEW - TAUTOT ) <= 1.E-5 ) EXIT IN   
+       IF(TAUNEW <= TAUW) TAUNEW = .5 * (TAUTOT + TAUW)
+       IF(ABS( TAUNEW - TAUTOT ) <= 1.E-5 ) EXIT
+!
        TAUTOT = TAUNEW
-     END DO IN         
+     ENDDO
 !
      UFRIC  = SQRT ( TAUTOT / RHOA )
 !
@@ -1478,4 +1480,3 @@
    RETURN
 
    END SUBROUTINE WNDPAR
-

@@ -219,6 +219,7 @@
 !--get the indexes of the nearest observations
 
      CALL SELECT_NEAREST(GX(:,I),OX,PARAM,MM,INDEX,DISTANCE)
+     
 !--form compute the error covariance matrix of the observation 
 
      CALL OBSERVATION_COVARIANCE(OVAR,INDEX,R)
@@ -254,6 +255,7 @@
 
    END DO
 !$omp end do
+
    DEALLOCATE(WORK)
  
 !$omp end parallel 

@@ -753,6 +753,18 @@ CONTAINS
 
        REWIND NESTUNIT
 
+!       DO WHILE(.TRUE.)
+!          READ(NESTUNIT,*,IOSTAT=IOS)N1,N2,N3
+!          if (IOS == 0) then
+!             BackSpace NESTUNIT
+!             exit
+!          elseif(IOS < 0) then
+!            Call FATAL_ERROR('Improper formatting of NESTING NODE FILE:',&
+!                &'Reached end of file with out finding NESTING data?',&
+!                &'FORMAT: NEST# SUBDOMAIN# LARGEDOMAIN# (ALL INTEGERS)')
+!          end if
+!       END DO
+
        NHEADER = 0      !lwang intel23@20230710
        DO WHILE(.TRUE.)
           READ(NESTUNIT,*,IOSTAT=IOS,END=199)N1,N2,N3
@@ -808,6 +820,7 @@ CONTAINS
                & ' IS NOT IN THE GLOBAL DOMAIN',&
                & 'CHECK INPUT FILE NESTING NODES ARE 1 <= '//trim(temp2))
        END IF
+
        IF(  MAXVAL(NODES) > MGL) THEN
           write(temp,'(I8)') MAXLOC(NODES)
           write(temp2,'(I8)') MGL
@@ -1825,14 +1838,14 @@ END SUBROUTINE GENMAP_NESTING
        CALL NC_READ_VAR(VAR,STKRNG=NESTING_DATA%RNG)
        VAR_S1=> VAR
 
-# if defined (NH)   
+# if defined (NH)
        VAR => FIND_VAR(NESTING_FILE,"hyw",FOUND)
        IF(.not. FOUND) CALL FATAL_ERROR &
             & ("IN NESTING FILE OBJECT NO 'hyw' FOUND?")
        CALL NC_CONNECT_PVAR(VAR, NESTING_DATA%HYW_BLK)
        CALL NC_READ_VAR(VAR,STKRNG=NESTING_DATA%RNG)
        VAR_HYW=> VAR
-# endif 
+# endif
 
        IF(TRIM(NESTING_TYPE) == '3')THEN 
        

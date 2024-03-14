@@ -154,7 +154,16 @@ dashL= $(empty) -L
 #--------------------------------------------------------------------------
 
              FLAG_4 = -DMULTIPROCESSOR
+#         If using METIS 5 or above, uncomment FLAG_411 and read the file readme_metis in folder METIS_source for detail
+#	     FLAG_411 = -DMETIS_5
+#        If FLAG_411 is defined, uncomment path below	     
+#             PARLIB = 
+#             PARTINCS = -I/usr/local/install/metis-5.1.0/gcc-4.4.7/include
+#             PARTLIBS = -L/usr/local/install/metis-5.1.0/gcc-4.4.7/lib -lmetis
+#        If FLAG_411 is not defined, uncomment path below
              PARLIB = -lmetis  #-L/usr/local/lib -lmetis
+             PARTINCS =
+             PARTLIBS =
 
 #--------------------------------------------------------------------------
 #        WATER_QUALITY      INCLUDE EPA WATER QUALITY MOD
@@ -440,6 +449,7 @@ dashL= $(empty) -L
 #        WAVE-CURRENT INTERACTION
 #--------------------------------------------------------------------------
 #             FLAG_32 =  -DWAVE_CURRENT_INTERACTION
+#             FLAG_321 = -DVORTEX_FORCE
 #             FLAG_33 =  -DPLBC
 #           NOTE! THis option is for wave code          
 #             FLAG_34 =  -DEXPLICIT
@@ -480,6 +490,11 @@ dashL= $(empty) -L
 #             FLAG_42 = -DPARTITION_SPECIAL
 
 #--------------------------------------------------------------------------
+#        Vegetation Impact on FLows, Waves and Sediment (with FLAG_32 turned on)
+#--------------------------------------------------------------------------
+#             FLAG_45 = -DVEGETATION
+
+#--------------------------------------------------------------------------
 #        DEVELOPMENT FLAGS
 #            FOR BETA WORK ONLY 
 #--------------------------------------------------------------------------
@@ -496,6 +511,14 @@ dashL= $(empty) -L
 #--------------------------------------------------------------------------
 
 #             FLAG_80 = -DPIO
+
+#--------------------------------------------------------------------------
+#    NUOPC (The National Unified Operational Prediction Capability)
+#    This FLAG is only used for creating FVCOM library file 
+#    with command 'make libfvcom'.
+#--------------------------------------------------------------------------
+
+#             FLAG_81 = -DFVCOM_COUPLED
 
 #--------------------------------------------------------------------------
 #        SELECT COMPILER/PLATFORM SPECIFIC DEFINITIONS
@@ -634,18 +657,18 @@ dashL= $(empty) -L
    $(FLAG_31) $(FLAG_32) $(FLAG_33) $(FLAG_34) \
    $(FLAG_35) $(FLAG_36) $(FLAG_37) $(FLAG_38) \
    $(FLAG_39) $(FLAG_40) $(FLAG_41) $(FLAG_42) \
-   $(FLAG_43) $(FLAG_44) $(FLAG_80)$(FLAG_LAM)\
-   $(FLAG_101) $(FLAG_102) $(FLAG_103) $(FLAG_104) $(FLAG_105)\
+   $(FLAG_43) $(FLAG_44) $(FLAG_45) $(FLAG_80) $(FLAG_81) $(FLAG_LAM) $(FLAG_411) \
+   $(FLAG_101) $(FLAG_102) $(FLAG_103) $(FLAG_104) $(FLAG_105) $(FLAG_321)\
    $(FLAG_211) $(FLAG_212) $(FLAG_213) $(FLAG_251) $(FLAG_261) $(FLAG_262)\
    $(FLAG_USE_NETCDF4) $(FLAG_USE_COMPRESSION)
 #--------------------------------------------------------------------------
 #  Libraries           
 #--------------------------------------------------------------------------
 
-            LIBS  =	$(LIBDIR) $(CLIB)  $(PARLIB) $(IOLIBS)	$(DTLIBS)\
+            LIBS  =	$(LIBDIR) $(CLIB) $(PARLIB) $(PARTLIBS) $(IOLIBS)	$(DTLIBS)\
 			$(MPILIB) $(GOTMLIB) $(KFLIB) $(BIOLIB)	\
 			$(OILIB) $(VISITLIB) $(PROJLIBS) $(PETSC_LIB)
 
             INCS  = 	$(INCDIR) $(IOINCS) $(GOTMINCS) $(BIOINCS)\
-			 $(VISITINCPATH) $(PROJINCS) $(DTINCS) \
+			 $(VISITINCPATH) $(PROJINCS) $(DTINCS) $(PARTINCS)\
 			 $(PETSC_FC_INCLUDES)

@@ -289,8 +289,8 @@ SUBROUTINE NC_CREATE(NCF)
     status = nf90_create(trim(NCF%fname),NF90_NETCDF4,NCF%ncid)
   ENDIF
 # else
-  !if(libnetcdf(1:1) == '4') CALL FATAL_ERROR("The version of NetCDF is 4.",&
-  !             & "Please use NetCDF3.")
+!  if(libnetcdf(1:1) == '4') CALL FATAL_ERROR("The version of NetCDF is 4.",&
+!               & "Please use NetCDF3.")
   IF(NPROCS_FVCOM > 1 .and. USE_MPI_IO_MODE) THEN
     status = nf90_create(trim(NCF%fname),IOR(NF90_64BIT_OFFSET,NF90_MPIIO), &
                          NCF%ncid,comm=MPI_FVCOM_GROUP,info=MPI_INFO_NULL)
@@ -304,8 +304,8 @@ SUBROUTINE NC_CREATE(NCF)
                & "Please use NetCDF4.")
   status = nf90_create(trim(NCF%fname),NF90_NETCDF4,NCF%ncid)
 # else
- ! if(libnetcdf(1:1) == '4') CALL FATAL_ERROR("The version of NetCDF is 4.",&
- !              & "Please use NetCDF3.")
+!  if(libnetcdf(1:1) == '4') CALL FATAL_ERROR("The version of NetCDF is 4.",&
+!               & "Please use NetCDF3.")
   status = nf90_create(trim(NCF%fname),NF90_64BIT_OFFSET,NCF%ncid)
 # endif
 # endif
@@ -7151,6 +7151,7 @@ SUBROUTINE NC_READ_VAR(VAR,STKCNT,STKRNG,IOSTART,IOCOUNT,IOSTRIDE,DEALERID,PARAL
      CALL FATAL_ERROR("NC_READ_VAR: CAN NOT READ FILE, IT IS NOT OPEN!")
   END IF
   
+
 
   IF ( PRESENT(STKCNT) ) THEN
 

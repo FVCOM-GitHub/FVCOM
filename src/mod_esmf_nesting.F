@@ -404,6 +404,18 @@ CHARACTER(LEN=80), ALLOCATABLE :: NEST_FNAMES(:),NEST_FNAMES_CELL(:)
 
        REWIND NESTUNIT
 
+!       DO WHILE(.TRUE.)
+!          READ(NESTUNIT,*,IOSTAT=IOS)N1,N2,N3
+!          if (IOS == 0) then
+!             BackSpace NESTUNIT
+!             exit
+!          elseif(IOS < 0) then
+!            Call FATAL_ERROR('Improper formatting of NESTING NODE FILE:',&
+!                &'Reached end of file with out finding NESTING data?',&
+!                &'FORMAT: NEST# SUBDOMAIN# LARGEDOMAIN# (ALL INTEGERS)')
+!          end if
+!       END DO
+
        NHEADER = 0      !lwang intel23@20230710       
        DO WHILE(.TRUE.)
           READ(NESTUNIT,*,IOSTAT=IOS,END=199)N1,N2,N3
@@ -515,6 +527,18 @@ CHARACTER(LEN=80), ALLOCATABLE :: NEST_FNAMES(:),NEST_FNAMES_CELL(:)
 
 
        REWIND NESTUNIT1
+
+!       DO WHILE(.TRUE.)
+!          READ(NESTUNIT1,*,IOSTAT=IOS)C1,C2,C3
+!          if (IOS == 0) then
+!             BackSpace NESTUNIT1
+!             exit
+!          elseif(IOS < 0) THEN
+!            Call FATAL_ERROR('Improper formatting of NESTING CELL FILE:',&
+!                &'Reached end of file with out finding NESTING data?',&
+!                &'FORMAT: NEST# SUBDOMAIN# LARGEDOMAIN# (ALL INTEGERS)')
+!          end if
+!       END DO
 
        NHEADER = 0      !lwang intel23@20230710
 

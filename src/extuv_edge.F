@@ -52,6 +52,10 @@
    USE MOD_WAVE_CURRENT_INTERACTION
 #  endif
 
+#  if defined (VEGETATION)
+   USE MOD_VEGETATION
+#  endif
+
    IMPLICIT NONE
    INTEGER, INTENT(IN) :: K
    REAL(SP), DIMENSION(0:NT) :: RESX,RESY,TMP
@@ -113,11 +117,23 @@
                  -(WUSURF2(I)+WUBOT(I))*ART(I)
        RESY(I) = ADY2D(I)+ADVVA(I)+DRY2D(I)+PSTY(I)+COR(I)*UA(I)*D1(I)*ART(I)  &
                  -(WVSURF2(I)+WVBOT(I))*ART(I)
+# if defined (VEGETATION)
+       IF(VEGETATION_MODEL.and.VEG_DRAG)THEN
+         RESX(I) = RESX(I) + step2d_uveg(i)*ART(I)
+         RESY(I) = RESY(I) + step2d_vveg(i)*ART(I)
+       END IF
+# endif
 #      else
        RESX(I) = ADX2D(I)+ADVUA(I)+DRX2D(I)+PSTX(I)-COR(I)*VA(I)*D1(I)*ART(I)  &
                  -(WUSURF2(I)+WUBOT(I))*ART(I)+NHQ2DX(I)
        RESY(I) = ADY2D(I)+ADVVA(I)+DRY2D(I)+PSTY(I)+COR(I)*UA(I)*D1(I)*ART(I)  &
                  -(WVSURF2(I)+WVBOT(I))*ART(I)+NHQ2DY(I)
+# if defined (VEGETATION)
+       if(VEGETATION_MODEL.and.VEG_DRAG)then
+         RESX(I) = RESX(I) + step2d_uveg(i)*ART(I)
+         RESY(I) = RESY(I) + step2d_vveg(i)*ART(I)
+       endif
+# endif
 #      endif
 
 #  if defined (SPHERICAL)
@@ -128,7 +144,7 @@
 #  endif
 
 
-#  if defined (WAVE_CURRENT_INTERACTION)
+#  if defined (WAVE_CURRENT_INTERACTION) || (FVCOM_COUPLED)
        RESX(I) = RESX(I) + WAVESTRX_2D(I)
        RESY(I) = RESY(I) + WAVESTRY_2D(I)
 #  endif  

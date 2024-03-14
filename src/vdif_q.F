@@ -50,6 +50,10 @@
    USE MOD_DAM
 #  endif
 
+# if defined (VEGETATION)
+   USE MOD_VEGETATION
+# endif
+
    IMPLICIT NONE
    INTEGER :: I,J,K,KI
    REAL(SP)  :: CONST1,COEF1,COEF2,COEF3,COEF4,COEF5,LMAX
@@ -517,6 +521,17 @@
       END DO
      END IF
     END DO
+#  endif
+
+# if defined (VEGETATION)
+    !
+    !-----------------------------------------------------------------------
+    !  Add the effect of vegetation on horizontal viscosity.
+    !-----------------------------------------------------------------------
+    !
+    if(VEGETATION_MODEL.and.VEG_HMIXING)then
+        KM = KM  + VEG % visc3d_r_veg
+    end if
 #  endif
 
 #  if defined (THIN_DAM)

@@ -1,3 +1,17 @@
+
+!     SWAN/COMPU      file 2 of 5
+!
+!     PROGRAM SWANCOM2.FOR
+!
+!     This file SWANCOM2 of the main program SWAN
+!     include the next subroutines (mainly subroutines for
+!     the source terms for dissipation and some general stuff):
+!
+!     DISSIPATION SOURCE TERMS :
+!
+!     SBOT    (Bottom friction)
+!     SVEG    (Dissipation due to vegetation)                             40.55
+
    SUBROUTINE SBOT (ABRBOT  ,DEP2    ,ECOS    ,ESIN    ,KWAVE   , &
                     SPCSIG  ,UBOT    ,UX2     ,UY2     ,IDCMIN  , &
 		    IDCMAX  ,ISSTOP  ,VARFR   ,FRCOEF  ,IG      , &
@@ -206,6 +220,317 @@
    RETURN
    END SUBROUTINE SBOT
  
+#  if defined (VEGETATION)
+!
+!****************************************************************
+!
+      SUBROUTINE SVEG ( DEP2   ,IMATDA   ,ETOT   ,SMEBRK    ,  KMESPC&
+           & ,PLVEGT   , IDCMIN ,IDCMAX   ,ISSTOP ,DISSC1    , NPLA2 &
+           & ,      IG , IMATRA )
+
+!
+!****************************************************************
+!
+      USE SWCOMM2
+      USE SWCOMM3
+      USE SWCOMM4
+      USE OCPCOMM4
+      USE M_GENARR
+!
+   USE VARS_WAVE, ONLY : MT,AC2
+      IMPLICIT NONE
+!
+!
+!   --|-----------------------------------------------------------|--
+!     | Delft University of Technology                            |
+!     | Faculty of Civil Engineering                              |
+!     | Environmental Fluid Mechanics Section                     |
+!     | P.O. Box 5048, 2600 GA  Delft, The Netherlands            |
+!     |                                                           |
+!     | Programmers: The SWAN team                                |
+!   --|-----------------------------------------------------------|--
+!
+!
+!     SWAN (Simulating WAves Nearshore); a third generation wave model
+!     Copyright (C) 1993-2017  Delft University of Technology
+!
+!     This program is free software; you can redistribute it and/or
+!     modify it under the terms of the GNU General Public License as
+!     published by the Free Software Foundation; either version 2 of
+!     the License, or (at your option) any later version.
+!
+!     This program is distributed in the hope that it will be useful,
+!     but WITHOUT ANY WARRANTY; without even the implied warranty of
+!     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+!     GNU General Public License for more details.
+!
+!     A copy of the GNU General Public License is available at
+!     http://www.gnu.org/copyleft/gpl.html#SEC3
+!     or by writing to the Free Software Foundation, Inc.,
+!     59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+!
+!
+!  0. Authors
+!
+!     40.55: Bastiaan Burger, Martijn Meijer
+!     40.61: Marcel Zijlema
+!     40.58: Tomo Suzuki, Marcel Zijlema
+!
+!  1. Updates
+!
+!     40.55, May. 05: implementation of vegetation dissipation formula
+!     40.61, Sep. 06: introduce DISVEG variable for output purposes
+!     40.58, Nov. 08: some modifications and corrections
+!
+!  2. Purpose
+!
+!     Computation of the source term due to vegetation dissipation
+!
+!  3. Method
+!
+!     The energy dissipation due to vegetation is described by a
+!     Morrison type equation, modelling the plants as vertical,
+!     noncompliant cylinders, neclecting swaying motions induced by
+!     waves. Vegetation characteristics that are used as input are
+!     drag coefficient, vegetation height, plant density and diameter.
+!
+!     The formula used in SWAN is due to Dalrymple (1984)
+!     (see Mendez and Losada, 2004):
+!
+!     d(Cg E)
+!     ------- = -epsv
+!        dx
+!
+!     with dissipation due to vegetation:
+!
+!     epsv = 1/2 * 1/sqrt(pi) * rho * Cd * bv * Nv *
+!                                                                3
+!                              (gk/2sigma)^3 * ((A + B)/C) * Hrms
+!
+!     where
+!
+!     rho   = water density
+!     k     = wave number
+!     sigma = angular frequency
+!     Cd    = drag coefficient
+!     bv    = stem thickness
+!     Nv    = vegetation density
+!     Hrms  = rms wave height
+!
+!     and the coefficients
+!
+!     A = sinh^3 k*ah
+!     B = 3*sinh k*ah
+!     C = 3k*cosh^3 kh
+!
+!     with ah the vegetation height
+!
+!     The source term to be used in SWAN is based on the
+!     corresponding dissipation rate and reads
+!
+!     Dtot = -epsv / rho / g
+!
+!     In the formulation, the mean average wavenumber according
+!     to the WAM-formulation and the mean frequency will be employed
+!
+!     Now, the source term is:
+!
+!                      E
+!     Sveg = Dtot *  ------ = factor * sqrt(Etot) * E
+!                     Etot
+!
+!     and is linearized by means of the Picard iteration
+!
+!
+!  4. Argument variables
+!
+!     DEP2        water depth
+!     DISSC1      dissipation coefficient
+!     ETOT        total energy per spatial gridpoint
+!     IDCMIN      frequency dependent counter in directional space
+!     IDCMAX      frequency dependent counter in directional space
+!     IMATDA      coefficients of diagonal of matrix
+!     ISSTOP      maximum counter of wave component in frequency
+!                 space that is propagated
+!     KMESPC      mean average wavenumber according to the WAM-formulation
+!     NPLA2       number of plants per square meter (depth-averaged)
+!     PLVEGT      array containing the vegetation source term for test-output
+!     SMEBRK      mean frequency according to first order moment
+!
+      INTEGER ISSTOP, IDCMIN(MSC), IDCMAX(MSC)
+      REAL    DEP2(MT) , IMATDA(MDC,MSC),DISSC1(MDC,MSC),PLVEGT(MDC,MSC,NPTST),NPLA2(MT)
+      REAL    ETOT, SMEBRK, KMESPC,IMATRA(MDC,MSC)
+!
+!  6. Local variables
+!
+!     A     :     auxiliary variable
+!     B     :     auxiliary variable
+!     C     :     auxiliary variable
+!     D     :     auxiliary variable
+!     ID    :     counter of the spectral direction
+!     IDDUM :     counter
+!     IENT  :     number of entries
+!     IK    :     counter
+!     IL    :     counter
+!     IS    :     counter of relative frequency band
+!     KD    :     wavenumber times water depth
+!     KVEGH :     wavenumber times plant height
+!     LAYPRT:     part of layer below water level
+!     SINHK :     sinh(kh)
+!     SLAYH :     total sum of layer thicknesses
+!     SLAYH1:     sum of layer thicknesses below water level
+!     SLAYH2:     sum of layer thicknesses below water level
+!     SVEG1 :     layer-independent dissipation factor
+!     SVEG2 :     total sum of dissipation factor over layers
+!     SVEGET:     source term containing dissipation due to vegetation
+!                 to be stored in the array IMATDA
+!
+      INTEGER ID, IDDUM, IENT, IK, IL, IS, IG
+      REAL    A, B, C, D, KD, KVEGH, LAYPRT, SINHK, SLAYH, SLAYH1, SLAYH2, SVEG1, SVEG2, SVEGET
+!
+!  9. Subroutines calling
+!
+!     SOURCE
+!
+! 12. Structure
+!
+!     Vegetation parameters are given per layer thickness, so for
+!     each layer the contribution to wave damping is calculated
+!
+!     This routine checks in which layer the water level is present
+!
+!            -----------
+!                        ILMAX
+!            -----------
+!              _ d       2
+!            --|--------
+!              |         1
+!            --|--------
+!
+!     d     = waterdepth
+!     ILMAX = number of layers in grid point
+!
+!     Subsequently, the vegetation parameters up to the layer where the
+!     water level is in, are used to calculate dissipation for each layer
+!
+!     Thereafter, the contributions to disspation are summed up
+!
+!     With this summation the total dissipation due to vertical varying
+!     vegetation is calculated
+!
+! 13. Source text
+!
+
+!     --- compute layer-independent vegetation dissipation factor
+
+      KD    = KMESPC * DEP2(IG)
+      IF ( KD.GT.10. ) RETURN
+      C     = 3.*KMESPC*(COSH(KD))**3
+      SVEG1 = SQRT(2./PI_W) * GRAV_W**2 * (KMESPC/SMEBRK)**3 * SQRT(ETOT)/ C
+
+!      IF ( VARNPL ) SVEG1 = SVEG1 * NPLA2(KCGRD(1))
+      SVEG1 = SVEG1 * SUM(VEGNSL(IG,1:ILMAX))
+
+!     --- compute dissipation factor for each layer and summed up
+
+      SLAYH = 0.
+      DO IL = 1, ILMAX
+         SLAYH = SLAYH + LAYH(IG,IL)
+      ENDDO
+
+      KVEGH = 0.
+      C     = 0.
+      D     = 0.
+      SVEG2 = 0.
+
+      IF ( DEP2(IG).GT.SLAYH ) THEN
+
+         DO IL = 1, ILMAX
+            KVEGH = KVEGH + KMESPC * LAYH(IG,IL)
+            SINHK = SINH(KVEGH)
+            A     = C
+            B     = D
+            C     = SINHK**3
+            D     = 3.*SINHK
+            A     = C - A
+            B     = D - B
+            SVEG2 = SVEG2 + VEGDRL(IG,IL)*VEGDIL(IG,IL)*VEGNSL(IG,IL)*(A + B)
+         END DO
+
+      ELSE IF ( DEP2(IG).LT.LAYH(IG,1) ) THEN
+
+         SINHK = SINH(KD)
+         A     = SINHK**3
+         B     = 3.*SINHK
+         SVEG2 = VEGDRL(IG,1)*VEGDIL(IG,1)*VEGNSL(IG,1)*(A + B)
+
+      ELSE
+
+         SLAYH1 = 0.
+         SLAYH2 = 0.
+         LAYPRT = 0.
+         VGLOOP : DO IL = 1, ILMAX
+            SLAYH1 = SLAYH1 + LAYH(IG,IL)
+            IF (DEP2(IG).LE.SLAYH1) THEN
+               DO IK = 1, IL-1
+                  SLAYH2 = SLAYH2 + LAYH(IG,IK)
+               END DO
+               LAYPRT = DEP2(IG) - SLAYH2
+               DO IK = 1, IL-1
+                  KVEGH = KVEGH + KMESPC * LAYH(IG,IK)
+                  SINHK = SINH(KVEGH)
+                  A     = C
+                  B     = D
+                  C     = SINHK**3
+                  D     = 3.*SINHK
+                  A     = C - A
+                  B     = D - B
+                  SVEG2 = SVEG2+VEGDRL(IG,IK)*VEGDIL(IG,IK)*VEGNSL(IG,IK)*(A + B)
+               END DO
+               KVEGH = KVEGH + KMESPC * LAYPRT
+               SINHK = SINH(KVEGH)
+               A     = C
+               B     = D
+               C     = SINHK**3
+               D     = 3.*SINHK
+               A     = C - A
+               B     = D - B
+               SVEG2 = SVEG2 + VEGDRL(IG,IL)*VEGDIL(IG,IL)*VEGNSL(IG,IL)*(A + B)
+               EXIT VGLOOP
+            END IF
+         END DO VGLOOP
+
+      END IF
+
+!     --- compute total dissipation
+
+      SVEGET = SVEG1 * SVEG2
+!
+!     *** test output ***
+!
+      IF (TESTFL .AND. ITEST.GE.60) THEN
+         WRITE (PRTEST, 110) IVEG, IG, DEP2(IG), SVEGET
+ 110     FORMAT (' SVEG :IVEG INDX DEP VEGFAC:', 2I5, 2E12.4)
+      END IF
+
+      DO IS = 1, ISSTOP
+         DO IDDUM = IDCMIN(IS), IDCMAX(IS)
+            ID = MOD ( IDDUM - 1 + MDC , MDC ) + 1
+
+!           *** store the results in the array IMATDA ***
+!           *** if testfl store results in array for isoline plot ***
+
+            IMATRA(ID,IS) = IMATRA(ID,IS) - SVEGET*AC2(ID,IS,IG)
+            IMATDA(ID,IS) = IMATDA(ID,IS) + SVEGET
+!            IF (TESTFL) PLVEGT(ID,IS,IPTST) = -1.* SVEGET
+            DISSC1(ID,IS) = DISSC1(ID,IS) + SVEGET
+
+         END DO
+      END DO
+
+      RETURN
+    END SUBROUTINE SVEG
+#   endif
 !
 !****************************************************************
 !

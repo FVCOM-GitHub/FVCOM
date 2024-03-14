@@ -301,17 +301,21 @@ CONTAINS
                sumc = 1.0D0
                sums = 0.0D0
                do k=1, equi_astr(equi_id(j))%nj
-                 equi_rr = equi_astr(equi_id(j))%ee(k) 
-                 equi_l  = equi_astr(equi_id(j))%ir(k)+1                    
+                 equi_rr = equi_astr(equi_id(j))%ee(k)
+                 equi_l  = equi_astr(equi_id(j))%ir(k)+1
 
-                 if(equi_l == 2)then                                                             
-                   equi_rr = equi_astr(equi_id(j))%ee(k)*0.36309D0*(1.0D0-5.0D0*slat*slat)/slat 
-                 else if(equi_l == 3)then                                                        
-                   equi_rr = equi_astr(equi_id(j))%ee(k)*2.59808D0*slat                         
-		 end if                                                                          
+!                 goto (901, 902, 903) equi_l
+!  902            equi_rr = equi_astr(equi_id(j))%ee(k)*0.36309D0*(1.0D0-5.0D0*slat*slat)/slat
+!                 goto 901
+!  903            equi_rr = equi_astr(equi_id(j))%ee(k)*2.59808D0*slat
+!  901            continue
 
-                 equi_uudbl = equi_astr(equi_id(j))%ldel(k)*equi_p+equi_astr(equi_id(j))%mdel(k)*equi_enp+    &
-		              equi_astr(equi_id(j))%ndel(k)*equi_pp+equi_astr(equi_id(j))%ph(k)
+                 IF(equi_l .eq. 2 .or. equi_l .lt. 1 .or. equi_l .gt. 3) THEN
+                   equi_rr = equi_astr(equi_id(j))%ee(k)*0.36309D0*(1.0D0-5.0D0*slat*slat)/slat
+                 ELSE IF(equi_l .eq. 3) THEN
+                   equi_rr = equi_astr(equi_id(j))%ee(k)*2.59808D0*slat
+                 ENDIF
+                 equi_uudbl = equi_astr(equi_id(j))%ldel(k)*equi_p+equi_astr(equi_id(j))%mdel(k)*equi_enp+equi_astr(equi_id(j))%ndel(k)*equi_pp+equi_astr(equi_id(j))%ph(k)
                  equi_iuu = int(equi_uudbl)
                  equi_uu  = equi_uudbl - equi_iuu
                  
