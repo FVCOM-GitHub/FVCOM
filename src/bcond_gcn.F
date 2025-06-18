@@ -225,13 +225,21 @@
          K300_CD = KBM1
          K300_ND = KBM1
          DO K=1,KBM1
-            IF (H(CDX)*(-ZZ(CDX,K)) > 300.0_SP) THEN
+!@---> Qichun Xu, 300to200@20250618
+!@     Changed the top layer thickness from 300 m to 200 m (for Scotain Shelf)
+!@            IF (H(CDX)*(-ZZ(CDX,K)) > 300.0_SP) THEN  
+            IF (H(CDX)*(-ZZ(CDX,K)) > 200.0_SP) THEN  
+!@<---
                 K300_CD = K - 1
                 EXIT
             ENDIF
          ENDDO
          DO K=1,KBM1
-            IF (H(NDX)*(-ZZ(NDX,K)) > 300.0_SP) THEN
+!@---> Qichun Xu, 300to200@20250618
+!@     Changed the top layer thickness from 300 m to 200 m (for Scotain Shelf)
+!@            IF (H(NDX)*(-ZZ(NDX,K)) > 300.0_SP) THEN
+            IF (H(NDX)*(-ZZ(NDX,K)) > 200.0_SP) THEN
+!@<---
                 K300_ND = K - 1
                 EXIT
             ENDIF

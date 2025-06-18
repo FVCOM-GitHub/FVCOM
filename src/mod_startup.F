@@ -729,10 +729,19 @@ CONTAINS
 
     ! LOAD Air pressure induced elevation
     VAR => FIND_VAR(NC_START,'el_press',FOUND)
-    IF(.not. FOUND) CALL FATAL_ERROR&
-         &("COULD NOT FIND VARIABLE 'el_press' IN THE HOTSTART FILE OBJECT")
-    CALL NC_CONNECT_AVAR(VAR, EL_AIR)
-    CALL NC_READ_VAR(VAR,STKCNT)
+!@---> Lianyuan Zheng, el_press@20250618
+!@      To avoid crash when el_press is missing in the restart file
+!@    IF(.not. FOUND) CALL FATAL_ERROR&
+!@         &("COULD NOT FIND VARIABLE 'el_press' IN THE HOTSTART FILE OBJECT")
+!@    CALL NC_CONNECT_AVAR(VAR, EL_AIR)
+!@    CALL NC_READ_VAR(VAR,STKCNT)
+    IF(.not. FOUND) THEN
+      EL_AIR = ZERO
+    ELSE
+      CALL NC_CONNECT_AVAR(VAR, EL_AIR)
+      CALL NC_READ_VAR(VAR,STKCNT)
+    END IF
+!@<---
 
     IF(DBG_SET(DBG_SBR)) write(ipt,*) "End: READ_AIR_PRESS_ELE" 
    
