@@ -1352,6 +1352,25 @@ CONTAINS
     pathnfile = trim(INPUT_DIR)//trim(GRID_FILE)
     Call FOPEN(GRIDUNIT,trim(pathnfile),'cfr')
     
+# if !defined (SPHERICAL) 
+!@---> Siqi Li, LONLAT@20231113
+    !Check LONLAT File and open:
+    if (TRIM(LONLAT_FILE) /= 'none') then
+        USE_LONLAT = .TRUE.
+        ! TEST FILE NAME
+        charnum = index (LONLAT_FILE,".dat")
+        if (charnum /= len_trim(LONLAT_FILE)-3)&
+           & CALL WARNING("LONLAT FILE does not end in .dat", &
+           & trim(LONLAT_FILE))
+        ! OPEN FILE
+        pathnfile = trim(INPUT_DIR)//trim(LONLAT_FILE)
+        Call FOPEN(LONLATUNIT,trim(pathnfile),'cfr')
+    else
+        USE_LONLAT = .FALSE.
+    endif
+!@<--- Siqi Li
+# endif 
+
 # if defined (PLBC) 
     !Check plbc_cell File and open:
     ! OPEN FILE
@@ -2767,6 +2786,7 @@ CONTAINS
   
   SUBROUTINE LOAD_RESTART_COORDS(X_LCL,Y_LCL)
     USE CONTROL
+    USE ALL_VARS, ONLY : LON, LAT !@ Siqi Li, LONLAT@20231113
     IMPLICIT NONE
     REAL(SP), ALLOCATABLE,TARGET :: X_LCL(:),Y_LCL(:)
 
@@ -2792,6 +2812,28 @@ CONTAINS
        CALL NC_CONNECT_AVAR(VAR, Y_LCL)
        CALL NC_READ_VAR(VAR)
        CALL NC_DISCONNECT(VAR)
+
+       !@---> Siqi Li, LONLAT@20231113
+       VAR => FIND_VAR(NC_START,'lon',FOUND)
+       IF(.not. FOUND) CALL FATAL_ERROR("COULD NOT FIND VARIABLE 'lon'&
+            & IN THE HOTSTART FILE OBJECT")
+       CALL NC_CONNECT_AVAR(VAR, LON)
+       CALL NC_READ_VAR(VAR)
+       CALL NC_DISCONNECT(VAR)
+
+       VAR => FIND_VAR(NC_START,'lat',FOUND)
+       IF(.not. FOUND) CALL FATAL_ERROR("COULD NOT FIND VARIABLE 'lat'&
+            & IN THE HOTSTART FILE OBJECT")
+       CALL NC_CONNECT_AVAR(VAR, LAT)
+       CALL NC_READ_VAR(VAR)
+       CALL NC_DISCONNECT(VAR)
+       
+       IF (MINVAL(LON)==MAXVAL(LON) .AND. MINVAL(LAT)==MAXVAL(LAT)) THEN
+            USE_LONLAT = .FALSE.
+       ELSE
+            USE_LONLAT = .TRUE.
+       ENDIF
+       !@<--- Siqi Li
 
     CASE('degrees')
        ! CONNECT THE VARIABLE OBJECTS AND LOAD THE DATA
@@ -4830,6 +4872,129 @@ case default
     
     
  END SUBROUTINE READ_COLDSTART_SIGMA
+
+!---> Siqi Li, LONLAT@2031113
+  SUBROUTINE READ_COLDSTART_LONLAT(LONLATUNIT,MGL,XG1,YG1)
+
+    IMPLICIT NONE
+    INTEGER, INTENT(IN)  :: LONLATUNIT, MGL
+    REAL(SP),ALLOCATABLE,INTENT(INOUT) :: XG1(:),YG1(:)
+    CHARACTER(LEN=80)    :: temp
+    INTEGER              :: I,IOS,NodeCount, ISCAN
+    Real(sp)             :: X1, Y1
+    !==============================================================================|
+
+    !----------------Determine Number of Nodes -----------------------!
+    ISCAN = SCAN_FILE(LONLATUNIT,"Node Number",ISCAL = NODECOUNT)
+    IF(ISCAN /= 0) then
+       write(temp,'(I2)') ISCAN
+       call fatal_error('Improper formatting of LONLAT FILE: ISCAN ERROR&
+            &# '//trim(temp),&
+            & 'The header must contain: "Node Number ="', &
+            & 'Followed by an integer number of nodes')
+    END IF
+
+    if ( NODECOUNT .NE. MGL) &
+         & CALL FATAL_ERROR('The stated number of nodes in the lonlat file',&
+         ' does not match the number in the grid file')
+
+   !----------------Read LONLAT Array----------------------------------!
+   ! FIND FIRST LINE of CONNECTIVITY ARRAY
+    rewind LONLATUNIT
+    NHEADER = 0
+    DO WHILE(.TRUE.)
+       READ(LONLATUNIT,*,IOSTAT=IOS,END=99)X1,Y1
+       if (IOS == 0) then
+          exit
+       end if
+
+       NHEADER = NHEADER + 1
+       CYCLE
+
+99 Call FATAL_ERROR('Improper formatting of LONLAT FILE:',&
+           &'Reached end of file with out finding LONLAT data?',&
+           &'FORMAT: X Y (ALL REALS)')
+    END DO
+
+    REWIND LONLATUNIT
+    DO I = 1, NHEADER
+       READ(LONLATUNIT,*)
+    END DO
+
+    I = 0
+    DO WHILE(.TRUE.)
+       READ(LONLATUNIT,*,IOSTAT=IOS) X1,Y1
+       IF(IOS < 0) exit
+       I = I + 1
+       IF(I > MGL) CALL FATAL_ERROR('Number of rows of data in the lonlat file &
+            & exceeds the number of nodes ?')
+       IF(X1 < 0.0) X1 = X1 + 360.0_SP
+       XG1(I) = X1
+       YG1(I) = Y1
+    END DO
+
+    if ( I .NE. MGL) &
+         & CALL FATAL_ERROR('The number of rows of data in the lonlat file does&
+         & not equal the number of nodes?')
+
+   if(DBG_SET(dbg_log)) then
+      WRITE(IPT,*)'!  Finished Reading LONLAT File'
+      WRITE(IPT,*)'!  LON range =           :',minval(XG1(1:MGL)),maxval(XG1(1:MGL))
+      WRITE(IPT,*)'!  LAT range =           :',minval(YG1(1:MGL)),maxval(YG1(1:MGL))
+      WRITE(IPT,*)'!'
+   end if
+
+  END SUBROUTINE READ_COLDSTART_LONLAT
+
+
+  SUBROUTINE LOAD_COLDSTART_LONLAT
+    USE CONTROL
+    USE ALL_VARS
+    IMPLICIT NONE
+    integer status,I,IERR
+    REAL(SP), ALLOCATABLE :: LON_GL(:), LAT_GL(:)
+    INTEGER :: SENDID,SENDER
+
+    IF(PAR) CALL MPI_BCAST(USE_LONLAT,1,MPI_LOGICAL,0,MPI_FVCOM_GROUP,IERR)
+
+    ALLOCATE(LON_GL(0:MGL))
+    ALLOCATE(LAT_GL(0:MGL))
+
+    IF (MSR) THEN
+       ! Read (LON, LAT) from the ASCII input
+       CALL READ_COLDSTART_LONLAT(LONLATUNIT,MGL,LON_GL,LAT_GL)
+       CLOSE(LONLATUNIT)
+    END IF
+
+# if defined (MULTIPROCESSORdd)
+    IF(PAR)THEN
+      SENDER = MSRID - 1
+      CALL MPI_BCAST(LON_GL,MGL,MPI_F,SENDER,MPI_FVCOM_GROUP,IERR)
+      CALL MPI_BCAST(LAT_GL,MGL,MPI_F,SENDER,MPI_FVCOM_GROUP,IERR)
+      LON_GL(0)=0.0_SP
+      LAT_GL(0)=0.0_SP
+    END IF
+# endif
+
+    ! Convert it from the global vairable to the local one.
+    IF (SERIAL) THEN
+       LON = LON_GL
+       LAT = LAT_GL
+    ELSE
+# if defined (MULTIPROCESSOR)
+       CALL ADEAL(MYID,MSRID,NPROCS,NXMAP,LON_GL,LON)
+       CALL ADEAL(MYID,MSRID,NPROCS,NXMAP,LAT_GL,LAT)
+# endif
+    ENDIF
+
+    IF (MSR) THEN
+       DEALLOCATE(LON_GL)
+       DEALLOCATE(LAT_GL)
+    ENDIF
+
+  END SUBROUTINE LOAD_COLDSTART_LONLAT
+!<--- Siqi Li
+
 
   SUBROUTINE HelpTxt(IPT)
     implicit none

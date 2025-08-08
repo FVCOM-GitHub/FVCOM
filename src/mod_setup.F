@@ -142,8 +142,18 @@ CONTAINS
     YMC = YC + VYMIN
     YMC(0)= 0.0_SP
 
-    IF (USE_PROJ ) THEN
-        IF (SERIAL) THEN
+    !@---> Siqi Li, LONLAT@20231113
+    IF (USE_LONLAT) THEN
+      CALL N2E2D(LON, LONC)
+      CALL N2E2D(LAT, LATC)
+    ENDIF
+    !@<--- Siqi
+
+!@---> Siqi Li, LONLAT@20231113
+!    IF (USE_PROJ ) THEN
+    IF (USE_PROJ .AND. .NOT. USE_LONLAT) THEN 
+!@<---
+         IF (SERIAL) THEN
            CALL Meters2Degrees(XMC(1:NT),YMC(1:NT)&
                 &   ,PROJECTION_REFERENCE,LONC(1:NT),LATC(1:NT),NT)
 # if defined (MULTIPROCESSOR)
@@ -695,7 +705,10 @@ CONTAINS
        YM = YL
        
        ! USE PROJECTION TOOL BOX TO CONVERT TO DEGREES
-       IF (USE_PROJ ) THEN
+!---> Siqi Li, LONLAT@20231113
+!       IF (USE_PROJ ) THEN
+       IF (USE_PROJ .AND. .NOT. USE_LONLAT) THEN  
+!@<---
         IF (SERIAL) THEN
            CALL meters2degrees(XL(1:MT),YL(1:MT), &
             & PROJECTION_REFERENCE,LON(1:MT),LAT(1:MT),MT)
