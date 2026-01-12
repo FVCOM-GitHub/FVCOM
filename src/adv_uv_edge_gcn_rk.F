@@ -846,9 +846,11 @@
    END DO
 #  endif
 
-   DO K=1,KB
-    VISCOFM(:,K) = VISCOFM(:,K)/ART(:)
-   END DO 
+!@---> Qichun Xu, Am@20260112
+!   DO K=1,KB
+!    VISCOFM(:,K) = VISCOFM(:,K)/ART(:)
+!   END DO
+!@<--- Qichun Xu
 
    IF(DBG_SET(DBG_SBR)) WRITE(IPT,*) "End: adv_uv_edge_gcn_rk"
 
