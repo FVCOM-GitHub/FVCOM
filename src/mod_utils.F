@@ -141,7 +141,7 @@ CONTAINS
 !  FVCOM VERSION                                                               !
 !==============================================================================!
 
-   FVCOM_VERSION     = 'FVCOM_4.4.9'
+   FVCOM_VERSION     = 'FVCOM_4.4.10'
    FVCOM_WEBSITE     = 'http://fvcom.smast.umassd.edu, https://github.com/FVCOM-GitHub/FVCOM'
    INSTITUTION       = 'School for Marine Science and Technology'
 
@@ -2324,7 +2324,7 @@ WRITE(IPT,*)'          _____    _     _  _        _     _  _  _  _             '
 WRITE(IPT,*)'         |  ___)  | |   | || |      | |   | || ||_|| |            '
 WRITE(IPT,*)'         | |       \ \ / / | |_____ | |___| || |   | |            '
 WRITE(IPT,*)'         |_|        \___/   \______) \_____/ |_|   |_|            '
-WRITE(IPT,*)' -- Version 4.4.9 Release'
+WRITE(IPT,*)' -- Version 4.4.10 Release'
 WRITE(IPT,*)'!================================================================!'
 WRITE(IPT,*)'!                                                                !'
 WRITE(IPT,*)'!========DOMAIN DECOMPOSITION USING: METIS 4.0.1 ================!'
