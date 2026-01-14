@@ -12,7 +12,16 @@ brew install gcc open-mpi netcdf netcdf-fortran hdf5 metis
 
 ## Configuration (make.inc)
 
-Edit `src/make.inc` with the following changes:
+A macOS configuration template is provided at `src/make-mac.inc`. To use it:
+
+```bash
+cd src
+cp make-mac.inc make.inc
+```
+
+Then edit `make.inc` with your specific paths:
+
+**OR** manually edit `src/make.inc` with the following changes:
 
 ### 1. Set paths
 
