@@ -9,3 +9,11 @@ libfvcom.a
 *.mod
 *.o
 *.f90
+
+# Compiled libraries and install directory
+libs/install/
+libs/julian/
+libs/metis/build/
+
+# Project documentation (user-specific)
+CLAUDE.md
