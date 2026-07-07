@@ -113,11 +113,7 @@ MAIN_W = ocpmix.F	ocpcre.F	ocpids.F	\
 	swancom1.F	swancom2.F	swancom3.F	swancom4.F	\
 	swancom5.F	w3part.F
 
-ifdef FLAG_411
-  COBJS = func_pointer.c partition.c
-else
-  COBJS = func_pointer.c
-endif
+COBJS = $(if $(FLAG_411),func_pointer.c partition.c,func_pointer.c)
 
 BIOGEN	= mod_bio_3D.F	mod_onedtide.F
 
