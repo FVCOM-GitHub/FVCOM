@@ -118,19 +118,23 @@
   IMPLICIT NONE                                                     
 !
   INTEGER :: IC,IS,ID,I,INDX
-  REAL    :: NN(1:MSC), ND(1:MSC)                                    
+  REAL    :: NN(1:MSC), ND(1:MSC)
   REAL    :: DEP2(MT),KWAVEL,CGOL
-  REAL    :: DEPLOC,SPCSIGL
+  REAL    :: DEPLOC
+  ! Local arrays for KSCIP1 interface (gfortran compatibility)
+  REAL    :: SPCSIGL(1),KWAVEL_ARR(1),CGOL_ARR(1),NNL(1),NDL(1)
 
   DEPLOC = (DEP2(NV(I,1))+DEP2(NV(I,2))+DEP2(NV(I,3)))/3.0
   IF(DEPLOC <= DEPMIN)THEN
 !   *** depth is negative ***
-    KWAVEL = -1.                                           
-    CGOL   = 0.                                            
+    KWAVEL = -1.
+    CGOL   = 0.
   ELSE
 !   *** call KSCIP1 to compute KWAVE and CGO ***
-    SPCSIGL = SPCSIG(IS)
-    CALL KSCIP1(1,SPCSIGL,DEPLOC,KWAVEL,CGOL,NN,ND)                                 
+    SPCSIGL(1) = SPCSIG(IS)
+    CALL KSCIP1(1,SPCSIGL,DEPLOC,KWAVEL_ARR,CGOL_ARR,NNL,NDL)
+    KWAVEL = KWAVEL_ARR(1)
+    CGOL = CGOL_ARR(1)                                 
   END IF
 
   RETURN
