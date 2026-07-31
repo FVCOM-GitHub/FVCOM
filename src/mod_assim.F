@@ -3168,7 +3168,9 @@ in:  DO WHILE(.TRUE.)
 !
 # if !defined (SPHERICAL) 
    TS_OBS(:)%X = TS_OBS(:)%X - VXMIN 
-   TS_OBS(:)%Y = TS_OBS(:)%Y - VYMIN 
+   TS_OBS(:)%Y = TS_OBS(:)%Y - VYMIN
+# else
+   WHERE (TS_OBS(:)%X<0.0) TS_OBS(:)%X = TS_OBS(:)%X + 360.0  !@ Lu Wang, da_SPR@20260715
 # endif
    
 !# if defined (SPHERICAL) 
@@ -3867,7 +3869,7 @@ in:  DO WHILE(.TRUE.)
    REAL(SP), ALLOCATABLE, DIMENSION(:,:) :: TINT,TCORR,TG,TCORR1
    REAL(SP), ALLOCATABLE, DIMENSION(:,:) :: TWGHT_T
    REAL(SP), ALLOCATABLE, DIMENSION(:)   :: FTEMP
-   REAL, ALLOCATABLE, DIMENSION(:,:) :: T_FLAG1, T_FLAG2   
+   REAL(SP), ALLOCATABLE, DIMENSION(:,:) :: T_FLAG1, T_FLAG2  !@ Lu Wang, da_SPR@20260715 
    REAL(SP) :: WEIGHT,DEFECT,CORRECTION,DT_MIN,SIMTIME,T_THRESH,WGHT,TOT_WGHT
    REAL(SP) :: U1,U2,V1,V2,W1,W2,WEIGHT1,WEIGHT2
    TYPE(TIME) ::DIFTIME
@@ -4005,8 +4007,8 @@ IF(MSR)THEN
          ! if the difference between model depth and obserbation depth is big
          ! then T_FLAG2 =0  20211208
          if (HG(J1)/TS_OBS(Id)%DEPTH>1.5 .or. HG(J1)/TS_OBS(Id)%DEPTH<0.67) then
-            T_FLAG2(J1,TS_OBS(Id)%S_INT(K,1))=0
-            T_FLAG2(J1,TS_OBS(Id)%S_INT(K,2))=0
+            T_FLAG2(J1,TS_OBS(Id)%S_INT(K,1))=0.0
+            T_FLAG2(J1,TS_OBS(Id)%S_INT(K,2))=0.0
          endif
 
        END DO !J

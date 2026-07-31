@@ -37,7 +37,10 @@
 #  if defined (DATA_ASSIM)
    USE MOD_PREC
    USE CONTROL
-   
+  
+#  if defined (SPHERICAL)
+   USE MOD_SPHERICAL, ONLY : ARC   !@ Lu Wang, da_SPR@20260715
+#  endif
    CONTAINS
 
 !--select the m observations closest to x
@@ -53,8 +56,18 @@
    REAL(SP) :: D(SIZE(OX,2))
    INTEGER  :: I
 
+   REAL(SP) :: tmp !@ Lu Wang, da_SPR@20260715
+
    DO I=1,SIZE(OX,2)
+!@---> Lu Wang, da_SPR@20260715
+#      if defined (SPHERICAL)
+     CALL ARC(X(1), X(2), OX(1,I), OX(2,I), tmp)
+     D(I) = (tmp*PARAM(1,I))**2
+#      else
      D(I) = SUM(((X - OX(:,I)) * PARAM(:,I))**2)
+#      endif
+!   D(I) = SUM(((X - OX(:,I)) * PARAM(:,I))**2)
+!@<--- Lu Wang   
    END DO
 
    CALL SORT(D,MM,INDEX)
@@ -120,7 +133,15 @@
 !   DIS = (X1 - X2)*PARAM
 !
 !   C = EXP(-SUM(DIS**2))
+!@---> Lu Wang, da_SPR@20260715
+!   DIS(1) = (X1(1)-X2(1))**2.0 + (X1(2)-X2(2))**2.0
+#      if defined (SPHERICAL)
+   CALL ARC(X1(1), X1(2), X2(1), X2(2), DIS(1))
+   DIS(1) = DIS(1)**2.0
+#      else
    DIS(1) = (X1(1)-X2(1))**2.0 + (X1(2)-X2(2))**2.0
+#      endif
+!@<--- Lu Wang   
    C = 1.0/PARAM(1)**2.0
    C = (C-DIS(1)) / (C+DIS(1))
    IF (C<0) C = 0.0

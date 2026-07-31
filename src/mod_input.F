@@ -2843,10 +2843,10 @@ CONTAINS
        CALL NC_CONNECT_AVAR(VAR, X_LCL)
        CALL NC_READ_VAR(VAR)
        CALL NC_DISCONNECT(VAR)
-!# if defined (SPHERICAL)
-!       ! Siqi Li, XLON@20230817
-!       WHERE (X_LCL<0.0) X_LCL = X_LCL + 360.0
-!# endif           
+# if defined (SPHERICAL)
+       !@ Lu Wang, da_SPR@20260715
+       WHERE (X_LCL<0.0) X_LCL = X_LCL + 360.0
+# endif           
        
        VAR => FIND_VAR(NC_START,'lat',FOUND)
        IF(.not. FOUND) CALL FATAL_ERROR("COULD NOT FIND VARIABLE 'lat'&
