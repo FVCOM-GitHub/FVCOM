@@ -223,3 +223,11 @@ ifdef FVCOM_MAKE_INC
 else
   include ./make.inc
 endif
+#--------------------------------------------------------------------------
+#  Debugging options
+#--------------------------------------------------------------------------
+DEBUG ?= 0
+ifeq ($(DEBUG),1)
+  OPT = -O0 -g
+  DEBFLGS = -check all -traceback
+endif
